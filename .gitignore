@@ -1,0 +1,23 @@
+.DS_Store
+.env
+.venv/
+__pycache__/
+*.py[cod]
+*.log
+*.sqlite
+*.sqlite3
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+tmp/
+
+# Raw reports can contain company and personal identifiers.
+data/*.csv
+data/*.json
+data/*.parquet
+!data/README.md
+
