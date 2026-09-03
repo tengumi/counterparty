@@ -499,10 +499,13 @@ Settings
 
 ## Источники решения
 
-- Карта процесса: `COUNTERPARTY_CHECK_FLOW.md`.
+- [Карта продуктового процесса](../CONTEXT_PACK.md).
+- [Индекс артефактов кейса](../artifacts/INDEX.md): постановка,
+  экспорт Q&A и PDF-презентация.
 - Технический референс: путеводитель по SuperVisor из материалов команды.
-- Данные: `contractors_audit.snapshot.json` и
-  `contractors_audit.snapshot_C12613591.csv`.
+- Локальные данные: `contractors_audit.snapshot.json` и
+  `contractors_audit.snapshot_C12613591.csv` (не коммитятся из-за реквизитов и
+  потенциальных PII).
 - [LangGraph overview](https://docs.langchain.com/oss/python/langgraph/overview)
 - [LangGraph persistence](https://docs.langchain.com/oss/python/langgraph/persistence)
 - [Deep Agents overview](https://docs.langchain.com/oss/python/deepagents/overview)
