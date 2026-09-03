@@ -130,9 +130,9 @@ START
   ↓
 restore_session
   ↓
-parse_request                         # regex/checksum/name normalization first
+parse_request                         # сначала шаблон, контрольная сумма и нормализация названия
   ↓
-understand_ambiguous_request          # LLM только если правила не справились
+understand_ambiguous_request          # языковая модель — только если правила не справились
   ↓
 resolve_entities
   ├── ambiguous → ask_clarification → END
@@ -230,6 +230,10 @@ Raw JSON/CSV и полные `CounterpartySnapshot` в checkpoint не клад�
 одноразовый стенд без перезапусков, `InMemorySaver` допустим как упрощение.
 Checkpoints имеют TTL и не используются для персонализации новой сессии.
 
+Переходный `/api/chat` до сборки LangGraph хранит не более восьми сообщений в
+памяти одного процесса и очищает их по TTL. Это временная реализация для
+проверки UI и DSLab; она не заменяет описанный SQLite checkpointer.
+
 ## 8. Канонические контракты
 
 ```text
@@ -326,7 +330,8 @@ success | empty | partial | unavailable | denied | invalid
 | Python | **3.12** | Совпадает с референсом и поддерживается выбранными пакетами |
 | Project manager/build | **`uv` + `uv_build`** | `.venv`, зависимости, scripts, build и воспроизводимый `uv.lock` |
 | Workflow/state | **`langgraph`** | Явный граф, streaming, fan-out и session checkpoint |
-| LLM primitives | **`langchain-core`, `langchain-openai`** | Messages, tools и OpenAI-compatible endpoint для Qwen/GPT-OSS |
+| Provider client | **`openai` SDK** | DSLab Chat Completions: `qwen3.7-plus`, reasoning выключен по умолчанию |
+| LLM orchestration | **`langchain-core`, `langchain-openai`** | Messages/tools внутри будущих LangGraph-узлов |
 | Contracts/config | **`pydantic` v2, `pydantic-settings`** | Domain schemas, structured output и env settings |
 | API | **`fastapi`, `uvicorn`** | HTTP, health, lifespan и static demo UI |
 | Agent transport | **`ag-ui-langgraph` + SSE** | Переиспользуем интеграцию SuperVisor, если frontend поддерживает AG-UI |
@@ -372,17 +377,24 @@ Git. В CI используется `uv sync --locked`.
 │   └── architecture.md
 ├── data/
 │   └── README.md
-├── src/counterparty_agent/
-│   ├── __init__.py
-│   ├── config.py
-│   ├── models.py
-│   ├── sources.py
-│   ├── analysis.py
-│   ├── graph.py
-│   └── app.py
+├── src/
+│   ├── main.py
+│   └── counterparty_agent/
+│       ├── __init__.py
+│       ├── config.py
+│       ├── models.py
+│       ├── sources.py
+│       ├── analysis.py
+│       ├── graph.py
+│       ├── llm.py
+│       ├── app.py
+│       └── ui/
+│           └── index.html
 └── tests/
     ├── README.md
-    └── test_scaffold.py
+    ├── test_scaffold.py
+    ├── test_app.py
+    └── test_llm.py
 ```
 
 `uv.lock` появится после первого `uv sync` и должен быть закоммичен. Пакет пока
@@ -390,6 +402,8 @@ Git. В CI используется `uv sync --locked`.
 независимые ответственности или нескольким участникам станет трудно работать
 без конфликтов. Предметная логика при этом остаётся в `analysis.py`, доступ к
 данным — в `sources.py`, оркестрация — в `graph.py`, транспорт — в `app.py`.
+Один автономный `ui/index.html` служит кликабельным UX-контрактом до выбора
+полноценного frontend-стека.
 
 ## 12. Что именно взять из SuperVisor
 
@@ -397,7 +411,7 @@ Git. В CI используется `uv sync --locked`.
 
 - `pyproject.toml`, `uv` workflow и `src`-layout;
 - `config.py` с typed settings;
-- одну model factory с настраиваемым `base_url` (на старте в `app.py`);
+- одну model factory с настраиваемым `base_url` в `llm.py`;
 - composition root в `app.py` и возможность подменять model/source/checkpointer;
 - shared `httpx.AsyncClient` на lifespan;
 - FastAPI + AG-UI endpoint над тем же graph;
@@ -426,7 +440,7 @@ Git. В CI используется `uv sync --locked`.
 Settings
 → shared HTTP client
 → JsonCounterpartySource | CsvCounterpartySource | MockSource | future McpSource
-→ OpenAI-compatible chat model
+→ DSLab adapter (`qwen3.7-plus` через OpenAI Chat Completions)
 → domain services
 → checkpointer
 → build_graph(dependencies)

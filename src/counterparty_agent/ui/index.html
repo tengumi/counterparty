@@ -1,0 +1,1009 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Проверка контрагента</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #18191c;
+      --muted: #6f737b;
+      --line: #e4e5e8;
+      --surface: #ffffff;
+      --page: #f5f5f3;
+      --accent: #ef3124;
+      --accent-soft: #fff0ee;
+      --green: #1f9d62;
+      --yellow: #d99500;
+      --red: #dc3d35;
+      --grey: #93969d;
+      --blue-soft: #eef4ff;
+      --radius: 18px;
+      --shadow: 0 14px 40px rgba(25, 26, 30, 0.07);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      margin: 0;
+      background: var(--page);
+      color: var(--ink);
+    }
+
+    button,
+    input { font: inherit; }
+
+    button { cursor: pointer; }
+
+    [hidden] { display: none !important; }
+
+    .topbar {
+      position: sticky;
+      z-index: 10;
+      top: 0;
+      display: flex;
+      min-height: 64px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 12px max(20px, calc((100vw - 1180px) / 2));
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(14px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 800;
+    }
+
+    .brand strong,
+    .brand span { display: block; }
+
+    .brand span {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pill {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: #f1f2f4;
+      color: #555961;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .button {
+      min-height: 38px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--surface);
+      color: var(--ink);
+      font-weight: 650;
+    }
+
+    .button:hover { border-color: #babdc3; }
+
+    .shell {
+      width: min(1180px, calc(100% - 32px));
+      margin: 34px auto 48px;
+    }
+
+    .intro {
+      max-width: 720px;
+      margin-bottom: 22px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 42px);
+      letter-spacing: -0.04em;
+      line-height: 1.06;
+    }
+
+    .intro-copy {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.55;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .search-card {
+      position: relative;
+      margin-bottom: 18px;
+      padding: 12px;
+    }
+
+    .search-form {
+      display: flex;
+      gap: 9px;
+    }
+
+    .search-input {
+      min-width: 0;
+      height: 46px;
+      flex: 1;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      outline: 0;
+      background: #fafafa;
+    }
+
+    .search-input:focus {
+      border-color: #aeb1b8;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(24, 25, 28, 0.06);
+    }
+
+    .search-submit {
+      padding: 0 20px;
+      border: 0;
+      border-radius: 12px;
+      background: var(--ink);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .search-results {
+      position: absolute;
+      z-index: 5;
+      top: calc(100% - 5px);
+      right: 12px;
+      left: 12px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .result-button {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 13px 15px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+      text-align: left;
+    }
+
+    .result-button:last-child { border-bottom: 0; }
+    .result-button:hover { background: #f7f7f7; }
+    .result-button span { color: var(--muted); font-size: 12px; }
+
+    .result-message {
+      margin: 0;
+      padding: 14px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(340px, 0.92fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .report { padding: 24px; }
+
+    .company-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .company-head h2 {
+      margin: 0;
+      font-size: 23px;
+      letter-spacing: -0.025em;
+    }
+
+    .company-meta {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .company-status {
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: #eaf8f1;
+      color: #18794d;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .assessment-grid {
+      display: grid;
+      grid-template-columns: 0.78fr 1.22fr;
+      gap: 12px;
+      margin: 18px 0 22px;
+    }
+
+    .assessment {
+      min-height: 132px;
+      padding: 16px;
+      border-radius: 14px;
+      background: #f7f7f6;
+    }
+
+    .assessment.agent { background: var(--blue-soft); }
+
+    .label {
+      display: block;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .traffic-value {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 17px;
+      font-weight: 750;
+    }
+
+    .traffic-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--grey);
+    }
+
+    .traffic-dot.green { background: var(--green); }
+    .traffic-dot.yellow { background: var(--yellow); }
+    .traffic-dot.red { background: var(--red); }
+    .traffic-dot.grey { background: var(--grey); }
+
+    .assessment p {
+      margin: 9px 0 0;
+      color: #61656d;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .assessment.agent strong {
+      display: block;
+      font-size: 17px;
+      line-height: 1.35;
+    }
+
+    .section-title {
+      margin: 0 0 12px;
+      font-size: 15px;
+    }
+
+    .findings-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .finding {
+      padding: 12px 13px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    .finding summary {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 650;
+      list-style: none;
+    }
+
+    .finding summary::-webkit-details-marker { display: none; }
+
+    .severity {
+      width: 8px;
+      height: 8px;
+      flex: 0 0 8px;
+      margin-top: 5px;
+      border-radius: 50%;
+      background: var(--yellow);
+    }
+
+    .severity.high { background: var(--red); }
+    .severity.info { background: var(--grey); }
+
+    .evidence {
+      margin: 10px 0 0 17px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .evidence code {
+      padding: 2px 5px;
+      border-radius: 5px;
+      background: #f1f2f4;
+      color: #4f535b;
+    }
+
+    .facts-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .fact {
+      padding: 13px;
+      border-radius: 12px;
+      background: #f7f7f6;
+    }
+
+    .fact span,
+    .fact strong,
+    .fact small { display: block; }
+
+    .fact span { color: var(--muted); font-size: 11px; }
+    .fact strong { margin-top: 5px; font-size: 16px; }
+    .fact small { margin-top: 4px; color: var(--muted); font-size: 10px; }
+
+    .data-gap {
+      margin-top: 14px;
+      padding: 12px 13px;
+      border-left: 3px solid var(--yellow);
+      border-radius: 8px;
+      background: #fff8e7;
+      color: #6d5a2c;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .chat {
+      position: sticky;
+      top: 82px;
+      overflow: hidden;
+    }
+
+    .chat-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 17px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .chat-head strong,
+    .chat-head span { display: block; }
+    .chat-head span { margin-top: 3px; color: var(--muted); font-size: 11px; }
+
+    .agent-status {
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: #f1f2f4;
+      color: #5d6169;
+      font-size: 10px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .chat-messages {
+      display: flex;
+      overflow-y: auto;
+      height: 390px;
+      flex-direction: column;
+      gap: 10px;
+      padding: 16px;
+    }
+
+    .message {
+      max-width: 88%;
+      padding: 10px 12px;
+      border-radius: 13px;
+      font-size: 12px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .message.agent {
+      align-self: flex-start;
+      border: 1px solid var(--line);
+      border-bottom-left-radius: 4px;
+      background: #f7f7f6;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+      background: var(--ink);
+      color: #fff;
+    }
+
+    .message-meta {
+      display: block;
+      margin-top: 5px;
+      color: #8b8f96;
+      font-size: 9px;
+    }
+
+    .quick-prompts {
+      display: flex;
+      overflow-x: auto;
+      gap: 6px;
+      padding: 0 16px 11px;
+    }
+
+    .quick-prompts button {
+      min-width: max-content;
+      padding: 7px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: #555961;
+      font-size: 10px;
+    }
+
+    .chat-form {
+      display: flex;
+      gap: 8px;
+      padding: 12px;
+      border-top: 1px solid var(--line);
+    }
+
+    .chat-input {
+      min-width: 0;
+      height: 42px;
+      flex: 1;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      outline: 0;
+    }
+
+    .chat-input:focus { border-color: #aeb1b8; }
+
+    .send-button {
+      width: 42px;
+      border: 0;
+      border-radius: 11px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 750;
+    }
+
+    .send-button:disabled { cursor: wait; opacity: 0.55; }
+
+    .disclaimer {
+      margin: 15px 2px 0;
+      color: #8a8e95;
+      font-size: 10px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 860px) {
+      .workspace { grid-template-columns: 1fr; }
+      .chat { position: static; }
+      .chat-messages { height: 330px; }
+    }
+
+    @media (max-width: 600px) {
+      .topbar { align-items: flex-start; }
+      .brand span,
+      .pill { display: none; }
+      .shell { width: min(100% - 20px, 1180px); margin-top: 24px; }
+      .search-form { flex-direction: column; }
+      .search-submit { height: 44px; }
+      .report { padding: 18px; }
+      .company-head,
+      .assessment-grid { grid-template-columns: 1fr; }
+      .company-head { display: grid; }
+      .company-status { width: max-content; }
+      .facts-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">A</div>
+      <div>
+        <strong>Проверка контрагента</strong>
+        <span>ИИ-помощник по данным отчёта</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span class="pill">Сессия · <span id="sessionId"></span></span>
+      <button class="button" id="newSessionButton" type="button">Новая сессия</button>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="intro">
+      <p class="eyebrow">Синтетические данные</p>
+      <h1>Проверка без длинного отчёта</h1>
+      <p class="intro-copy">
+        Найдите компанию по ИНН, ОГРН или названию. Агент покажет существенные факты,
+        пробелы в данных и ответит на уточняющие вопросы.
+      </p>
+    </section>
+
+    <section class="card search-card">
+      <form class="search-form" id="searchForm">
+        <input
+          class="search-input"
+          id="companySearch"
+          type="search"
+          placeholder="ИНН, ОГРН или название"
+          autocomplete="off"
+          aria-label="Поиск контрагента"
+        >
+        <button class="search-submit" type="submit">Найти</button>
+      </form>
+      <div class="search-results" id="searchResults" hidden></div>
+    </section>
+
+    <div class="workspace">
+      <article class="card report" id="reportView">
+        <div class="company-head">
+          <div>
+            <h2 id="companyName"></h2>
+            <p class="company-meta" id="companyMeta"></p>
+          </div>
+          <span class="company-status" id="companyStatus"></span>
+        </div>
+
+        <div class="assessment-grid">
+          <section class="assessment">
+            <span class="label">Светофор банка</span>
+            <div class="traffic-value">
+              <i class="traffic-dot" id="trafficDot"></i>
+              <span id="trafficLabel"></span>
+            </div>
+            <p>Внешняя оценка закрытой методологии. Агент не объясняет причины цвета.</p>
+          </section>
+          <section class="assessment agent">
+            <span class="label">Что видно в отчёте</span>
+            <strong id="agentSummary"></strong>
+            <p>Это наблюдение по доступным данным, а не гарантия сделки.</p>
+          </section>
+        </div>
+
+        <h3 class="section-title">Ключевые факты</h3>
+        <div class="findings-list" id="findingsList"></div>
+        <div class="facts-grid" id="factsGrid"></div>
+        <div class="data-gap" id="dataGap"></div>
+      </article>
+
+      <aside class="card chat">
+        <div class="chat-head">
+          <div>
+            <strong>Помощник</strong>
+            <span id="chatContext">Текущий контрагент</span>
+          </div>
+          <div class="agent-status" id="agentStatus" aria-live="polite">Проверяем API</div>
+        </div>
+        <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
+        <div class="quick-prompts">
+          <button type="button" data-question="Почему требуется внимание?">Почему внимание?</button>
+          <button type="button" data-question="Какие документы запросить до договора?">Что запросить?</button>
+          <button type="button" data-question="Что известно о судах и взысканиях?">Суды и взыскания</button>
+        </div>
+        <form class="chat-form" id="chatForm">
+          <input
+            class="chat-input"
+            id="chatInput"
+            maxlength="2000"
+            placeholder="Задайте вопрос по отчёту"
+            aria-label="Вопрос агенту"
+          >
+          <button class="send-button" id="sendButton" type="submit" aria-label="Отправить">↑</button>
+        </form>
+      </aside>
+    </div>
+
+    <p class="disclaimer">
+      Демо не является юридическим или финансовым заключением. Отсутствие сведений
+      в отчёте не означает отсутствие риска.
+    </p>
+  </main>
+
+  <script>
+    const companies = {
+      north: {
+        id: "north",
+        name: "ООО «Северный Контур»",
+        inn: "7701234567",
+        ogrn: "1237700000001",
+        region: "Москва",
+        status: "Действует",
+        reportDate: "02.09.2026",
+        traffic: { code: "YELLOW", label: "Требует внимания", style: "yellow" },
+        summary: "Есть факторы, которые стоит проверить до аванса",
+        findings: [
+          { level: "warning", text: "Выручка снизилась за последний отчётный год", evidence: "demo:finance:2025" },
+          { level: "high", text: "Найдено одно активное исполнительное производство", evidence: "demo:enforcement:active" },
+          { level: "info", text: "Компания выступала ответчиком в арбитражных делах", evidence: "demo:arbitration:defendant" }
+        ],
+        facts: [
+          { label: "Выручка", value: "124 млн ₽", note: "−12% год к году" },
+          { label: "Суды", value: "3 дела", note: "4,8 млн ₽" },
+          { label: "Взыскания", value: "1 активное", note: "620 тыс. ₽" }
+        ],
+        gaps: "Не хватает актуальных сведений о лицензиях и параметров конкретной сделки.",
+        nextSteps: ["Запросить справку об исполнении обязательств", "Ограничить размер аванса"]
+      },
+      vector: {
+        id: "vector",
+        name: "ООО «Вектор Поставка»",
+        inn: "7802345678",
+        ogrn: "1237800000002",
+        region: "Санкт-Петербург",
+        status: "Действует",
+        reportDate: "01.09.2026",
+        traffic: { code: "GREEN", label: "Надёжный", style: "green" },
+        summary: "Критические сигналы в доступных данных не обнаружены",
+        findings: [
+          { level: "info", text: "Финансовый результат положительный", evidence: "demo:finance:profit" },
+          { level: "info", text: "Активные исполнительные производства не указаны", evidence: "demo:enforcement:coverage" }
+        ],
+        facts: [
+          { label: "Выручка", value: "208 млн ₽", note: "+9% год к году" },
+          { label: "Суды", value: "1 дело", note: "завершено" },
+          { label: "Взыскания", value: "Не указаны", note: "проверить покрытие" }
+        ],
+        gaps: "Нет параметров сделки; зелёный сигнал не является гарантией исполнения.",
+        nextSteps: ["Сверить полномочия подписанта", "Проверить условия оплаты"]
+      },
+      horizon: {
+        id: "horizon",
+        name: "ООО «Горизонт Сервис»",
+        inn: "5403456789",
+        ogrn: "1235400000003",
+        region: "Новосибирск",
+        status: "Действует",
+        reportDate: "30.08.2026",
+        traffic: { code: "GREY", label: "Нет данных", style: "grey" },
+        summary: "Для уверенного вывода недостаточно сведений",
+        findings: [
+          { level: "warning", text: "Финансовая отчётность заполнена частично", evidence: "demo:finance:data-gap" },
+          { level: "info", text: "Банковская оценка отсутствует", evidence: "demo:zsk:null" }
+        ],
+        facts: [
+          { label: "Выручка", value: "Нет данных", note: "последний период" },
+          { label: "Суды", value: "Не указаны", note: "покрытие неизвестно" },
+          { label: "Взыскания", value: "Не указаны", note: "покрытие неизвестно" }
+        ],
+        gaps: "Нужны финансовая отчётность, сведения о судах и подтверждение лицензий.",
+        nextSteps: ["Запросить бухгалтерскую отчётность", "Провести повторную проверку реестров"]
+      }
+    };
+
+    const state = {
+      currentId: "north",
+      sessionId: createSessionId(),
+      rememberedIds: new Set(["north"]),
+      pending: false
+    };
+
+    const byId = (id) => document.getElementById(id);
+
+    function createSessionId() {
+      if (globalThis.crypto?.randomUUID) {
+        return globalThis.crypto.randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase();
+      }
+      return `${Date.now()}${Math.random()}`.replaceAll(".", "").slice(-12);
+    }
+
+    function normalize(value) {
+      return value.toLocaleLowerCase("ru").replace(/[«»"']/g, "").replace(/\s+/g, " ").trim();
+    }
+
+    function currentCompany() {
+      return companies[state.currentId];
+    }
+
+    function renderReport() {
+      const company = currentCompany();
+      byId("companyName").textContent = company.name;
+      byId("companyMeta").textContent = `ИНН ${company.inn} · ОГРН ${company.ogrn} · ${company.region} · отчёт ${company.reportDate}`;
+      byId("companyStatus").textContent = company.status;
+      byId("trafficDot").className = `traffic-dot ${company.traffic.style}`;
+      byId("trafficLabel").textContent = company.traffic.label;
+      byId("agentSummary").textContent = company.summary;
+      byId("chatContext").textContent = company.name;
+
+      const findings = company.findings.map((finding) => {
+        const details = document.createElement("details");
+        details.className = "finding";
+
+        const summary = document.createElement("summary");
+        const dot = document.createElement("i");
+        dot.className = `severity ${finding.level === "warning" ? "" : finding.level}`;
+        const statement = document.createElement("span");
+        statement.textContent = finding.text;
+        summary.append(dot, statement);
+
+        const evidence = document.createElement("p");
+        evidence.className = "evidence";
+        evidence.append("Источник: ");
+        const code = document.createElement("code");
+        code.textContent = finding.evidence;
+        evidence.append(code, ` · актуально на ${company.reportDate}`);
+        details.append(summary, evidence);
+        return details;
+      });
+      byId("findingsList").replaceChildren(...findings);
+
+      const facts = company.facts.map((fact) => {
+        const item = document.createElement("div");
+        item.className = "fact";
+        const label = document.createElement("span");
+        label.textContent = fact.label;
+        const value = document.createElement("strong");
+        value.textContent = fact.value;
+        const note = document.createElement("small");
+        note.textContent = fact.note;
+        item.append(label, value, note);
+        return item;
+      });
+      byId("factsGrid").replaceChildren(...facts);
+      byId("dataGap").textContent = `Пробелы в данных: ${company.gaps}`;
+    }
+
+    function renderSearchResults(matches, message = "") {
+      const container = byId("searchResults");
+      container.replaceChildren();
+      if (message) {
+        const note = document.createElement("p");
+        note.className = "result-message";
+        note.textContent = message;
+        container.append(note);
+      } else {
+        matches.forEach((company) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "result-button";
+          button.dataset.companyId = company.id;
+          const name = document.createElement("strong");
+          name.textContent = company.name;
+          const meta = document.createElement("span");
+          meta.textContent = `ИНН ${company.inn} · ${company.region}`;
+          button.append(name, meta);
+          container.append(button);
+        });
+      }
+      container.hidden = false;
+    }
+
+    function searchCompanies(query) {
+      const value = normalize(query);
+      if (!value) {
+        renderSearchResults([], "Введите ИНН, ОГРН или часть названия.");
+        return;
+      }
+      const matches = Object.values(companies).filter((company) => {
+        const haystack = normalize(`${company.name} ${company.inn} ${company.ogrn}`);
+        return haystack.includes(value);
+      });
+      if (matches.length === 1) {
+        selectCompany(matches[0].id);
+        return;
+      }
+      renderSearchResults(matches, matches.length ? "" : "Компания не найдена в demo-базе.");
+    }
+
+    function selectCompany(companyId) {
+      if (!companies[companyId]) return;
+      state.currentId = companyId;
+      state.rememberedIds.add(companyId);
+      byId("searchResults").hidden = true;
+      byId("companySearch").value = "";
+      renderReport();
+      addMessage("agent", `Переключились на ${currentCompany().name}. Что хотите уточнить?`, "Контекст сессии");
+    }
+
+    function apiContext() {
+      const company = currentCompany();
+      return {
+        synthetic_demo_data: true,
+        current_company: {
+          company_id: company.id,
+          company_name: company.name,
+          inn: company.inn,
+          ogrn: company.ogrn,
+          status: company.status,
+          report_date: company.reportDate,
+          bank_signal: {
+            code: company.traffic.code,
+            label: company.traffic.label,
+            methodology_disclosed: false
+          },
+          findings: company.findings.map((finding) => ({
+            statement: finding.text,
+            evidence_id: finding.evidence
+          })),
+          metrics: company.facts,
+          data_gaps: company.gaps,
+          suggested_checks: company.nextSteps
+        },
+        company_ids_in_current_session: [...state.rememberedIds]
+      };
+    }
+
+    function addMessage(role, text, meta) {
+      const message = document.createElement("div");
+      message.className = `message ${role}`;
+      const content = document.createElement("span");
+      content.textContent = text;
+      const caption = document.createElement("span");
+      caption.className = "message-meta";
+      caption.textContent = meta || (role === "user" ? "Вы" : "Агент · данные отчёта");
+      message.append(content, caption);
+      byId("chatMessages").append(message);
+      byId("chatMessages").scrollTop = byId("chatMessages").scrollHeight;
+      return message;
+    }
+
+    function demoReply(question) {
+      const company = currentCompany();
+      const value = normalize(question);
+      if (value.includes("документ") || value.includes("запрос") || value.includes("договор")) {
+        return `До договора: 1) ${company.nextSteps[0]}; 2) ${company.nextSteps[1]}. Это demo-рекомендация по доступным фактам.`;
+      }
+      if (value.includes("суд") || value.includes("взыск") || value.includes("производ")) {
+        return `${company.facts[1].label}: ${company.facts[1].value}; ${company.facts[2].label.toLocaleLowerCase("ru")}: ${company.facts[2].value}. Разверните факты слева, чтобы увидеть evidence_id.`;
+      }
+      if (value.includes("светофор") || value.includes("цвет")) {
+        return `Банковский сигнал — «${company.traffic.label}». Методология закрыта, поэтому агент не объясняет причины этого цвета.`;
+      }
+      return `${company.summary}. Основные основания перечислены в карточке слева; отсутствующие сведения не считаются положительным признаком.`;
+    }
+
+    async function requestAnswer(question) {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: state.sessionId,
+          question,
+          context: apiContext()
+        })
+      });
+      if (!response.ok) throw new Error(`chat failed: ${response.status}`);
+      return response.json();
+    }
+
+    function setPending(pending) {
+      state.pending = pending;
+      byId("sendButton").disabled = pending;
+      byId("chatInput").disabled = pending;
+    }
+
+    async function askAgent(question) {
+      const cleaned = question.trim();
+      if (!cleaned || state.pending) return;
+      addMessage("user", cleaned);
+      const loading = addMessage("agent", "Анализирую доступные данные…", "Ожидание");
+      setPending(true);
+      try {
+        const result = await requestAnswer(cleaned);
+        loading.remove();
+        addMessage("agent", result.answer, `${result.model} · DSLab`);
+        byId("agentStatus").textContent = "Qwen доступен";
+      } catch {
+        loading.remove();
+        addMessage("agent", demoReply(cleaned), "Демо-ответ · API недоступен");
+        byId("agentStatus").textContent = "Демо-режим";
+      } finally {
+        setPending(false);
+        byId("chatInput").focus();
+      }
+    }
+
+    async function checkBackend() {
+      try {
+        const response = await fetch("/api/health");
+        if (!response.ok) throw new Error("health failed");
+        const health = await response.json();
+        byId("agentStatus").textContent = health.llm_configured ? "Ключ настроен" : "Демо · нужен ключ";
+      } catch {
+        byId("agentStatus").textContent = "Демо-режим";
+      }
+    }
+
+    function resetSession() {
+      const previousId = state.sessionId;
+      fetch(`/api/sessions/${encodeURIComponent(previousId)}`, { method: "DELETE" }).catch(() => {});
+      state.sessionId = createSessionId();
+      state.currentId = "north";
+      state.rememberedIds = new Set(["north"]);
+      byId("sessionId").textContent = state.sessionId.slice(0, 6);
+      byId("chatMessages").replaceChildren();
+      renderReport();
+      addMessage("agent", "Новая сессия начата. Найдите компанию или задайте вопрос по текущему demo-отчёту.");
+    }
+
+    byId("searchForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      searchCompanies(byId("companySearch").value);
+    });
+
+    byId("searchResults").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-company-id]");
+      if (button) selectCompany(button.dataset.companyId);
+    });
+
+    byId("chatForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const input = byId("chatInput");
+      const question = input.value;
+      input.value = "";
+      askAgent(question);
+    });
+
+    document.querySelectorAll("[data-question]").forEach((button) => {
+      button.addEventListener("click", () => askAgent(button.dataset.question));
+    });
+
+    byId("newSessionButton").addEventListener("click", resetSession);
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".search-card")) byId("searchResults").hidden = true;
+    });
+
+    byId("sessionId").textContent = state.sessionId.slice(0, 6);
+    renderReport();
+    addMessage("agent", "Выбрала demo-компанию. Спросите о ключевых рисках, документах или судах.");
+    checkBackend();
+  </script>
+</body>
+</html>

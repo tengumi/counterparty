@@ -12,12 +12,17 @@ dependencies = [
     "langchain-openai>=1.4.3",
     "langgraph>=1.2.11",
     "langgraph-checkpoint-sqlite",
+    "openai>=2,<3",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.15.0",
     "pyyaml>=6.0.3",
     "rapidfuzz",
     "uvicorn>=0.52.1",
 ]
+
+[project.scripts]
+counterparty-api = "counterparty_agent.app:run"
+counterparty-llm-check = "counterparty_agent.llm:main"
 
 [dependency-groups]
 dev = [
@@ -35,6 +40,7 @@ build-backend = "uv_build"
 [tool.pytest.ini_options]
 addopts = "-q"
 asyncio_mode = "auto"
+pythonpath = ["src"]
 testpaths = ["tests"]
 
 [tool.ruff]
@@ -48,4 +54,3 @@ select = ["B", "E", "F", "I", "UP"]
 python_version = "3.12"
 strict = true
 packages = ["counterparty_agent"]
-

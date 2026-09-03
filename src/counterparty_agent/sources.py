@@ -1,11 +1,11 @@
-"""Input adapters and the counterparty repository boundary.
+"""Адаптеры входных данных и граница репозитория контрагентов.
 
-TODO:
-- определить read-only CounterpartySource protocol;
-- сделать JSON основным adapter и распаковать $date/$numberLong;
-- добавить CSV unflatten adapter как fallback;
-- нормализовать schema aliases, включая cofounders[].isActive/active;
+Что осталось сделать:
+- определить протокол CounterpartySource только для чтения;
+- сделать JSON основным адаптером и распаковать $date/$numberLong;
+- добавить восстановление вложенной структуры CSV как резервный адаптер;
+- нормализовать псевдонимы полей схемы, включая cofounders[].isActive/active;
 - собрать индексы по ИНН, ОГРН, нормализованному названию и ОКВЭД;
 - возвращать success/empty/partial/unavailable/denied/invalid;
-- не логировать raw snapshots и PII.
+- не логировать исходные снимки и персональные данные.
 """

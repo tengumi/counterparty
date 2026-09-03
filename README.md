@@ -5,8 +5,9 @@
 показывает пробелы в данных и отвечает на уточняющие вопросы в рамках одной
 сессии.
 
-> Сейчас это только компактный scaffold: структура, зависимости и TODO. Агент
-> ещё не реализован и приложение пока не запускается.
+> Сейчас реализованы интерактивный демоинтерфейс и безопасное подключение
+> Qwen3.7 Plus. Загрузка реальных снимков, аналитические правила и граф
+> выполнения LangGraph пока остаются в плане работ.
 
 ## Основные решения
 
@@ -83,7 +84,7 @@ DOCX-контракт и реальные snapshots местами расход�
 |---|---|
 | Управление проектом | `uv`, `uv_build`, Python 3.12 |
 | Workflow и память | `langgraph`, SQLite checkpointer |
-| LLM | `langchain-core`, `langchain-openai`, OpenAI-compatible Qwen/GPT-OSS |
+| LLM | официальный `openai` SDK → DSLab Qwen3.7 Plus; LangChain для будущего graph |
 | Контракты | Pydantic v2, `pydantic-settings` |
 | API и streaming | FastAPI, Uvicorn, AG-UI/SSE |
 | Источники | стандартный JSON/CSV, `httpx` для будущих API |
@@ -93,49 +94,63 @@ DOCX-контракт и реальные snapshots местами расход�
 В MVP не нужны vector DB, embeddings, RAG, Redis, брокер задач, `Deep Agents`
 и отдельный LLM на каждый раздел.
 
-## Карта репозитория и TODO
+## Карта репозитория и план работ
 
 ```text
 .
 ├── README.md                         краткое соглашение команды и порядок работ
-├── AGENTS.md                         правила работы coding-агентов
+├── AGENTS.md                         правила работы ИИ-агентов
 ├── CONTEXT_PACK.md                   продуктовый контекст и открытые вопросы
 ├── pyproject.toml                    зависимости, Python и настройки инструментов
 ├── .python-version                   единая версия Python для uv
 ├── .env.example                      только безопасные имена настроек
-├── .gitignore                        исключает секреты, raw-данные и кэши
+├── .gitignore                        исключает секреты, исходные данные и кэши
 ├── data/                              локальные входные данные, не в Git
-│   └── README.md                     правила локального хранения snapshots
+│   └── README.md                     правила локального хранения снимков
 ├── docs/                              устойчивые командные решения
 │   └── architecture.md               подробное ADR и путь роста
-├── src/counterparty_agent/            устанавливаемый Python-пакет
-│   ├── __init__.py                   граница Python-пакета
-│   ├── config.py                     typed settings
-│   ├── models.py                     канонические модели и evidence
-│   ├── sources.py                    JSON/CSV repository и индексы
-│   ├── analysis.py                   правила, сравнение и grounding
-│   ├── graph.py                      состояние и маршруты LangGraph
-│   └── app.py                        FastAPI, AG-UI и lifecycle
+├── src/
+│   ├── main.py                       единая точка локального запуска
+│   └── counterparty_agent/           устанавливаемый Python-пакет
+│       ├── __init__.py               граница Python-пакета
+│       ├── config.py                 типизированные настройки
+│       ├── models.py                 канонические модели и доказательства
+│       ├── sources.py                репозиторий JSON/CSV и индексы
+│       ├── analysis.py               правила, сравнение и привязка к доказательствам
+│       ├── graph.py                  состояние и маршруты LangGraph
+│       ├── llm.py                    безопасный адаптер DSLab/Qwen
+│       ├── app.py                    FastAPI, API и жизненный цикл
+│       └── ui/
+│           └── index.html            лаконичный интерактивный макет интерфейса
 └── tests/                              проверки контрактов и поведения
-    ├── README.md                     минимальный план unit/integration/evals
-    └── test_scaffold.py              проверка, что каркас импортируется
+    ├── README.md                     минимальный план модульных и интеграционных проверок
+    ├── test_scaffold.py              импорт и основные UI-сценарии
+    ├── test_app.py                   дымовые тесты HTTP API без сети
+    └── test_llm.py                   адаптер DSLab без сетевых вызовов
 ```
 
-TODO по файлам:
+Что осталось сделать по файлам:
 
-- `config.py` — описать env-настройки модели, источника, API и session DB.
+- `config.py` — настройки DSLab и сервера готовы; добавить валидацию путей к
+  снимкам при реализации загрузки данных.
 - `models.py` — начать с `CounterpartySnapshot`, `BankTrafficLight`, `Evidence`,
   `Finding`, `QueryPlan` и `SessionState`.
-- `sources.py` — реализовать `CounterpartySource`, JSON decoder, CSV fallback и
+- `sources.py` — реализовать `CounterpartySource`, декодер JSON, резервный
+  CSV-адаптер и
   индексы по ИНН/ОГРН/названию/ОКВЭД.
-- `analysis.py` — реализовать детерминированные risk rules, data quality,
-  cohort/ranking и проверку `evidence_id`.
+- `analysis.py` — реализовать детерминированные правила риска, оценку качества
+  данных, группировку, ранжирование и проверку `evidence_id`.
 - `graph.py` — собрать ветки `lookup`, `compare`, `similar`, `follow_up` и
-  подключить SQLite checkpointer.
-- `app.py` — собрать зависимости в одном месте и опубликовать graph через
-  FastAPI/AG-UI.
-- `tests/` — smoke-тест уже есть; дальше проверить идентификаторы, оба формата
-  данных, светофор, grounding и изоляцию сессий.
+  подключить механизм контрольных точек SQLite.
+- `llm.py` — подключение Qwen готово; далее передавать только канонический
+  контекст доказательств из графа.
+- `app.py` — `/api/chat`, проверка состояния, интерфейс и временная память
+  сессии готовы; далее заменить память на механизм контрольных точек LangGraph
+  и добавить потоковую выдачу AG-UI.
+- `ui/index.html` — чат подключён к `/api/chat`, при недоступной серверной части
+  остаётся демонстрационный режим; далее заменить синтетические данные реальным API.
+- `tests/` — дымовой тест уже есть; дальше проверить идентификаторы, оба формата
+  данных, светофор, привязку к доказательствам и изоляцию сессий.
 
 Когда любой модуль станет неудобно большим, его можно разнести на подпакет по
 целевой структуре из `docs/architecture.md`. До этого дополнительные уровни не
@@ -149,13 +164,49 @@ TODO по файлам:
 - **API/frontend:** `app.py`, AG-UI, виджеты и streaming.
 - **QA:** тестовые вопросы, expected evidence и сценарии отказа.
 
+## DSLab Qwen3.7 Plus
+
+Интеграция использует OpenAI-compatible Chat Completions:
+
+- `base_url`: `https://api.dslab.tech/v1`;
+- модель: `qwen3.7-plus`;
+- ключ: только `COUNTERPARTY_LLM_API_KEY` в локальном `.env`;
+- reasoning по умолчанию отключён для снижения стоимости и задержки.
+
+```bash
+cp .env.example .env
+# Впишите COUNTERPARTY_LLM_API_KEY в .env
+uv sync
+uv run --no-editable counterparty-llm-check  # необязательный минимальный платный запрос
+uv run python src/main.py
+```
+
+Откройте `http://127.0.0.1:8000`. Проверить конфигурацию без вызова модели можно
+через `http://127.0.0.1:8000/api/health`. Ключ не попадает в браузер, prompt,
+логи или Git.
+
+## Предварительный UI
+
+[`src/counterparty_agent/ui/index.html`](src/counterparty_agent/ui/index.html)
+— автономный кликабельный прототип на синтетических данных. В нём работают
+поиск по названию/ИНН/ОГРН, краткая карточка компании, банковский светофор,
+ключевые факты с `evidence_id`, чат через Qwen и сброс памяти сессии.
+
+```bash
+# Только статический режим без серверной части и языковой модели:
+uv run python -m http.server 8000 --directory src/counterparty_agent/ui
+```
+
+Если API или ключ недоступны, интерфейс автоматически показывает заранее
+подготовленные демонстрационные ответы и явно помечает их как демонстрационные.
+
 ## Первый запуск после установки uv
 
 ```bash
 uv sync
 uv run pytest
+uv run ruff check .
 ```
 
-Первый `uv sync` создаст `uv.lock`; его нужно проверить и закоммитить. После
-реализации `app.py` команда запуска будет добавлена сюда. Lock-файл вручную не
-редактируется.
+Первый `uv sync` создаст `uv.lock`; его нужно проверить и закоммитить. Lock-файл
+вручную не редактируется.
