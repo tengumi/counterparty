@@ -1,0 +1,628 @@
+.comparison-toolbar,
+.filter-row,
+.table-footer {
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.comparison-toolbar {
+  flex-wrap: wrap;
+}
+.toggle-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  font-size: 14px;
+}
+.toggle-options label,
+.shortlist-check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
+input[type="checkbox"] {
+  accent-color: #df343c;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+}
+.filter-row {
+  padding-top: 0;
+}
+.filter-row input,
+.filter-row select {
+  background: #fafbfc;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+.filter-row input {
+  flex: 1;
+}
+.table-scroll {
+  overflow: auto;
+  max-height: 65vh;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.table-scroll table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  font-size: 14px;
+}
+.table-scroll th,
+.table-scroll td {
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 14px 16px;
+  text-align: left;
+  vertical-align: top;
+  min-width: 220px;
+  max-width: 280px;
+  font-weight: 400;
+}
+.table-scroll thead th {
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.table-scroll th:first-child {
+  position: sticky;
+  left: 0;
+  min-width: 180px;
+  max-width: 200px;
+  background: #fafbfc;
+  z-index: 1;
+}
+.table-scroll thead th:first-child {
+  z-index: 3;
+}
+.table-scroll th:last-child,
+.table-scroll td:last-child {
+  border-right: 0;
+}
+.table-scroll tr:last-child td,
+.table-scroll tr:last-child th {
+  border-bottom: 0;
+}
+.table-scroll th > p {
+  margin-top: 10px;
+}
+.company-column-top {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.company-number {
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  background: #f0f1f3;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--muted);
+}
+.shortlist-check {
+  font-size: 14px;
+  color: var(--muted);
+}
+.company-link {
+  font-size: 14px;
+  text-align: left;
+  font-weight: 650;
+  padding: 0;
+  border: 0;
+  background: none;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.company-link:hover {
+  color: #bd2630;
+}
+.company-link + p {
+  margin: 5px 0 12px !important;
+}
+.bank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0f1f3;
+  color: #656a73;
+  padding: 4px 7px;
+  font-size: 14px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+.bank-badge i {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  border-radius: 50%;
+}
+.bank-badge.green {
+  background: #eaf5ee;
+  color: #347b50;
+}
+.bank-badge.yellow {
+  background: #fff3d9;
+  color: #976d13;
+}
+.bank-badge.red {
+  background: #feeeed;
+  color: #c44749;
+}
+.row-note {
+  display: block;
+  color: #92959b;
+  font-size: 14px;
+  line-height: 1.4;
+  margin-top: 5px;
+}
+.cell-button {
+  border: 0;
+  padding: 0;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  background: none;
+  width: 100%;
+  overflow-wrap: anywhere;
+}
+.cell-button.limited {
+  color: #8b744a;
+}
+.source-arrow {
+  opacity: 0;
+  color: #8c939f;
+  margin-left: 5px;
+}
+.cell-button:hover .source-arrow,
+.cell-button:focus-visible .source-arrow {
+  opacity: 1;
+}
+.table-footer {
+  padding: 12px 20px;
+}
+.limits {
+  padding: 12px 20px 18px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.comparison-scope {
+  padding: 0 20px 12px;
+}
+.limits summary {
+  cursor: pointer;
+}
+.limits li {
+  margin: 8px 0;
+}
+.report {
+  padding: 24px;
+}
+.report-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.report-heading h2 {
+  margin: 8px 0;
+  max-width: 700px;
+  overflow-wrap: anywhere;
+}
+.report-tabs {
+  display: flex;
+  overflow-x: auto;
+  margin: 24px 0 0;
+  border-bottom: 1px solid var(--line);
+  gap: 20px;
+}
+.report-tabs button {
+  padding: 10px 0;
+  white-space: nowrap;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-size: 14px;
+}
+.report-tabs button.active {
+  color: #292b30;
+  border-color: #e43640;
+}
+.finding-item {
+  display: flex;
+  gap: 12px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+.finding-item:last-child {
+  border: 0;
+}
+.finding-item p {
+  font-size: 14px;
+  margin: 5px 0 8px;
+}
+.finding-marker {
+  flex-shrink: 0;
+  margin-top: 3px;
+  display: grid;
+  place-items: center;
+  background: #f1f2f4;
+  color: #9499a3;
+  width: 23px;
+  height: 23px;
+  border-radius: 6px;
+}
+.finding-marker[data-attention="true"] {
+  background: #fff0cf;
+  color: #a67f22;
+}
+
+/* Краткое сравнение и раскрывающиеся разделы используют стиль карточки. */
+.comparison-dossier {
+  --report-ink: #26354a;
+  --report-muted: #657185;
+  --report-line: #e6eaf0;
+  padding: 28px;
+  color: var(--report-ink);
+  min-width: 0;
+}
+.comparison-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--report-line);
+}
+.comparison-heading .eyebrow {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--report-muted);
+}
+.comparison-heading h2 {
+  margin: 6px 0 8px;
+  font-size: 25px;
+  letter-spacing: -0.6px;
+}
+.comparison-heading p {
+  font-size: 14px;
+  color: var(--report-muted);
+}
+.comparison-heading p span {
+  margin: 0 9px;
+}
+.comparison-heading .period-chip {
+  margin-top: 8px;
+}
+.comparison-filters {
+  padding: 18px 0 15px;
+}
+.comparison-dossier .filter-row {
+  padding: 0;
+  gap: 10px;
+}
+.comparison-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 11px;
+  min-width: 0;
+  flex: 1;
+  background: #f8fafd;
+  border: 1px solid #e3e8ef;
+  border-radius: 8px;
+  color: var(--report-muted);
+}
+.comparison-search svg {
+  flex: 0 0 17px;
+}
+.comparison-dossier .comparison-search input {
+  border: 0;
+  background: none;
+  padding: 9px 0;
+  width: 100%;
+  min-width: 0;
+  color: var(--report-ink);
+}
+.comparison-dossier .filter-row select {
+  background: white;
+  padding: 9px 10px;
+  max-width: 100%;
+}
+.comparison-dossier .comparison-toolbar {
+  padding: 12px 0 0;
+  gap: 8px;
+}
+.comparison-scroll-hint {
+  color: var(--report-muted);
+  font-size: 12px;
+}
+.comparison-matrix {
+  border: 1px solid var(--report-line);
+  border-radius: 11px;
+  max-height: none;
+}
+.comparison-matrix table {
+  font-size: 14px;
+}
+.comparison-matrix th,
+.comparison-matrix td {
+  padding: 14px;
+  min-width: 195px;
+  max-width: 250px;
+  border-color: var(--report-line);
+}
+.comparison-matrix th:first-child {
+  min-width: 155px;
+  max-width: 175px;
+  background: #f8fafd;
+}
+.comparison-matrix thead th {
+  background: #fff;
+}
+.comparison-matrix thead th:first-child {
+  background: #f8fafd;
+}
+.comparison-matrix thead .eyebrow {
+  color: var(--report-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+.comparison-matrix thead th > p {
+  color: var(--report-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.comparison-matrix tbody th {
+  color: #45546b;
+  font-weight: 500;
+  font-size: 14px;
+}
+.comparison-matrix tbody tr:hover td {
+  background: #fbfcfe;
+}
+.comparison-matrix .company-column-top {
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.comparison-matrix .company-number {
+  background: #edf2f9;
+  color: #607795;
+  flex-shrink: 0;
+}
+.comparison-matrix .company-link {
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--report-ink);
+}
+.comparison-matrix .company-link:hover {
+  color: #315c9e;
+  text-decoration: underline;
+}
+.comparison-matrix .comparison-inn {
+  margin: 6px 0 12px !important;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.comparison-bank-source {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+.comparison-bank-source > span:last-child:not(.bank-badge) {
+  font-size: 12px;
+  color: var(--report-muted);
+}
+.comparison-matrix .bank-badge {
+  white-space: normal;
+  font-size: 14px;
+}
+.comparison-matrix .comparison-report-date {
+  font-size: 12px;
+  margin-top: 10px;
+}
+.comparison-matrix .row-note {
+  font-size: 12px;
+  color: var(--report-muted);
+  font-weight: 400;
+}
+.comparison-matrix .row-note summary {
+  cursor: pointer;
+}
+.comparison-matrix .cell-button {
+  position: relative;
+  padding-right: 10px;
+  color: var(--report-ink);
+}
+.comparison-matrix .cell-button.limited {
+  color: #77654b;
+}
+.comparison-matrix .cell-button:hover .comparison-cell-value {
+  color: #315c9e;
+}
+.comparison-matrix .source-arrow {
+  position: absolute;
+  right: -3px;
+  top: 0;
+  opacity: 0.6;
+  margin: 0;
+  font-size: 12px;
+}
+.comparison-cell-value {
+  display: block;
+}
+.comparison-matrix--compact tr[data-financial="true"] .comparison-cell-value {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.35px;
+  color: #263b59;
+  font-variant-numeric: tabular-nums;
+}
+.comparison-matrix--compact
+  tr[data-financial="true"]
+  .comparison-cell-value[data-negative="true"] {
+  color: #b0434b;
+}
+.comparison-record-count {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-size: 20px;
+  font-weight: 600;
+}
+.comparison-record-count small {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--report-muted);
+}
+.comparison-cell-preview {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--report-muted);
+  margin-top: 5px;
+}
+.comparison-dossier .table-footer {
+  padding: 13px 0;
+  font-size: 12px;
+  color: var(--report-muted);
+  flex-wrap: wrap;
+}
+.comparison-money-note {
+  font-size: 12px;
+  color: var(--report-muted);
+  line-height: 1.6;
+}
+.comparison-dossier .dossier-details-heading {
+  margin-top: 27px;
+}
+.comparison-dossier .dossier-section-title strong {
+  font-size: 15px;
+}
+.comparison-detail-section .comparison-matrix {
+  border: 0;
+  border-top: 1px solid var(--report-line);
+  border-radius: 0;
+}
+.comparison-detail-section .company-column-top {
+  margin-bottom: 6px;
+}
+.comparison-detail-section .company-link {
+  font-size: 14px;
+}
+.comparison-detail-section .comparison-inn {
+  margin-bottom: 0 !important;
+}
+.comparison-dossier .comparison-scope {
+  padding: 15px 0 0;
+  font-size: 12px;
+  color: var(--report-muted);
+  line-height: 1.6;
+}
+.comparison-dossier .limits {
+  padding: 15px 0 0;
+  font-size: 14px;
+}
+.comparison-dossier .comparison-overview {
+  padding: 18px;
+  border: 0;
+  background: #fbfcfe;
+}
+.comparison-dossier .comparison-overview .visual-heading h2 {
+  display: none;
+}
+.comparison-dossier .comparison-overview .overview-grid {
+  grid-template-columns: 1fr;
+}
+.comparison-dossier .notice {
+  margin: 12px 0;
+}
+.comparison-dossier .blank-state .dossier-expand {
+  margin-top: 15px;
+}
+@media (max-width: 600px) {
+  .comparison-dossier {
+    padding: 16px;
+  }
+  .comparison-heading h2 {
+    font-size: 23px;
+  }
+  .comparison-dossier .filter-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .comparison-dossier .comparison-search {
+    width: 100%;
+  }
+  .comparison-dossier .comparison-toolbar {
+    padding-top: 12px;
+  }
+  .comparison-dossier .comparison-matrix th,
+  .comparison-dossier .comparison-matrix td {
+    min-width: 190px;
+    padding: 12px;
+  }
+  .comparison-dossier .comparison-matrix th:first-child {
+    min-width: 116px;
+    max-width: 135px;
+  }
+  .comparison-dossier .comparison-overview {
+    padding: 12px;
+  }
+  .comparison-dossier .dossier-section-title > span {
+    display: none;
+  }
+}
+@media (max-width: 540px) {
+  .comparison-toolbar,
+  .filter-row {
+    padding: 12px;
+  }
+  .filter-row {
+    flex-wrap: wrap;
+    padding-top: 0;
+  }
+  .filter-row input {
+    width: 100%;
+  }
+  .filter-row select {
+    width: 100%;
+  }
+  .toggle-options {
+    gap: 12px;
+  }
+  .table-scroll th:first-child {
+    min-width: 125px;
+    max-width: 140px;
+  }
+  .table-scroll th,
+  .table-scroll td {
+    padding: 12px;
+    min-width: 190px;
+  }
+  .report {
+    padding: 16px;
+  }
+}

@@ -5,6 +5,9 @@ description = "Grounded AI assistant for counterparty checks and comparisons"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+  "pypdf>=6.0,<7",
+  "defusedxml>=0.7.1,<1",
+  "psutil>=7,<8",
     "ag-ui-langgraph>=0.0.42",
     "fastapi>=0.141.1",
     "httpx>=0.28.1",
@@ -12,6 +15,7 @@ dependencies = [
     "langchain-openai>=1.4.3",
     "langgraph>=1.2.11",
     "langgraph-checkpoint-sqlite",
+    "langsmith>=0.12.1",
     "openai>=2,<3",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.15.0",
@@ -21,8 +25,8 @@ dependencies = [
 ]
 
 [project.scripts]
-counterparty-api = "counterparty_agent.app:run"
-counterparty-llm-check = "counterparty_agent.llm:main"
+counterparty-api = "counterparty_agent.api.routes:run"
+counterparty-llm-check = "counterparty_agent.ai.transport:main"
 
 [dependency-groups]
 dev = [
@@ -40,7 +44,7 @@ build-backend = "uv_build"
 [tool.pytest.ini_options]
 addopts = "-q"
 asyncio_mode = "auto"
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 testpaths = ["tests"]
 
 [tool.ruff]
@@ -53,4 +57,5 @@ select = ["B", "E", "F", "I", "UP"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
+mypy_path = "src"
 packages = ["counterparty_agent"]

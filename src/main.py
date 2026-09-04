@@ -1,6 +1,6 @@
 """Единая точка локального запуска приложения."""
 
-from counterparty_agent.app import run
+from counterparty_agent.api.routes import run
 
 
 def main() -> None:
