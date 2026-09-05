@@ -7,12 +7,14 @@ name = "counterparty-storage"
 version = "0.1.0"
 description = "Persistence interfaces and implementations for Counterparty Workspace"
 requires-python = ">=3.13,<3.14"
-dependencies = ["sqlalchemy>=2.0.36,<3"]
+dependencies = ["sqlalchemy[asyncio]>=2.0.36,<3"]
 
 [dependency-groups]
 dev = [
   "mypy>=1.18,<2",
+  "psycopg[binary]>=3.2,<4",
   "pytest>=8.4,<10",
+  "pytest-asyncio>=1.0,<2",
   "ruff>=0.13,<0.16",
 ]
 
@@ -36,3 +38,6 @@ files = ["src", "tests"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
