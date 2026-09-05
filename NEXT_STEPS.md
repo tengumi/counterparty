@@ -1,8 +1,8 @@
 # Next steps: запуск разработки через субагентов
 
-**Текущая цель:** завершить интеграцию и проверку волны G: подключить готовые
-storage-примитивы в UI API и проверить объединённый срез на PostgreSQL. После
-review — WEB-07 и завершение волны 1.
+**Текущая цель:** пользовательский review проверенной волны G. Интеграция
+storage → UI API завершена; следующий срез после review — WEB-07 и завершение
+волны 1.
 
 **Источник полного backlog:** [`docs/WORK_PLAN.md`](docs/WORK_PLAN.md).
 
@@ -12,6 +12,8 @@ review — WEB-07 и завершение волны 1.
 - Старый `src`-прототип и корневой Python/uv-проект удалены.
 - Gate F0 и волны D/E приняты. Волна F принята пользователем 05.09.2026 и
   интегрирована в `dev` через merge-коммиты F1/F2/F3.
+- G1–G4 интегрированы в `dev`; независимая проверка G5 и web/HTTP-проверка G6
+  пройдены. Срез G готов к пользовательскому review, WEB-07 ещё не начат.
 - `packages/`, `migrations/`, `scripts/import_reports`, `apps/web` и три
   Python-сервиса в `services/` созданы; выполнены базовый storage/import,
   project/company API и web-отчёт по typed mocks.
@@ -296,12 +298,9 @@ WEB-04, отдельная правка сейчас не нужна.
 Волна F принята пользователем 05.09.2026. Browser-прогон F3 намеренно не
 выполнялся: единая проверка 390/1024/1440 остаётся на WEB-07.
 
-Дефект, найденный при полном прогоне после интеграции F (заведён в волну G):
-ревизия `0004` создаёт роли, которые являются объектами кластера, а не базы, и
-на downgrade пытается их удалить. Как только тот же кластер несёт вторую базу
-проекта — а это ровно то, что сделал F1, — `DROP ROLE` падает с
-`DependentObjectsStillExist`, и downgrade миграций рушится. Границы объекта и
-границы миграции разъехались; чинить в G.
+Дефект downgrade ревизии `0004` исправлен в G3: миграция снимает grants своей
+БД и не удаляет cluster-wide роли. G5 независимо подтвердил regression на двух
+БД одного кластера.
 
 Порядок дальнейших подходов волны 1 (уточняется после каждого review):
 
@@ -310,36 +309,59 @@ WEB-04, отдельная правка сейчас не нужна.
 3. **F:** IMP-02 + IMP-03 + slim OPS-01 · API-02 + API-03 · WEB-06 — сведено. Здесь же slim `OPS-01`:
    Compose появляется, как только есть что поднимать целиком — PostgreSQL,
    миграции, импорт и сервисы.
-4. **G (текущий):** API-04 + API-05 + D-04 · подключение web к живым API ·
-   долг по storage/migrations/contracts, включая дефект downgrade ревизии 0004.
+4. **G:** API-04 + API-05 + D-04 · живой project/company CRUD в web ·
+   storage wiring и безопасный downgrade — интегрировано и проверено, review.
 5. **Завершение волны 1:** WEB-07 вместе с выравниванием UI по референсному
    макету — отдельной задачей, тогда же единственный браузерный прогон и
    скриншоты 390/1024/1440.
 
-### Волна G — интеграция и проверка
+### Волна G — готова к review
 
-Все три task-ветки созданы от принятого baseline и имеют непересекающийся
-ownership. Полный WEB-08 не объявляется выполненным в G2: comparison/overview
-подключаются после готовности G1, а формальная зависимость от WEB-07 остаётся.
+G1/G2/G3 влиты до текущего подхода; G4 завершил wiring, G5 независимо проверил
+данные и API, G6 проверил web и живой HTTP flow. Полный WEB-08 не объявляется
+выполненным: comparison/overview/materials ещё не подключены в UI, формальная
+зависимость от WEB-07 остаётся.
 
 | Task | Статус | Область и результат |
 |---|---|---|
-| G1 / D-04, API-04, API-05 | review | merged `f100723`; overview/comparison реализованы, общий прогон после merge не подтверждён |
-| G2 / live API slice | review | merged `1a9edf1`; живой CRUD проектов/компаний, overview/materials/comparison остаются typed mocks; не полный WEB-08 |
-| G3 / storage + migration debt | review | merged `8df63b9`; primitives и downgrade реализованы, wiring в UI API ещё не завершён |
-| G4 / API storage integration | in progress | `services/ui_api`: использовать готовые repositories, сохранить ownership, pagination и idempotency contract |
-| G5 / data integration verification | in progress | независимая проверка contracts/domain/storage/migrations/import на изолированных тестовых БД |
-| G6 / web verification | in progress | проверки web и краткий handoff для WEB-07; без браузерного прогона и правок дизайна |
+| G1 / D-04, API-04, API-05 | review | merged `f100723`; overview/comparison подтверждены PostgreSQL tests и HTTP smoke |
+| G2 / live API slice | review | merged `1a9edf1`; живой CRUD проектов/компаний проверен, overview/materials/comparison остаются typed mocks; не полный WEB-08 |
+| G3 / storage + migration debt | review | merged `8df63b9`; 80 storage + 18 migration tests, wiring завершён в G4 |
+| G4 / API storage integration | review | implementation `37e1b25`, final `0bb8aaa`; repositories подключены, 50 API tests и независимый повтор прошли |
+| G5 / data integration verification | review | независимый pass: 436 Python tests, 0 skipped; все локальные ruff/format/mypy checks прошли |
+| G6 / web verification | review | 74 web tests, lint/typecheck/build; 17 HTTP checks и auth/projects через Vite proxy прошли; README и WEB-07 handoff готовы |
 
-Порядок интеграции: сначала G3; после merge обязательно переустановить
-non-editable shared packages в затронутых venv, затем свести G1/G2 и провести
-общий прогон на раздельных тестовых БД.
+Всего в матрице G: 510 tests (contracts 135, domain 110, storage 80,
+migrations 18, importer 43, ui_api 50, web 74). UI API отдельно перепроверен
+независимым verifier. В целевом `services/ui_api/.venv` выполнены frozen sync,
+переустановка contracts/domain/storage и import smoke.
 
-05.09.2026 пользователь поручил продолжить после аудита. Текущий подход закрывает
-G4–G6 и возвращает проверяемый срез на review; следующая крупная волна не начата.
-В текущем окружении `docker`, `node` и `npm` не обнаружены в PATH: доступность
-инструментов и способ запуска PostgreSQL проверяются в G5/G6, прежние результаты
-тестов не считаются новым прогоном.
+05.09.2026 пользователь поручил продолжить после аудита; после прерывания работа
+возобновлена с task-checkpoints. G4–G6 завершены без запуска новой крупной волны.
+Подготовлены native Python/PostgreSQL и Node/npm; Docker отсутствует, образы и
+Compose в этом подходе не запускались. Browser-проверка остаётся на WEB-07.
+
+Результаты и воспроизведение: `docs/checkpoints/tasks/G4.md`, `G5.md`, `G6.md`;
+пользовательские команды — `README.md`. Native demo содержит 100 исходных mock
+snapshots и использует ограниченную UI API роль; тестовые БД отделены от demo.
+Для русского поиска test/demo DB создана с Unicode-aware `LC_CTYPE`: исходный
+локальный setup `C` давал ложный failure ILIKE, на корректной БД suite прошёл.
+G4 намеренно не перехватывает in-flight по возрасту; без reconciliation/fencing
+такой takeover способен создать дубликат. Completed idempotency key сохраняется
+даже при ошибке после успешно выполненного commit.
+
+### Следующий срез после review: WEB-07
+
+- Выравнивание S1/S2 с неизменяемым дизайнерским HTML; один браузерный прогон и
+  screenshots 390/1024/1440, включая материалы/report/evidence и состояния ошибок.
+- Полный визуальный S2 проверять через browser-test harness/intercept с уже
+  существующими typed fixtures; реальные REST UUID пока не связаны с mock content.
+  Отдельно проверить live CRUD с demo session. Не добавлять production fallback
+  или искусственные report IDs в БД ради скриншотов.
+- Ownership: `apps/web/**` и отдельный task-checkpoint. Подробный handoff — G6.
+  WEB-08/09 и полноценный агентный сценарий в этот визуальный срез не включать.
+- После принятия G пользователем отметить D-04/API-04/API-05 в WORK_PLAN как
+  done, зафиксировать замечания и создать task-worktree для WEB-07.
 
 ## Волна C — интеграционные риски и первый data/domain слой
 
