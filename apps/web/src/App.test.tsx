@@ -16,7 +16,8 @@ describe('check routes', () => {
 
     await user.click(screen.getByRole('link', { name: /Поставка оборудования к 20 сентября/ }));
     expect(screen.getByTitle('Поставка оборудования к 20 сентября')).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Поставка' })).toBeVisible();
+    expect(screen.getByRole('button', { name: /Чат: Поставка/ })).toBeVisible();
+    expect(screen.getByText('Остановились на…')).toBeVisible();
 
     await user.click(screen.getByRole('link', { name: '← Все проверки' }));
     expect(screen.getByRole('heading', { name: 'Проверка контрагентов' })).toBeVisible();

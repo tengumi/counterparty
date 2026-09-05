@@ -1,0 +1,72 @@
+/* S2 conversation blocks (07 §5). Pixel alignment with the baseline is WEB-07. */
+
+.feed { display: flex; flex-direction: column; gap: 24px; }
+.block { display: flex; flex-direction: column; }
+
+/* S2-11 «Остановились на…» */
+.resume { border: 1px solid #e7e8eb; border-radius: 14px; padding: 16px 18px; }
+.resumeLabel { margin: 0; font-size: 13px; line-height: 18px; color: rgba(5, 8, 29, .38); }
+.resumeText { margin: 6px 0 0; font-size: 16px; line-height: 24px; }
+.resumeAction { margin-top: 12px; }
+
+/* S2-03 client message */
+.user { align-self: flex-end; max-width: 84%; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #e7e8eb; border-radius: 8px; padding: 5px 10px; font-size: 13px; line-height: 18px; color: rgba(4, 4, 19, .55); }
+.bubble { background: rgba(15, 25, 55, .06); border-radius: 14px; padding: 10px 14px; font-size: 16px; line-height: 24px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.file { display: flex; align-items: center; gap: 10px; border: 1px solid #e7e8eb; border-radius: 12px; padding: 10px 12px; min-width: 240px; }
+.fileName { display: block; line-height: 20px; }
+.fileState { display: block; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); }
+
+/* notice */
+.notice { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 18px; color: rgba(4, 4, 19, .55); border-left: 2px solid #e7e8eb; padding: 2px 0 2px 12px; }
+
+/* S2-05 progress */
+.activity { display: flex; flex-direction: column; gap: 10px; }
+.activityLine { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: rgba(4, 4, 19, .55); }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: #2a77ef; }
+.dot[data-status='completed'] { background: #1f8c4d; }
+.dot[data-status='failed'] { background: #d91d0b; }
+.steps { list-style: none; margin: 0 0 0 18px; padding: 0 0 0 14px; border-left: 1px solid #e7e8eb; display: flex; flex-direction: column; gap: 8px; }
+.step { display: flex; gap: 12px; font-size: 13px; line-height: 18px; }
+.stepLabel { flex: 1; color: rgba(3, 3, 6, .88); }
+.stepLabel[data-status='failed'] { color: #d91d0b; }
+.stepSource { flex: none; color: rgba(5, 8, 29, .38); }
+
+/* S2-06 answer */
+.answer { font-size: 16px; line-height: 24px; display: flex; flex-direction: column; gap: 14px; }
+.answerText { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.points { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.point { display: flex; gap: 10px; font-size: 15px; line-height: 22px; }
+.pointDash { flex: none; width: 10px; color: rgba(5, 8, 29, .38); }
+.evidence { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; margin-left: 6px; padding: 0 4px; border: 0; border-radius: 5px; background: rgba(42, 119, 239, .1); color: #2a77ef; font: inherit; font-size: 12px; line-height: 16px; cursor: pointer; }
+.options { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* S2-09 conclusion */
+.conclusion { border: 1px solid #e7e8eb; border-radius: 16px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; }
+.conclusionLabel { margin: 0; font-size: 13px; line-height: 18px; color: rgba(5, 8, 29, .38); }
+.stale { margin: 0; font-size: 13px; line-height: 18px; color: #b2670a; }
+.unconfirmed { margin: 0; padding-top: 14px; border-top: 1px solid #e7e8eb; font-size: 13px; line-height: 18px; color: rgba(4, 4, 19, .55); }
+
+/* S2-07 confirmation */
+.confirmation { border: 1px solid #e7e8eb; border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.confirmationActions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* empty conversation */
+.empty { color: rgba(4, 4, 19, .55); }
+.empty p { margin: 0 0 6px; }
+
+/* S2-10 composer */
+.composer { border: 1px solid #e7e8eb; border-radius: 16px; padding: 12px 12px 10px 14px; background: #fff; display: flex; flex-direction: column; gap: 8px; }
+.composer[data-status='error'] { border-color: #d91d0b; }
+.composerRow { display: flex; align-items: center; gap: 8px; }
+.composerHint { flex: 1; min-width: 0; margin: 0; font-size: 13px; line-height: 18px; color: rgba(4, 4, 19, .55); }
+.composerActions { flex: none; display: flex; align-items: center; gap: 8px; }
+.composerError { margin: 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; line-height: 18px; color: #d91d0b; }
+.disclaimer { margin: 10px 0 0; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); }
+.disclaimer summary { cursor: pointer; }
+.disclaimerText { margin: 6px 0 0; }
+.input { width: 100%; border: 0; outline: none; resize: none; background: none; font: inherit; font-size: 16px; line-height: 24px; min-height: 48px; max-height: 160px; display: block; padding: 0; }
+.srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* layout of the conversation column */
+.threadRoot { flex: 1; min-height: 0; display: flex; flex-direction: column; }

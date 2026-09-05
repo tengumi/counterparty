@@ -32,7 +32,7 @@ describe('S2 header and chat switcher', () => {
     const user = userEvent.setup();
     openCheck('/checks/demo-project/chats/demo-thread');
 
-    expect(screen.getByRole('heading', { name: 'Поставка' })).toBeVisible();
+    expect(screen.getByText('Остановились на…')).toBeVisible();
     expect(screen.getByLabelText('Сообщение помощнику')).toBeVisible();
 
     await user.click(screen.getByRole('button', { name: /Чат: Поставка/ }));
@@ -40,9 +40,9 @@ describe('S2 header and chat switcher', () => {
     await user.click(screen.getByRole('button', { name: /Условия оплаты/ }));
 
     expect(path()).toBe('/checks/demo-project/chats/terms-thread');
-    expect(screen.getByRole('heading', { name: 'Условия оплаты' })).toBeVisible();
-    expect(screen.queryByRole('heading', { name: 'Поставка' })).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Сообщение помощнику')).not.toBeInTheDocument();
+    expect(screen.getByText('Сопоставляю условия оплаты и финансовые сведения')).toBeVisible();
+    // The other chat's saved conversation must not bleed into this one.
+    expect(screen.queryByText('Остановились на…')).not.toBeInTheDocument();
   });
 
   it('creates a new chat inside the same project, not a new check', async () => {
@@ -53,7 +53,7 @@ describe('S2 header and chat switcher', () => {
     await user.click(screen.getByRole('button', { name: 'Новый чат' }));
 
     expect(path()).toBe('/checks/demo-project/chats/local-chat-1');
-    expect(screen.getByRole('heading', { name: 'Новый чат 1' })).toBeVisible();
+    expect(screen.getByText('Сообщений пока нет.')).toBeVisible();
     expect(screen.getByTitle('Поставка оборудования к 20 сентября')).toBeVisible();
 
     await user.click(screen.getByRole('button', { name: /Чат: Новый чат 1/ }));
@@ -106,7 +106,7 @@ describe('S2 company context strip', () => {
     await user.click(screen.getByRole('button', { name: 'Добавить' }));
     const panel = screen.getByRole('complementary', { name: 'Материалы проверки' });
     expect(panel).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Условия' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: /Условия/ })).toBeVisible();
 
     await user.click(screen.getByRole('button', { name: 'Закрыть' }));
     expect(screen.queryByRole('complementary', { name: 'Материалы проверки' })).not.toBeInTheDocument();
@@ -122,8 +122,7 @@ describe('S1 to S2 handoff', () => {
     await user.click(screen.getByRole('button', { name: 'Отправить' }));
 
     expect(path()).toBe('/checks/demo-project/chats/demo-thread');
-    expect(screen.getByRole('heading', { name: 'Черновик задачи' })).toBeVisible();
-    expect(screen.getByText('Проверьте ИНН 7714497158')).toBeVisible();
+    expect(screen.getByLabelText('Сообщение помощнику')).toHaveValue('Проверьте ИНН 7714497158');
     expect(screen.getByText(/ещё не отправлен и не сохранён/)).toBeVisible();
   });
 });

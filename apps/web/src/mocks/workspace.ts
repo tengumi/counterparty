@@ -7,8 +7,11 @@
 
 import type {
   ChatSummary,
+  ConversationBlock,
+  EvidenceRecord,
   ExamplePrompt,
   ProjectDetail,
+  ProjectMaterials,
   ProjectSummary,
 } from './types';
 
@@ -121,4 +124,271 @@ export function newChat(index: number): ChatSummary {
     hint: 'Сообщений пока нет',
     status: 'ready',
   };
+}
+
+/* ------------------------------------------------------------------ *
+ * Conversation (WEB-04)
+ * ------------------------------------------------------------------ */
+
+const evidence: readonly EvidenceRecord[] = [
+  {
+    id: 'ev-capital',
+    number: 1,
+    title: 'Капитал и резервы',
+    value: '1 240 000 ₽',
+    companyName: 'Компания А',
+    period: '2025 год',
+    source: 'Предоставленный отчёт',
+    asOf: '5 августа 2026',
+  },
+  {
+    id: 'ev-executions',
+    number: 2,
+    title: 'Действующие исполнительные производства',
+    value: '2 производства на 180 000 ₽',
+    companyName: 'Компания А',
+    period: 'на дату среза',
+    source: 'Предоставленный отчёт',
+    asOf: '5 августа 2026',
+  },
+  {
+    id: 'ev-age',
+    number: 3,
+    title: 'Дата регистрации',
+    value: '14 марта 2014',
+    companyName: 'Компания А',
+    period: '—',
+    source: 'Предоставленный отчёт',
+    asOf: '5 августа 2026',
+  },
+];
+
+/** Saved blocks of the demo chat: what the user sees on returning. */
+const demoConversation: readonly ConversationBlock[] = [
+  {
+    kind: 'resume',
+    id: 'demo-resume',
+    text: 'Ждём подтверждение наличия товара. Разбор условий поставки сохранён.',
+  },
+  {
+    kind: 'user',
+    id: 'demo-user-1',
+    text: 'Можно ли перечислять 80% аванса этой компании?',
+    context: null,
+    file: null,
+  },
+  {
+    kind: 'activity',
+    id: 'demo-activity-1',
+    label: 'Проверено: оценка банка, финансы, взыскания',
+    status: 'completed',
+    steps: [
+      {
+        id: 'demo-step-1',
+        kind: 'reading_report',
+        label: 'Прочитал финансовые сведения',
+        source: 'Отчёт · срез 5 августа 2026',
+        status: 'completed',
+      },
+      {
+        id: 'demo-step-2',
+        kind: 'comparing',
+        label: 'Сопоставил аванс с капиталом компании',
+        source: 'Условия проверки',
+        status: 'completed',
+      },
+      {
+        id: 'demo-step-3',
+        kind: 'reading_report',
+        label: 'Проверил исполнительные производства',
+        source: 'Отчёт · срез 5 августа 2026',
+        status: 'completed',
+      },
+    ],
+  },
+  {
+    kind: 'answer',
+    id: 'demo-answer-1',
+    text:
+      'Аванс 80% от 2 400 000 ₽ — это 1 920 000 ₽ до отгрузки. Это больше собственного капитала компании, ' +
+      'поэтому риск потери денег при срыве поставки ложится на вас.',
+    points: [
+      {
+        id: 'demo-point-1',
+        text: 'Капитал и резервы — 1 240 000 ₽, то есть меньше суммы аванса',
+        evidenceId: 'ev-capital',
+      },
+      {
+        id: 'demo-point-2',
+        text: 'Есть действующие исполнительные производства на 180 000 ₽',
+        evidenceId: 'ev-executions',
+      },
+      {
+        id: 'demo-point-3',
+        text: 'Компания работает с 2014 года, разрывов в деятельности не видно',
+        evidenceId: 'ev-age',
+      },
+    ],
+    followUp: 'Оплата до поставки или после? Насколько критичен срок 20 сентября?',
+    options: [
+      { id: 'demo-option-1', label: 'Аванс', text: 'Оплата авансом' },
+      { id: 'demo-option-2', label: 'После поставки', text: 'Оплата после поставки' },
+      { id: 'demo-option-3', label: 'Ещё не решили', text: 'Условие оплаты ещё не решили' },
+    ],
+  },
+  {
+    kind: 'confirmation',
+    id: 'demo-confirmation-1',
+    text: 'Наличие товара не подтверждено. Прикрепите письмо или документ, если он у вас есть.',
+    attachLabel: 'Прикрепить',
+    declineLabel: 'Документа нет',
+  },
+];
+
+const termsConversation: readonly ConversationBlock[] = [
+  {
+    kind: 'user',
+    id: 'terms-user-1',
+    text: 'Сравни условия оплаты с финансовыми сведениями компании.',
+    context: 'Капитал · Компания А · 2025',
+    file: null,
+  },
+  {
+    kind: 'activity',
+    id: 'terms-activity-1',
+    label: 'Сопоставляю условия оплаты и финансовые сведения',
+    status: 'running',
+    steps: [
+      {
+        id: 'terms-step-1',
+        kind: 'reading_document',
+        label: 'Прочитал условия проверки',
+        source: 'Из вашего сообщения',
+        status: 'completed',
+      },
+      {
+        id: 'terms-step-2',
+        kind: 'reading_report',
+        label: 'Читаю финансовые сведения',
+        source: 'Отчёт · срез 5 августа 2026',
+        status: 'running',
+      },
+    ],
+  },
+];
+
+const logisticsConversation: readonly ConversationBlock[] = [
+  {
+    kind: 'user',
+    id: 'logistics-user-1',
+    text: 'Кого выбрать перевозчиком на 2 квартал?',
+    context: null,
+    file: null,
+  },
+  {
+    kind: 'answer',
+    id: 'logistics-answer-1',
+    text: 'Различие в авансе весит больше разницы в цене: у Транс-Лайн аванс ниже при сопоставимом сроке.',
+    points: [],
+    followUp: null,
+    options: [],
+  },
+  {
+    kind: 'conclusion',
+    id: 'logistics-conclusion-1',
+    text: 'Готов работать с Транс-Лайн при оплате после поставки.',
+    points: [
+      {
+        id: 'logistics-point-1',
+        text: 'Действующих взысканий не найдено',
+        evidenceId: null,
+      },
+    ],
+    unconfirmed: 'Не подтверждено: страхование груза',
+    stale: false,
+  },
+  {
+    kind: 'notice',
+    id: 'logistics-notice-1',
+    text: 'Решение записано 27 августа. Его можно изменить в материалах проверки.',
+    action: null,
+  },
+];
+
+const conversations: Readonly<Record<string, readonly ConversationBlock[]>> = {
+  'demo-thread': demoConversation,
+  'terms-thread': termsConversation,
+  'logistics-thread': logisticsConversation,
+  'inn-thread': [],
+};
+
+/** Saved blocks of one chat; an unknown or new chat starts empty. */
+export function getConversation(chatId: string | undefined): readonly ConversationBlock[] {
+  if (chatId === undefined) return [];
+  return conversations[chatId] ?? [];
+}
+
+/** One numbered basis, or `undefined` when the reference is unknown. */
+export function findEvidence(evidenceId: string | null | undefined): EvidenceRecord | undefined {
+  if (!evidenceId) return undefined;
+  return evidence.find((record) => record.id === evidenceId);
+}
+
+/* ------------------------------------------------------------------ *
+ * Materials panel (WEB-05)
+ * ------------------------------------------------------------------ */
+
+const materials: Readonly<Record<string, ProjectMaterials>> = {
+  'demo-project': {
+    terms: [
+      { id: 'role', label: 'Роль компании', value: 'Поставщик', source: 'Из вашего сообщения' },
+      { id: 'subject', label: 'Предмет', value: 'Оборудование', source: 'Из вашего сообщения' },
+      { id: 'amount', label: 'Сумма', value: '2 400 000 ₽', source: 'Из вашего сообщения' },
+      { id: 'payment', label: 'Оплата', value: 'Аванс 80%', source: 'Из вашего сообщения' },
+      { id: 'term', label: 'Срок', value: '20 сентября', source: 'Из вашего сообщения' },
+      { id: 'priority', label: 'Приоритет', value: null, source: 'Не указано' },
+    ],
+    documents: [
+      {
+        id: 'doc-invoice',
+        name: 'Счёт-оферта.pdf',
+        meta: 'Компания А · добавлен 5 сентября',
+        state: 'ready',
+      },
+    ],
+    summary: {
+      short: 'Предложение помощника',
+      line: 'Готов при условиях: аванс не выше 30% до подтверждения наличия товара',
+      recorded: false,
+    },
+  },
+  'logistics-project': {
+    terms: [
+      { id: 'role', label: 'Роль компании', value: 'Перевозчик', source: 'Из вашего сообщения' },
+      { id: 'amount', label: 'Сумма', value: null, source: 'Не указано' },
+    ],
+    documents: [],
+    summary: {
+      short: 'Решение записано',
+      line: 'Готов работать с Транс-Лайн при оплате после поставки · 27 августа',
+      recorded: true,
+    },
+  },
+  'inn-project': {
+    terms: [],
+    documents: [],
+    summary: { short: 'Пока нет', line: 'Вывода по задаче ещё нет', recorded: false },
+  },
+};
+
+const emptyMaterials: ProjectMaterials = {
+  terms: [],
+  documents: [],
+  summary: { short: 'Пока нет', line: 'Вывода по задаче ещё нет', recorded: false },
+};
+
+/** Materials of one project; an unknown project has nothing loaded. */
+export function getMaterials(projectId: string | undefined): ProjectMaterials {
+  if (projectId === undefined) return emptyMaterials;
+  return materials[projectId] ?? emptyMaterials;
 }
