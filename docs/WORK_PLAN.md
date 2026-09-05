@@ -53,7 +53,7 @@ storage. Изменения contract v0 согласуются до паралл
 | F0-04 | React/Vite/TypeScript strict, Core DS foundation, собственный Dockerfile и статический smoke screen | — | `apps/web` | done |
 | F0-05 | Contract v0: IDs, source/evidence refs, availability/outcome, project/thread/run envelopes | F0-02 | `packages/contracts` | done |
 | F0-06 | Spike V01: assistant-stream ↔ assistant-ui передаёт текст, typed activity, terminal error и cancel | F0-03B, F0-04, F0-05 | `agent`, `web`, contract test | done |
-| F0-07 | Spike V04: LangGraph PostgreSQL checkpoint в схеме `workspace`, restart помечает run interrupted | F0-03B | `agent`, `migrations` | todo |
+| F0-07 | Spike V04: LangGraph PostgreSQL checkpoint в схеме `workspace`, restart помечает run interrupted | F0-03B | `agent`, `migrations` | done |
 | F0-08 | Spike V05: FastMCP Streamable HTTP, один typed read-only tool и корректный async cleanup | F0-03C, F0-05 | `mcp`, integration test | done |
 
 Gate F0:
@@ -101,7 +101,7 @@ Gate F0:
 | API-03 | Add/remove 1–20 companies с закреплением report_id | API-02, IMP-02 | done |
 | API-04 | Deterministic company overview с evidence refs | API-03, D-03 | done |
 | API-05 | Comparison endpoint и неполные данные | API-04, D-04 | done |
-| API-06 | Чтение разделов отчёта и project-scoped evidence по REST; фильтры, cursor и границы доступа | API-04, C-01, DB-04 | todo |
+| API-06 | Чтение разделов отчёта и project-scoped evidence по REST; фильтры, cursor и границы доступа | API-04, C-01, DB-04 | done |
 
 ### Web — визуальный каркас без ожидания backend
 
@@ -123,18 +123,18 @@ typed mocks; скриншоты подтверждают сохранение п
 
 | ID | Результат | Depends on | Поток | Статус |
 |---|---|---|---|---|
-| MCP-01 | `get_company_overview` с pinned report_id | C-04, DB-04, IMP-02 | MCP | todo |
-| MCP-02 | `get_report_section`, enum filters, cursor и truncation | MCP-01 | MCP | todo |
+| MCP-01 | `get_company_overview` с pinned report_id | C-04, DB-04, IMP-02 | MCP | done |
+| MCP-02 | `get_report_section`, enum filters, cursor и truncation | MCP-01 | MCP | done |
 | MCP-03 | `compare_companies` и parity с UI API | MCP-02, API-05 | MCP/QA | todo |
-| AG-01 | Configurable model adapter и базовый agent graph/harness | F0-06, F0-07 | Agent | todo |
+| AG-01 | LangChain model adapter и сконфигурированный Deep Agents harness поверх checkpointer F0-07; собственный agent loop не пишется | F0-06, F0-07 | Agent | todo |
 | AG-02 | Project/thread context assembly без соседних histories | AG-01, API-02 | Agent | todo |
-| AG-03 | MCP tools, evidence-grounded answer и validator/repair | AG-02, MCP-02, D-02 | Agent | todo |
+| AG-03 | Подключение MCP tools штатным механизмом Deep Agents, evidence-grounded answer и прикладной validator/repair | AG-02, MCP-02, D-02 | Agent | todo |
 | AG-04 | Persistent run registry, reconnect, cancel и public projection | AG-03, C-03 | Agent | todo |
 | AG-05 | Persistent follow-up inbox и safe-boundary apply | AG-04 | Agent | todo |
 | DOC-01 | Upload/storage metadata и project-scoped access | API-02 | UI API/Data | todo |
 | DOC-02 | SkillExecutor, MarkItDown/PDF adapters, fragments и locators | DOC-01, AG-02 | Agent | todo |
 | DOC-03 | XLSX/DOCX/PDF parsing policies, cache и trace | DOC-02 | Agent/QA | todo |
-| WEB-08 | REST integration: projects, overview, materials, comparison | API-04, API-05, API-06, WEB-07 | Web | todo |
+| WEB-08 | REST integration: projects, overview, materials, comparison | API-04, API-05, API-06, WEB-07 | Web | done |
 | WEB-09 | Agent transport: stream, reconnect, cancel и errors | AG-04, WEB-04 | Web | todo |
 | WEB-10 | Follow-up queued/applied и document attachments | AG-05, DOC-02, WEB-09 | Web | todo |
 | WEB-11 | Decision flow, outdated analysis и returning-user state | WEB-08, WEB-09 | Web | todo |
@@ -143,6 +143,26 @@ Gate волны 2: основной сценарий компании А про�
 закрытие страницы не отменяет run; follow-up не создаёт второго writer;
 evidence открывает точный источник; решение пользователя записывается только
 через UI API.
+
+### Граница MVP, принятая 05.09.2026
+
+Пользователь сократил объём MVP до сквозной истории «агент отвечает по
+закреплённому отчёту с проверяемыми evidence refs». В MVP остаются AG-01…AG-04,
+MCP-03, WEB-09, WEB-11, OPS-01, сжатая приёмка и REL-01.
+
+Перенесены в post-MVP и не входят в gate: DOC-01, DOC-02, DOC-03 (документы и
+skills), AG-05 (persistent follow-up inbox) и WEB-10 (follow-up и вложения).
+Их depends on и формулировки не меняются; при возврате к ним skills и файловый
+backend берутся штатными механизмами Deep Agents по Specs 11.
+
+Gate волны 2 в сокращённом виде: основной сценарий компании А проходит через
+реальные сервисы; закрытие страницы не отменяет run; evidence открывает точный
+источник; решение пользователя записывается только через UI API. Пункт про
+второго writer при follow-up проверяется вместе с AG-05 в post-MVP.
+
+Глубина проверки, принятая тем же решением: независимые проверяющие агенты
+назначаются только на AG-03 и AG-04; остальные задачи закрываются тестами
+исполнителя и обзором главного агента.
 
 ## 6. Волна 3 — сборка системы и приёмка
 
