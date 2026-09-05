@@ -13,7 +13,7 @@ def test_cli_reports_the_approved_source_without_differences(
 ) -> None:
     """Running against the approved file exits 0 and prints a JSON summary."""
     before = source_path.stat().st_mtime_ns
-    assert main([str(source_path)]) == 0
+    assert main(["inspect", str(source_path)]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["verification"]["differences"] == []
     assert payload["record_count"] == 100
@@ -26,6 +26,6 @@ def test_cli_fails_on_a_source_that_is_not_the_approved_one(
     """A different file exits non-zero and names every difference."""
     other = tmp_path / "other.json"
     other.write_text(json.dumps([{"_id": {}, "report": {}}]), encoding="utf-8")
-    assert main([str(other)]) == 1
+    assert main(["inspect", str(other)]) == 1
     payload = json.loads(capsys.readouterr().out)
     assert len(payload["verification"]["differences"]) == 3

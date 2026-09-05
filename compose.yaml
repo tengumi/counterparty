@@ -1,0 +1,133 @@
+# Local PostgreSQL, its migrations and the report import.
+#
+# This is the slim OPS-01 stack: it brings up the database with a durable
+# volume, runs the Alembic revisions, creates the login role the import
+# connects as and imports the approved mock snapshot. `web`, `ui_api`, `agent`
+# and `mcp` are deliberately absent — they run from their own Dockerfiles and
+# wiring them in belongs to the full OPS task, not to getting data into a
+# database.
+#
+#   docker compose up          # database, migrations, roles, import
+#   docker compose run --rm import   # import again; the second run is a no-op
+#
+# Two things this file does not do. It stores no real credential: every
+# password is a local development default that a deployment overrides through
+# the environment, and nothing here belongs in a shared cluster. And it does
+# not present the corpus as current information — `artifacts/` holds a mock
+# snapshot, read in place and never copied or edited.
+#
+# The Python steps run from the official uv image with the repository mounted,
+# so no service needs a Dockerfile it does not already have. Their virtualenvs
+# and uv cache live in named volumes on purpose: building them inside the
+# mounted tree would overwrite the `.venv` directories a developer uses on the
+# host, which are built for a different platform.
+
+name: counterparty
+
+x-uv: &uv
+  image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+  volumes:
+    - .:/workspace
+    - uv-cache:/uv-cache
+  environment:
+    UV_CACHE_DIR: /uv-cache
+    UV_LINK_MODE: copy
+    UV_FROZEN: "1"
+  restart: "no"
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-counterparty}
+      POSTGRES_USER: ${POSTGRES_USER:-counterparty}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-counterparty_dev}
+    ports:
+      - "${POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # Every later step waits on this, so a migration never races initdb.
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-counterparty} -d ${POSTGRES_DB:-counterparty}"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  migrate:
+    <<: *uv
+    working_dir: /workspace/migrations
+    environment:
+      UV_CACHE_DIR: /uv-cache
+      UV_LINK_MODE: copy
+      UV_FROZEN: "1"
+      UV_PROJECT_ENVIRONMENT: /venvs/migrations
+      COUNTERPARTY_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-counterparty}:${POSTGRES_PASSWORD:-counterparty_dev}@postgres:5432/${POSTGRES_DB:-counterparty}
+    volumes:
+      - .:/workspace
+      - uv-cache:/uv-cache
+      - migrate-venv:/venvs
+    command: ["uv", "run", "alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  roles:
+    # The revisions create the four service roles as NOLOGIN groups; a login
+    # user and its password belong to a deployment, which is what this step is.
+    # It is idempotent, and it grants the importer nothing beyond its group.
+    image: postgres:17-alpine
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-counterparty_dev}
+    command:
+      - psql
+      - --host=postgres
+      - --username=${POSTGRES_USER:-counterparty}
+      - --dbname=${POSTGRES_DB:-counterparty}
+      - --set=ON_ERROR_STOP=1
+      # Quoted with '' rather than dollar quoting: Compose would read a `$$`
+      # as an escaped dollar and hand psql a broken block.
+      - --command=DO 'BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = ''${IMPORTER_USER:-counterparty_import}'') THEN CREATE ROLE ${IMPORTER_USER:-counterparty_import} LOGIN PASSWORD ''${IMPORTER_PASSWORD:-counterparty_import_dev}''; END IF; END';
+      - --command=GRANT counterparty_importer TO ${IMPORTER_USER:-counterparty_import};
+      - --command=GRANT CONNECT ON DATABASE ${POSTGRES_DB:-counterparty} TO ${IMPORTER_USER:-counterparty_import};
+    restart: "no"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  import:
+    <<: *uv
+    working_dir: /workspace/scripts/import_reports
+    environment:
+      UV_CACHE_DIR: /uv-cache
+      UV_LINK_MODE: copy
+      UV_FROZEN: "1"
+      UV_PROJECT_ENVIRONMENT: /venvs/import
+      # Connects as the importer role: it may write inside `reports` and holds
+      # no DELETE at all, so the database is what stops the script from
+      # removing anything, not the script's own restraint.
+      COUNTERPARTY_DATABASE_URL: postgresql+psycopg://${IMPORTER_USER:-counterparty_import}:${IMPORTER_PASSWORD:-counterparty_import_dev}@postgres:5432/${POSTGRES_DB:-counterparty}
+    volumes:
+      - .:/workspace
+      - uv-cache:/uv-cache
+      - import-venv:/venvs
+    # The importer is a script and a job, never a service: it runs, prints its
+    # import report and exits. Running it again is a no-op, which the report's
+    # `changed_nothing` states rather than assumes.
+    command:
+      - uv
+      - run
+      - python
+      - -m
+      - import_reports
+      - import
+      - /workspace/artifacts/contractors_audit.snapshot.json
+    depends_on:
+      roles:
+        condition: service_completed_successfully
+
+volumes:
+  postgres-data:
+  uv-cache:
+  migrate-venv:
+  import-venv:
