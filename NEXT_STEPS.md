@@ -1,8 +1,8 @@
 # Next steps: запуск разработки через субагентов
 
-**Текущая цель:** завершить волну 1: отдать детерминированные overview/comparison
-через живой UI API, подключить web к уже готовым project/company routes и закрыть
-интеграционный долг storage/migrations перед финальным WEB-07.
+**Текущая цель:** завершить интеграцию и проверку волны G: подключить готовые
+storage-примитивы в UI API и проверить объединённый срез на PostgreSQL. После
+review — WEB-07 и завершение волны 1.
 
 **Источник полного backlog:** [`docs/WORK_PLAN.md`](docs/WORK_PLAN.md).
 
@@ -316,7 +316,7 @@ WEB-04, отдельная правка сейчас не нужна.
    макету — отдельной задачей, тогда же единственный браузерный прогон и
    скриншоты 390/1024/1440.
 
-### Волна G — текущий запуск
+### Волна G — интеграция и проверка
 
 Все три task-ветки созданы от принятого baseline и имеют непересекающийся
 ownership. Полный WEB-08 не объявляется выполненным в G2: comparison/overview
@@ -324,13 +324,22 @@ ownership. Полный WEB-08 не объявляется выполненны�
 
 | Task | Статус | Область и результат |
 |---|---|---|
-| G1 / D-04, API-04, API-05 | in progress | `packages/domain`, `services/ui_api`: детерминированные overview/comparison с evidence и incomplete states |
-| G2 / live API slice | in progress | `apps/web`: typed client и живые API-02/API-03 для проектов и состава проверки; не полный WEB-08 |
-| G3 / storage + migration debt | in progress | `packages/storage`, `migrations`: repository primitives F2 и безопасный downgrade ролей на кластере с двумя БД |
+| G1 / D-04, API-04, API-05 | review | merged `f100723`; overview/comparison реализованы, общий прогон после merge не подтверждён |
+| G2 / live API slice | review | merged `1a9edf1`; живой CRUD проектов/компаний, overview/materials/comparison остаются typed mocks; не полный WEB-08 |
+| G3 / storage + migration debt | review | merged `8df63b9`; primitives и downgrade реализованы, wiring в UI API ещё не завершён |
+| G4 / API storage integration | in progress | `services/ui_api`: использовать готовые repositories, сохранить ownership, pagination и idempotency contract |
+| G5 / data integration verification | in progress | независимая проверка contracts/domain/storage/migrations/import на изолированных тестовых БД |
+| G6 / web verification | in progress | проверки web и краткий handoff для WEB-07; без браузерного прогона и правок дизайна |
 
 Порядок интеграции: сначала G3; после merge обязательно переустановить
 non-editable shared packages в затронутых venv, затем свести G1/G2 и провести
 общий прогон на раздельных тестовых БД.
+
+05.09.2026 пользователь поручил продолжить после аудита. Текущий подход закрывает
+G4–G6 и возвращает проверяемый срез на review; следующая крупная волна не начата.
+В текущем окружении `docker`, `node` и `npm` не обнаружены в PATH: доступность
+инструментов и способ запуска PostgreSQL проверяются в G5/G6, прежние результаты
+тестов не считаются новым прогоном.
 
 ## Волна C — интеграционные риски и первый data/domain слой
 
