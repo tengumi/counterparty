@@ -16,6 +16,12 @@ from counterparty_agent.composition import AgentResources
 from counterparty_agent.config import AgentSettings
 
 
+@asynccontextmanager
+async def fake_owner(_: str) -> AsyncIterator[None]:
+    """Keep unit resource tests independent of a database."""
+    yield None
+
+
 class FakeCheckpointer:
     """Test double implementing the service-local saver boundary."""
 
@@ -54,6 +60,7 @@ def test_import_does_not_open_checkpointer() -> None:
     create_app(
         AgentSettings(postgres_dsn=SecretStr("postgresql://unused")),
         checkpointer_factory=factory,
+        run_owner_factory=fake_owner,
     )
 
     assert opened is False
@@ -76,6 +83,7 @@ async def test_configured_checkpointer_is_owned_by_lifespan() -> None:
     app = create_app(
         AgentSettings(postgres_dsn=SecretStr("postgresql://agent:secret@db/workspace")),
         checkpointer_factory=factory,
+        run_owner_factory=fake_owner,
     )
 
     async with app.router.lifespan_context(app):

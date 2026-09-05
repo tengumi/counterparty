@@ -9,6 +9,7 @@ ENV UV_COMPILE_BYTECODE=1 \
 WORKDIR /workspace/services/agent
 
 COPY packages/contracts /workspace/packages/contracts
+COPY packages/storage /workspace/packages/storage
 COPY services/agent/pyproject.toml services/agent/uv.lock ./
 RUN uv sync --locked --no-dev --no-install-project
 

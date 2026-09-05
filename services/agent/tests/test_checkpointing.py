@@ -6,7 +6,11 @@ from unittest.mock import patch
 
 import pytest
 
-from counterparty_agent.checkpointing import Checkpointer, postgres_checkpointer
+from counterparty_agent.checkpointing import (
+    Checkpointer,
+    postgres_checkpointer,
+    workspace_conninfo,
+)
 
 
 class FakeSaver:
@@ -25,7 +29,8 @@ async def test_postgres_adapter_delegates_lifecycle_to_official_saver() -> None:
 
     @asynccontextmanager
     async def official_factory(dsn: str) -> AsyncIterator[Checkpointer]:
-        events.append(f"enter:{dsn}")
+        assert dsn == workspace_conninfo("postgresql://checkpoint-db")
+        events.append("enter")
         try:
             yield saver
         finally:
@@ -36,7 +41,15 @@ async def test_postgres_adapter_delegates_lifecycle_to_official_saver() -> None:
         side_effect=official_factory,
     ):
         async with postgres_checkpointer("postgresql://checkpoint-db") as opened:
-            assert opened is saver
-            assert events == ["enter:postgresql://checkpoint-db"]
+            assert id(opened) == id(saver)
+            assert events == ["enter"]
 
-    assert events == ["enter:postgresql://checkpoint-db", "exit"]
+    assert events == ["enter", "exit"]
+
+
+def test_stored_run_statuses_match_the_public_contract() -> None:
+    """The persisted lifecycle needs no translation or guessed public state."""
+    from counterparty_contracts import RunStatus
+    from counterparty_storage.workspace import AgentRunStatus
+
+    assert {status.value for status in AgentRunStatus} == {status.value for status in RunStatus}

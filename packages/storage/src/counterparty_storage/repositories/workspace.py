@@ -8,18 +8,20 @@ composite foreign keys in the schema make the same statement one layer down, so
 a query written by hand cannot cross the boundary either.
 """
 
-from collections.abc import Sequence
+import asyncio
+from collections.abc import AsyncIterator, Sequence
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import Select, and_, delete, func, select, update
+from sqlalchemy import Select, and_, delete, func, select, text, update
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncSession
 
-from ..access import ProjectScope, TenantScope
+from ..access import ProjectScope, TenantScope, ThreadScope
 from ..errors import (
     ContextVersionConflictError,
     IdempotencyConflictError,
@@ -28,9 +30,16 @@ from ..errors import (
     ProjectDeletedError,
 )
 from ..reports.models import Company, CompanyProfile
-from ..workspace.enums import CounterpartyRole, IdempotencyState, ThreadStatus, WorkflowStatus
+from ..workspace.enums import (
+    AgentRunStatus,
+    CounterpartyRole,
+    IdempotencyState,
+    ThreadStatus,
+    WorkflowStatus,
+)
 from ..workspace.models import (
     MAX_PROJECT_COMPANIES,
+    AgentRun,
     IdempotencyKey,
     Project,
     ProjectCompany,
@@ -665,3 +674,164 @@ class IdempotencyRepository(_TenantScoped):
         if key is None:
             raise NotFoundError("idempotency key", client_request_id)
         return key
+
+
+class AgentRunRepository:
+    """Run records bound to one trusted thread and one process owner.
+
+    Writes are obtained through ``AgentRunOwner.runs`` so the advisory-lock
+    check and the mutation use the same dedicated database connection.
+    """
+
+    def __init__(self, session: AsyncSession, scope: ThreadScope, owner_id: UUID) -> None:
+        """Bind the repository to a trusted scope and the current owner."""
+        self._session = session
+        self.scope = scope
+        self.owner_id = owner_id
+
+    async def require_thread(self) -> Thread:
+        """Resolve the canonical mapping; reject a foreign or closed thread."""
+        scope = self.scope
+        thread = await ThreadRepository(self._session, TenantScope(scope.tenant_id)).require(
+            scope.thread_id
+        )
+        if thread.project_id != scope.project_id or thread.status is not ThreadStatus.ACTIVE:
+            raise NotFoundError("thread", scope.thread_id)
+        return thread
+
+    async def get(self, run_id: UUID) -> AgentRun | None:
+        """Read one run without widening tenant, project or thread access."""
+        await self.require_thread()
+        statement = select(AgentRun).where(
+            AgentRun.id == run_id,
+            AgentRun.tenant_id == self.scope.tenant_id,
+            AgentRun.project_id == self.scope.project_id,
+            AgentRun.thread_id == self.scope.thread_id,
+        )
+        return (await self._session.execute(statement)).scalar_one_or_none()
+
+    async def create(
+        self, *, client_request_id: UUID, based_on_context_version: int, run_id: UUID | None = None
+    ) -> AgentRun:
+        """Persist acceptance before execution; one active run is enforced by PostgreSQL."""
+        await self.require_thread()
+        run = AgentRun(
+            id=run_id or uuid4(),
+            tenant_id=self.scope.tenant_id,
+            project_id=self.scope.project_id,
+            thread_id=self.scope.thread_id,
+            owner_id=self.owner_id,
+            client_request_id=client_request_id,
+            status=AgentRunStatus.ACCEPTED,
+            based_on_context_version=based_on_context_version,
+            last_public_revision=0,
+        )
+        self._session.add(run)
+        await self._session.flush()
+        return run
+
+    async def set_status(self, run_id: UUID, status: AgentRunStatus) -> AgentRun:
+        """Advance this owner's active run; a terminal run can never be restarted implicitly."""
+        run = await self.get(run_id)
+        if run is None or run.owner_id != self.owner_id:
+            raise NotFoundError("run", run_id)
+        if run.status not in ACTIVE_RUN_STATUSES:
+            raise ValueError("terminal run requires an explicit new run")
+        run.status = status
+        run.finished_at = None if status in ACTIVE_RUN_STATUSES else datetime.now(UTC)
+        run.last_public_revision += 1
+        await self._session.flush()
+        return run
+
+
+ACTIVE_RUN_STATUSES = (
+    AgentRunStatus.ACCEPTED,
+    AgentRunStatus.RUNNING,
+    AgentRunStatus.CANCELLING,
+)
+_OWNER_NAMESPACE = 1129337423
+_OWNER_LOCK = 1
+
+
+class AgentRunOwner:
+    """Single-process ownership of one database, fenced by its own connection."""
+
+    def __init__(self, connection: AsyncConnection) -> None:
+        """Use the dedicated connection whose session already holds the lock."""
+        self._connection = connection
+        self._serial = asyncio.Lock()
+        self.id = uuid4()
+
+    @asynccontextmanager
+    async def _transaction(self) -> AsyncIterator[AsyncSession]:
+        async with self._serial:
+            if self._connection.closed or self._connection.invalidated:
+                raise RuntimeError("agent run ownership connection was lost")
+            async with self._connection.begin():
+                held = await self._connection.scalar(
+                    text(
+                        "SELECT EXISTS (SELECT 1 FROM pg_locks WHERE locktype = 'advisory' "
+                        "AND pid = pg_backend_pid() AND classid = :namespace AND objid = :key "
+                        "AND objsubid = 2 AND granted)"
+                    ),
+                    {"namespace": _OWNER_NAMESPACE, "key": _OWNER_LOCK},
+                )
+                if not held:
+                    raise RuntimeError("agent run ownership lock was lost")
+                async with AsyncSession(bind=self._connection, expire_on_commit=False) as session:
+                    yield session
+                    await session.flush()
+
+    @asynccontextmanager
+    async def runs(self, scope: ThreadScope) -> AsyncIterator[AgentRunRepository]:
+        """Serialize scoped work on the connection that holds process ownership."""
+        async with self._transaction() as session:
+            yield AgentRunRepository(session, scope, self.id)
+
+    async def interrupt_active(self, *, only_current: bool = False) -> int:
+        """Recover abandoned active runs, or finish this owner's bounded shutdown.
+
+        This deliberately crosses tenant scopes only for process recovery. It is
+        unavailable without the exclusive database owner lock. No checkpoint SQL
+        or terminal run is modified.
+        """
+        async with self._transaction() as session:
+            statement = update(AgentRun).where(AgentRun.status.in_(ACTIVE_RUN_STATUSES))
+            if only_current:
+                statement = statement.where(AgentRun.owner_id == self.id)
+            else:
+                statement = statement.where(AgentRun.owner_id != self.id)
+            ids = await session.scalars(
+                statement.values(
+                    status=AgentRunStatus.INTERRUPTED,
+                    finished_at=func.clock_timestamp(),
+                    last_public_revision=AgentRun.last_public_revision + 1,
+                ).returning(AgentRun.id)
+            )
+            return len(ids.all())
+
+
+@asynccontextmanager
+async def agent_run_owner(engine: AsyncEngine) -> AsyncIterator[AgentRunOwner]:
+    """Acquire one worker per database; a second worker fails before recovery.
+
+    The lock-holding connection also executes run writes, preventing a dead
+    owner from mutating records through a reconnected or independent session.
+    """
+    async with engine.connect() as connection:
+        acquired = await connection.scalar(
+            text("SELECT pg_try_advisory_lock(:namespace, :key)"),
+            {"namespace": _OWNER_NAMESPACE, "key": _OWNER_LOCK},
+        )
+        await connection.commit()
+        if not acquired:
+            raise RuntimeError("another agent worker already owns this database")
+        try:
+            yield AgentRunOwner(connection)
+        finally:
+            if not connection.closed and not connection.invalidated:
+                await connection.execute(
+                    text("SELECT pg_advisory_unlock(:namespace, :key)"),
+                    {"namespace": _OWNER_NAMESPACE, "key": _OWNER_LOCK},
+                )
+                await connection.commit()

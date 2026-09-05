@@ -48,7 +48,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from ..base import Base
 from ..schemas import WORKSPACE_SCHEMA
-from .enums import CounterpartyRole, IdempotencyState, ThreadStatus, WorkflowStatus
+from .enums import AgentRunStatus, CounterpartyRole, IdempotencyState, ThreadStatus, WorkflowStatus
 
 MAX_PROJECT_COMPANIES: Final = 20
 """Counterparties one project may compare, matching the REST contract. A batch
@@ -368,3 +368,67 @@ class IdempotencyKey(WorkspaceBase):
 
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     completed_at: Mapped[datetime | None] = mapped_column()
+
+
+class AgentRun(WorkspaceBase):
+    """Durable run lifecycle, separate from framework graph checkpoints."""
+
+    __tablename__ = "agent_runs"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["project_id", "tenant_id"],
+            [f"{_PROJECTS}.id", f"{_PROJECTS}.tenant_id"],
+            name="fk_agent_runs_project_id_tenant_id",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["thread_id", "project_id"],
+            [f"{WORKSPACE_SCHEMA}.threads.id", f"{WORKSPACE_SCHEMA}.threads.project_id"],
+            name="fk_agent_runs_thread_id_project_id",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint("based_on_context_version >= 0", name="context_version_non_negative"),
+        CheckConstraint("last_public_revision >= 0", name="public_revision_non_negative"),
+        CheckConstraint(
+            "(status IN ('accepted', 'running', 'cancelling')) = (finished_at IS NULL)",
+            name="terminal_status_matches_timestamp",
+        ),
+        UniqueConstraint(
+            "tenant_id", "thread_id", "client_request_id", name="uq_agent_runs_request"
+        ),
+        {"schema": WORKSPACE_SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = _pk()
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    project_id: Mapped[uuid.UUID] = mapped_column()
+    thread_id: Mapped[uuid.UUID] = mapped_column()
+    owner_id: Mapped[uuid.UUID] = mapped_column()
+    client_request_id: Mapped[uuid.UUID] = mapped_column()
+    status: Mapped[AgentRunStatus] = mapped_column(
+        Enum(
+            AgentRunStatus,
+            name="agent_run_status",
+            native_enum=False,
+            create_constraint=True,
+            values_callable=lambda enum: [member.value for member in enum],
+        )
+    )
+    started_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column()
+    based_on_context_version: Mapped[int] = mapped_column(Integer, server_default="0")
+    last_public_revision: Mapped[int] = mapped_column(Integer, server_default="0")
+
+
+Index(
+    "uq_agent_runs_active_thread",
+    AgentRun.thread_id,
+    unique=True,
+    postgresql_where=AgentRun.status.in_(
+        [
+            AgentRunStatus.ACCEPTED,
+            AgentRunStatus.RUNNING,
+            AgentRunStatus.CANCELLING,
+        ]
+    ),
+)

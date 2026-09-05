@@ -29,6 +29,7 @@ from collections.abc import Sequence
 
 from alembic import op
 from counterparty_storage.roles import (
+    DatabaseRole,
     create_role_statements,
     grant_statements,
     revoke_statements,
@@ -44,8 +45,17 @@ def upgrade() -> None:
     """Create the four group roles and apply the privilege matrix."""
     for statement in create_role_statements():
         op.execute(statement)
-    for statement in grant_statements():
+    # Freeze the agent surface of this revision: newer workspace tables do not
+    # exist yet during a clean upgrade. Their own revisions grant access later.
+    other_roles = [role for role in DatabaseRole if role is not DatabaseRole.AGENT]
+    for statement in grant_statements(other_roles):
         op.execute(statement)
+    op.execute("GRANT USAGE ON SCHEMA workspace TO counterparty_agent")
+    op.execute(
+        "GRANT SELECT ON workspace.projects, workspace.project_companies, "
+        "workspace.threads TO counterparty_agent"
+    )
+    op.execute("GRANT UPDATE (last_activity_at) ON workspace.threads TO counterparty_agent")
 
 
 def downgrade() -> None:
@@ -57,5 +67,9 @@ def downgrade() -> None:
     The NOLOGIN groups therefore outlive a database-local downgrade; explicit
     cluster decommissioning owns their eventual removal.
     """
-    for statement in revoke_statements():
+    other_roles = [role for role in DatabaseRole if role is not DatabaseRole.AGENT]
+    for statement in revoke_statements(other_roles):
         op.execute(statement)
+    op.execute("REVOKE ALL ON ALL TABLES IN SCHEMA workspace FROM counterparty_agent")
+    op.execute("REVOKE UPDATE (last_activity_at) ON workspace.threads FROM counterparty_agent")
+    op.execute("REVOKE ALL ON SCHEMA workspace FROM counterparty_agent")

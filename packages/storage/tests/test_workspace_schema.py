@@ -19,6 +19,7 @@ WORKSPACE_VERTICAL = {
     "threads",
     "project_companies",
     "idempotency_keys",
+    "agent_runs",
 }
 
 

@@ -3,11 +3,9 @@
 Two rules are enforced here rather than left to reviewer discipline:
 
 * the database URL comes from the environment, never from ``alembic.ini``;
-* only the schemas this project owns are ever compared or generated. Tables
-  created by a framework in its own schema (for example LangGraph checkpoint
-  storage, whose DDL belongs to the library and is applied as a separate
-  deployment step) stay invisible to autogenerate, so a project revision can
-  never propose dropping them.
+* only the schemas this project owns are compared or generated. Framework
+  checkpoint tables inside workspace remain invisible to autogenerate: their
+  DDL belongs to LangGraph and runs as an explicit deployment step.
 """
 
 import os
