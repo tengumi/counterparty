@@ -8,6 +8,7 @@ They are not tenant-scoped: the report corpus is shared, and which snapshot a
 project is allowed to reason about is decided by ``workspace``.
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -15,9 +16,23 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import FromClause
 
-from ..reports.models import Company, CompanyProfile, ReportSnapshot
+from ..reports.models import (
+    Company,
+    CompanyProfile,
+    CompanyStatus,
+    FinancialStatement,
+    ImportWarning,
+    ReportSnapshot,
+    SectionAvailability,
+    ZskAssessment,
+)
 
-__all__ = ["CompanyReadRepository", "CompanySearchResult", "ReportSnapshotReadRepository"]
+__all__ = [
+    "CompanyReadRepository",
+    "CompanySearchResult",
+    "ReportReadBundle",
+    "ReportSnapshotReadRepository",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,6 +42,24 @@ class CompanySearchResult:
     company: Company
     report: ReportSnapshot | None
     profile: CompanyProfile | None
+
+
+@dataclass(frozen=True, slots=True)
+class ReportReadBundle:
+    """Loaded rows of one pinned snapshot, with no derived DTOs or service policy.
+
+    All attributes are loaded eagerly. Child records retain stable source order
+    so either read service can produce the same deterministic projection.
+    """
+
+    snapshot: ReportSnapshot
+    company: Company
+    profile: CompanyProfile | None
+    status: CompanyStatus | None
+    zsk: ZskAssessment | None
+    financials: tuple[FinancialStatement, ...]
+    sections: tuple[SectionAvailability, ...]
+    warnings: tuple[ImportWarning, ...]
 
 
 def _latest_snapshot() -> FromClause:
@@ -146,7 +179,80 @@ class ReportSnapshotReadRepository:
         statement = (
             select(ReportSnapshot)
             .where(ReportSnapshot.company_id == company_id)
-            .order_by(ReportSnapshot.source_report_at.desc(), ReportSnapshot.ingested_at.desc())
+            .order_by(
+                ReportSnapshot.source_report_at.desc(),
+                ReportSnapshot.ingested_at.desc(),
+                ReportSnapshot.id.desc(),
+            )
             .limit(1)
         )
         return (await self._session.execute(statement)).scalars().first()
+
+    async def get_read_bundles(self, report_ids: Sequence[UUID]) -> list[ReportReadBundle]:
+        """Read exact snapshots and their normalized children in four statements.
+
+        Requested order is preserved after removing duplicate ids. Unknown ids
+        are omitted, and missing child data stays empty rather than synthesized.
+        An empty request performs no I/O. No report is replaced with its latest
+        version and this method never writes or commits.
+        """
+        ids = list(dict.fromkeys(report_ids))
+        if not ids:
+            return []
+        base_rows = (
+            await self._session.execute(
+                select(ReportSnapshot, Company, CompanyProfile, CompanyStatus, ZskAssessment)
+                .join(Company, Company.id == ReportSnapshot.company_id)
+                .outerjoin(CompanyProfile, CompanyProfile.report_id == ReportSnapshot.id)
+                .outerjoin(CompanyStatus, CompanyStatus.report_id == ReportSnapshot.id)
+                .outerjoin(ZskAssessment, ZskAssessment.report_id == ReportSnapshot.id)
+                .where(ReportSnapshot.id.in_(ids))
+            )
+        ).all()
+        sections_by_report: dict[UUID, dict[str, SectionAvailability]] = {item: {} for item in ids}
+        for section_entry in (
+            await self._session.execute(
+                select(SectionAvailability)
+                .where(SectionAvailability.report_id.in_(ids))
+                .order_by(SectionAvailability.report_id, SectionAvailability.section)
+            )
+        ).scalars():
+            sections_by_report[section_entry.report_id][section_entry.section] = section_entry
+        finances_by_report: dict[UUID, list[FinancialStatement]] = {item: [] for item in ids}
+        for financial_entry in (
+            await self._session.execute(
+                select(FinancialStatement)
+                .where(FinancialStatement.report_id.in_(ids))
+                .order_by(
+                    FinancialStatement.report_id,
+                    FinancialStatement.year,
+                    FinancialStatement.ordinal,
+                )
+            )
+        ).scalars():
+            finances_by_report[financial_entry.report_id].append(financial_entry)
+        warnings_by_report: dict[UUID, list[ImportWarning]] = {item: [] for item in ids}
+        for warning_entry in (
+            await self._session.execute(
+                select(ImportWarning)
+                .where(ImportWarning.report_id.in_(ids))
+                .order_by(ImportWarning.report_id, ImportWarning.created_at, ImportWarning.id)
+            )
+        ).scalars():
+            if warning_entry.report_id is not None:
+                warnings_by_report[warning_entry.report_id].append(warning_entry)
+
+        by_id = {
+            snapshot.id: ReportReadBundle(
+                snapshot=snapshot,
+                company=company,
+                profile=profile,
+                status=status,
+                zsk=zsk,
+                financials=tuple(finances_by_report[snapshot.id]),
+                sections=tuple(sections_by_report[snapshot.id].values()),
+                warnings=tuple(warnings_by_report[snapshot.id]),
+            )
+            for snapshot, company, profile, status, zsk in base_rows
+        }
+        return [by_id[report_id] for report_id in ids if report_id in by_id]
