@@ -16,6 +16,7 @@ export type ChatStatus = 'running' | 'needs_input' | 'ready';
 export type SaveState = 'saved' | 'saving' | 'error';
 
 export interface CompanyRef {
+  readonly reportId?: string;
   readonly id: string;
   readonly name: string;
   /** 10 digits for a legal entity, 12 for a sole trader. */

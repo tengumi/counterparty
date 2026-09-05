@@ -167,3 +167,21 @@
 .back { display: inline-flex; align-items: center; min-height: 44px; }
 .projectTitleButton, .companyName, .companyAction, .retryLink,
 .headerActions button, .panel button, .chatItem, .newChat { min-height: 44px; }
+
+.liveSectionTitle { margin: 16px 0 8px; font-size: 14px; font-weight: 600; }
+.liveRecord { margin-bottom: 18px; }
+.liveRecordTitle { margin: 12px 0 4px; font-size: 13px; font-weight: 600; }
+.liveSourceRow { display: grid; gap: 4px; padding: 10px 0; border-bottom: 1px solid #e8e8e8; overflow-wrap: anywhere; }
+.comparisonOptions { display: grid; gap: 12px; margin: 0 0 20px; padding: 12px; border: 1px solid #e8e8e8; border-radius: 12px; }
+.comparisonOptions legend { padding: 0 4px; font-size: 13px; font-weight: 600; }
+.liveSelect { display: grid; gap: 8px; margin-bottom: 12px; font-size: 13px; }
+.liveSelect select { min-height: 44px; width: 100%; max-width: 100%; font: inherit; border: 1px solid #d3d3d3; border-radius: 8px; padding: 8px; background: white; }
+.comparisonScroll { width: 100%; overflow: auto; max-height: 65vh; margin: 16px 0; border: 1px solid #e8e8e8; border-radius: 10px; }
+.comparisonTable { border-collapse: separate; border-spacing: 0; font-size: 12px; min-width: 640px; }
+.comparisonTable th, .comparisonTable td { min-width: 152px; max-width: 240px; padding: 12px; border-bottom: 1px solid #e8e8e8; border-right: 1px solid #e8e8e8; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.comparisonTable th:first-child { position: sticky; left: 0; background: #fafafa; z-index: 1; min-width: 170px; }
+.comparisonTable thead th { background: #f3f3f3; }
+.comparisonTable th span, .comparisonTable td span { display: block; }
+.draftContexts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.draftContext { display: flex; max-width: 100%; align-items: center; gap: 4px; border: 1px solid #d9d9d9; border-radius: 10px; padding-left: 10px; font-size: 12px; }
+.draftContext > span { overflow-wrap: anywhere; min-width: 0; }

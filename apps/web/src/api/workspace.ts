@@ -9,7 +9,7 @@ const statusMap: Readonly<Record<ApiProject['workflow_status'], ProjectStatus>> 
 };
 
 function companyView(company: ApiProjectCompany): CompanyRef {
-  return { id: company.company_id, name: company.short_name, inn: company.inn };
+  return { id: company.company_id, reportId: company.report_id, name: company.short_name, inn: company.inn };
 }
 
 function activityLabel(value: string): string {
@@ -30,12 +30,12 @@ export function projectSummary(project: ApiProject): ProjectSummary {
   };
 }
 
-export function projectDetail(project: ApiProject): ProjectDetail {
-  const mock = findProject(project.id);
+export function projectDetail(project: ApiProject, fixtureMode = false): ProjectDetail {
+  const mock = fixtureMode ? findProject(project.id) : undefined;
   const defaultChat: ChatSummary = {
     id: project.default_thread_id,
     title: project.title,
-    hint: 'Сообщения загрузятся после подключения API чатов',
+    hint: 'История разговора пока недоступна',
     status: 'ready',
   };
   return {

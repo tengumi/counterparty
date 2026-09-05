@@ -12,6 +12,7 @@ import { Button } from '@alfalab/core-components/button';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { addCompanies, getProject, removeCompany, renameProject, WorkspaceApiError } from '../api/client';
+import type { DiscussionContext } from '../api/reportContracts';
 import type { AddCompanyResult, ApiProject } from '../api/contracts';
 import { requestErrorMessage } from '../api/messages';
 import { projectDetail, withCompanies, workspaceKeys } from '../api/workspace';
@@ -48,7 +49,7 @@ function ChatNotFound() {
   );
 }
 
-function ProjectScreen({ apiProject, project, threadId }: { apiProject: ApiProject; project: ProjectDetail; threadId?: string }) {
+function ProjectScreen({ apiProject, project, threadId, fixtureMode }: { apiProject: ApiProject; project: ProjectDetail; threadId?: string; fixtureMode: boolean }) {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -61,8 +62,8 @@ function ProjectScreen({ apiProject, project, threadId }: { apiProject: ApiProje
   );
   const handoff = readTaskHandoff(location.state);
   // Set by the active chat so the panel can put a context chip in its composer.
-  const insertDraft = useRef<((text: string) => void) | null>(null);
-  const registerInsert = useCallback((insert: (text: string) => void) => {
+  const insertDraft = useRef<((text: string | DiscussionContext) => void) | null>(null);
+  const registerInsert = useCallback((insert: (text: string | DiscussionContext) => void) => {
     insertDraft.current = insert;
   }, []);
   const opener = useRef<HTMLElement | null>(null);
@@ -121,7 +122,7 @@ function ProjectScreen({ apiProject, project, threadId }: { apiProject: ApiProje
         activeChatId={activeChat?.id}
         chats={chats}
         materialsOpen={materials.open}
-        onCreateChat={createChat}
+        onCreateChat={fixtureMode ? createChat : undefined}
         onSelectChat={openChat}
         onToggleMaterials={() => {
           if (materials.open) closeMaterials();
@@ -140,7 +141,7 @@ function ProjectScreen({ apiProject, project, threadId }: { apiProject: ApiProje
         companies={project.companies}
         isDemo={project.isDemo}
         onAddCompany={() => openMaterials({ kind: 'list' })}
-        onCompare={() => openMaterials({ kind: 'list' })}
+        onCompare={() => openMaterials({ kind: fixtureMode ? 'list' : 'comparison' })}
         onOpenCompany={(companyId) => openMaterials({ kind: 'company', companyId })}
         status={project.status}
       />
@@ -149,6 +150,7 @@ function ProjectScreen({ apiProject, project, threadId }: { apiProject: ApiProje
           <ChatNotFound />
         ) : (
           <ChatSurface
+            fixtureMode={fixtureMode}
             chat={activeChat}
             handoffDraft={handoff?.draft ?? null}
             key={activeChat.id}
@@ -166,6 +168,7 @@ function ProjectScreen({ apiProject, project, threadId }: { apiProject: ApiProje
         <>
           <button aria-label="Закрыть материалы" className={styles.panelBackdrop} onClick={closeMaterials} tabIndex={-1} type="button" />
           <MaterialsPanel
+            apiProject={fixtureMode ? undefined : apiProject}
             companyChange={{
               busy: add.isPending || remove.isPending,
               error: add.error ? requestErrorMessage(add.error) : remove.error ? requestErrorMessage(remove.error) : null,
@@ -188,7 +191,7 @@ function ProjectScreen({ apiProject, project, threadId }: { apiProject: ApiProje
   );
 }
 
-export function CheckPage() {
+export function CheckPage({ fixtureMode = false }: { fixtureMode?: boolean }) {
   const { projectId, threadId } = useParams();
   const projectQuery = useQuery({
     enabled: projectId !== undefined,
@@ -214,6 +217,6 @@ export function CheckPage() {
       </section>
     );
   }
-  const project = projectDetail(projectQuery.data);
-  return <ProjectScreen apiProject={projectQuery.data} key={project.id} project={project} threadId={threadId} />;
+  const project = projectDetail(projectQuery.data, fixtureMode);
+  return <ProjectScreen fixtureMode={fixtureMode} apiProject={projectQuery.data} key={project.id} project={project} threadId={threadId} />;
 }

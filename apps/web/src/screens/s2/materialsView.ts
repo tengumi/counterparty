@@ -14,7 +14,8 @@ export type MaterialsView =
   | { readonly kind: 'company'; readonly companyId: string }
   | { readonly kind: 'evidence'; readonly evidenceId: string }
   | { readonly kind: 'document'; readonly documentId: string }
-  | { readonly kind: 'summary' };
+  | { readonly kind: 'summary' }
+  | { readonly kind: 'comparison' };
 
 export interface MaterialsState {
   readonly open: boolean;
@@ -42,6 +43,7 @@ function parseView(raw: unknown): MaterialsView | null {
   const value = raw as { kind?: unknown; companyId?: unknown; evidenceId?: unknown; documentId?: unknown };
   if (value.kind === 'list') return { kind: 'list' };
   if (value.kind === 'summary') return { kind: 'summary' };
+  if (value.kind === 'comparison') return { kind: 'comparison' };
   if (value.kind === 'company' && typeof value.companyId === 'string') {
     return { kind: 'company', companyId: value.companyId };
   }

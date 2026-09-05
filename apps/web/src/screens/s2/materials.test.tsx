@@ -20,8 +20,8 @@ function openCheck(path: string) {
     <MemoryRouter initialEntries={[path]}>
       <WorkspaceQueryProvider initialProjects={apiProjects}>
         <Routes>
-          <Route element={<CheckPage />} path="/checks/:projectId" />
-          <Route element={<CheckPage />} path="/checks/:projectId/chats/:threadId" />
+          <Route element={<CheckPage fixtureMode />} path="/checks/:projectId" />
+          <Route element={<CheckPage fixtureMode />} path="/checks/:projectId/chats/:threadId" />
         </Routes>
       </WorkspaceQueryProvider>
     </MemoryRouter>,
