@@ -195,6 +195,9 @@ async def test_targeted_attention_runs_real_graph_catalog_selector_and_validatio
                 next(item["fact_id"] for item in facts if item["topic"] == topic)
                 for topic in ("bank_signal", "attention_signal")
             ]
+            selected.append(
+                next(item["fact_id"] for item in facts if item["metric"] == "reason_unavailable")
+            )
             output = {"status": "answered", "fact_ids": selected}
         return SimpleNamespace(
             choices=[
@@ -221,10 +224,10 @@ async def test_targeted_attention_runs_real_graph_catalog_selector_and_validatio
     assert len(router_calls) == 1
     assert router_calls[0]["session"]["focused_position"] == 2
     assert seen_topics == [{"bank_signal", "attention_signal"}]
-    assert len(result.answer_claims) == 2
+    assert len(result.answer_claims) == 3
     analysis = analyze_snapshot(first, evaluated_at=NOW)
     allowed = {item.evidence_id for item in (*first.evidence, *analysis.derived_evidence)}
     assert all(set(claim.evidence_ids) <= allowed for claim in result.answer_claims)
     state = await graph.aget_state({"configurable": {"thread_id": "routing"}})
     assert state.values["focused_snapshot_id"] == first.snapshot_id
-    assert len(state.values["last_fact_ids"]) == 2
+    assert len(state.values["last_fact_ids"]) == 3

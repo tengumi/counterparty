@@ -97,7 +97,7 @@ export function ComparisonOverview({
                         onClick={() =>
                           source({
                             title: `Банковский светофор · ${segment.label}`,
-                            value: `${segment.count} из ${total} компаний. Внешний сигнал банка, без пересчёта. Ниже — основания всей группы для проверки количества.`,
+                            value: `${segment.count} из ${total} компаний. Ниже — данные отчётов, использованные в сводке.`,
                             evidence: segment.evidence,
                           })
                         }
@@ -113,8 +113,7 @@ export function ComparisonOverview({
                 </div>
               </div>
               <p className="chart-footnote">
-                Готовая оценка банка. Отсутствующий сигнал учитывается отдельно
-                от серого.
+                Отсутствующая оценка учитывается отдельно от серой.
               </p>
             </>
           ) : (

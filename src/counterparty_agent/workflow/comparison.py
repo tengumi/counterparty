@@ -9,6 +9,7 @@ from counterparty_agent.ai.validation import validate_comparison_answer
 from counterparty_agent.analytics.comparison import compare_snapshots, validate_comparison
 from counterparty_agent.analytics.core import analyze_snapshot, validate_analysis
 from counterparty_agent.workflow.contracts import WorkflowContext, WorkflowResult, WorkflowState
+from counterparty_agent.workflow.review_session import wants_review
 from counterparty_agent.workflow.selection import _comparison_selection_views
 
 
@@ -75,6 +76,8 @@ async def _answer_comparison_question(
     state: WorkflowState, runtime: Runtime[WorkflowContext]
 ) -> WorkflowState:
     context = runtime.context
+    if wants_review(context):
+        return {"status": "compose_comparison"}
     if context._comparison is None:
         raise RuntimeError("Сравнение для ответа не проверено")
     if context.settings is None:

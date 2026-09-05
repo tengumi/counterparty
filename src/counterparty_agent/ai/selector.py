@@ -32,6 +32,7 @@ from counterparty_agent.ai.periods import _has_nonannual_period, _select_relativ
 from counterparty_agent.ai.prompts import _GROUP_SELECTOR_PROMPT, _SELECTOR_PROMPT
 from counterparty_agent.ai.topics import (
     needs_attention_explanation,
+    needs_bank_reason,
     required_group_topics,
     topic_key,
 )
@@ -58,11 +59,20 @@ async def answer_question(
             return _safe_answer("insufficient_data", used_llm=False, model=None)
         previous_facts = [catalog[key] for key in previous_fact_ids[-8:] if key in catalog]
         attention_explanation = needs_attention_explanation(question, previous_facts)
+        bank_reason = needs_bank_reason(question, previous_facts)
         catalog, resolved_period = _select_relative_period(question, catalog, previous_facts)
         required_topics = {"bank_signal", "attention_signal"} if attention_explanation else set()
+        if bank_reason:
+            required_topics.add("bank_signal:reason_unavailable")
         if attention_explanation:
-            catalog = {key: item for key, item in catalog.items() if item.topic in required_topics}
-        if not catalog or not required_topics <= {item.topic for item in catalog.values()}:
+            catalog = {
+                key: item for key, item in catalog.items() if topic_key(item) in required_topics
+            }
+        if not bank_reason:
+            catalog = {
+                key: item for key, item in catalog.items() if item.metric != "reason_unavailable"
+            }
+        if not catalog or not required_topics <= {topic_key(item) for item in catalog.values()}:
             return _safe_answer("insufficient_data", used_llm=False, model=None)
         context = {
             "approved_facts": [
@@ -92,6 +102,7 @@ async def answer_question(
         if attention_explanation:
             context["answer_mode"] = "attention_explanation"
             context["required_topics"] = sorted(required_topics)
+            context["explain_bank_reason"] = bank_reason
         messages = build_messages(question, context)
         messages[0]["content"] = _SELECTOR_PROMPT
     except (AnalysisValidationError, LlmContextLimitError, ValueError, KeyError, StopIteration):
@@ -132,10 +143,16 @@ async def _invoke_fact_selector(
                 if required_topics and not required_topics <= topics:
                     raise LlmInvalidResponseError("Ответ не покрывает явно запрошенные показатели")
                 fact_ids = selected.fact_ids
-                if required_topics and "bank_signal" in required_topics:
-                    # Сначала граница банковской оценки, затем независимые сигналы.
+                if required_topics and required_topics & {"bank_signal", "comparison_bank_signal"}:
+                    # Сначала сама оценка, затем ответ о причине и отдельные обстоятельства.
                     fact_ids = tuple(
-                        sorted(fact_ids, key=lambda key: catalog[key].topic != "bank_signal")
+                        sorted(
+                            fact_ids,
+                            key=lambda key: (
+                                catalog[key].topic not in {"bank_signal", "comparison_bank_signal"},
+                                catalog[key].metric == "reason_unavailable",
+                            ),
+                        )
                     )
                 claims = tuple(catalog[key].claim for key in fact_ids)
                 return GroundedAnswer(
@@ -197,6 +214,20 @@ async def answer_comparison_question(
             item.fact_id: item for item in build_comparison_fact_catalog(snapshots, comparison)
         }
         previous = [catalog[key] for key in previous_fact_ids[-8:] if key in catalog]
+        bank_reason = needs_bank_reason(question, previous)
+        required_topics = required_group_topics(question)
+        if bank_reason:
+            required_topics.update(
+                {
+                    "comparison_bank_signal",
+                    "comparison_bank_signal:reason_unavailable",
+                    "comparison_attention_signals",
+                }
+            )
+        else:
+            catalog = {
+                key: item for key, item in catalog.items() if item.metric != "reason_unavailable"
+            }
         catalog, resolved_period = _select_relative_period(question, catalog, previous)
         # Каталог группы содержит лишь год текущей матрицы; другие относительные даты не угадываем.
         if re.search(
@@ -219,12 +250,14 @@ async def answer_comparison_question(
                 catalog = {
                     key: item for key, item in catalog.items() if item.period in explicit_years
                 }
-        if not catalog:
+        if not catalog or not required_topics <= {topic_key(item) for item in catalog.values()}:
             return _safe_answer("insufficient_data", used_llm=False, model=None)
         context = {
             "company_count": len(comparison.snapshot_ids),
             "comparison_period": comparison.financial_year,
             "resolved_period": resolved_period,
+            "explain_bank_reason": bank_reason,
+            "required_topics": sorted(required_topics),
             "previous_fact_ids": [item.fact_id for item in previous],
             "approved_facts": [
                 {
@@ -260,5 +293,5 @@ async def answer_comparison_question(
         messages,
         catalog,
         client=client,
-        required_topics=required_group_topics(question),
+        required_topics=required_topics,
     )

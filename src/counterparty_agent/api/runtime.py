@@ -15,6 +15,7 @@ from fastapi import HTTPException, Request
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langsmith import tracing_context
 
+from counterparty_agent.ai.deal import DealContext
 from counterparty_agent.ai.transport import create_client
 from counterparty_agent.api.projections import _response
 from counterparty_agent.api.schemas import ChatResponse
@@ -67,6 +68,12 @@ class _Runtime:
             "CREATE INDEX IF NOT EXISTS idx_browser_sessions_updated "
             "ON browser_sessions(updated_at)"
         )
+        async with self.saver.conn.execute("PRAGMA table_info(browser_sessions)") as cursor:
+            columns = {row[1] for row in await cursor.fetchall()}
+        if "review_context" not in columns:
+            await self.saver.conn.execute(
+                "ALTER TABLE browser_sessions ADD COLUMN review_context TEXT"
+            )
         await self.saver.conn.commit()
         await self.prune()
         try:
@@ -179,6 +186,15 @@ class _Runtime:
                 "Источник недоступен. Проверьте COUNTERPARTY_SNAPSHOT_JSON_PATH "
                 "и перезапустите сервер.",
             )
+        async with self.saver.conn.execute(
+            "SELECT review_context FROM browser_sessions "
+            "WHERE session_id = ? AND checkpoint_key = ?",
+            (session_id, checkpoint_key),
+        ) as cursor:
+            row = await cursor.fetchone()
+        deal = DealContext.model_validate_json(row[0]) if row and row[0] else DealContext()
+        if deal.source_hash and deal.source_hash != self.source.source_hash:
+            deal = DealContext()
         context = WorkflowContext(
             source=self.source,
             evaluated_at=datetime.now(UTC),
@@ -188,6 +204,7 @@ class _Runtime:
             restore=restore,
             settings=self.settings,
             llm_client=self.llm_client,
+            deal=deal,
         )
         try:
             # Внешний tracing не должен отправлять запросы и RuntimeContext за пределы стенда.
@@ -199,7 +216,15 @@ class _Runtime:
                 )
             if context.result is None:
                 raise RuntimeError("Граф не сформировал результат")
-            return _response(session_id, context.result)
+            response = _response(session_id, context.result)
+            if context.deal is not None:
+                await self.saver.conn.execute(
+                    "UPDATE browser_sessions SET review_context = ? "
+                    "WHERE session_id = ? AND checkpoint_key = ?",
+                    (context.deal.model_dump_json(), session_id, checkpoint_key),
+                )
+                await self.saver.conn.commit()
+            return response
         except InvalidCandidateSelection as error:
             raise HTTPException(
                 409, "Выбор устарел. Повторите поиск и выберите предложенную компанию."

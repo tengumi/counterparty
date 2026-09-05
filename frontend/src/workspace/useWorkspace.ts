@@ -8,10 +8,19 @@ import type {
   Message,
   Project,
   ProjectSummary,
+  ReviewContext,
 } from "../types";
 
 const sessionKey = "counterparty.session.v2";
 const projectKey = "counterparty.project.v1";
+const viewKey = "counterparty.view.v1";
+
+export function restoredWorkspaceView(
+  value: string | null,
+): "project" | "comparison" {
+  return value === "comparison" ? "comparison" : "project";
+}
+
 export function useWorkspace() {
   const [session, setSession] = useState<string | null>(null);
   const [data, setData] = useState<ChatResponse | null>(null);
@@ -22,7 +31,11 @@ export function useWorkspace() {
   const [shortlist, setShortlistState] = useState<string[]>([]);
   const [project, setProject] = useState<Project | null>(null);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [view, setView] = useState("comparison");
+  const [view, setViewState] = useState("comparison");
+  const setView = (next: string) => {
+    setViewState(next);
+    sessionStorage.setItem(viewKey, next);
+  };
   const pending = useRef(false);
   const requestVersion = useRef(0);
 
@@ -70,7 +83,11 @@ export function useWorkspace() {
           if (!active) return;
           rememberProject(opened.project);
           saveSession(opened.project.session_id);
-          setData(opened.response);
+          const restoredView = restoredWorkspaceView(
+            sessionStorage.getItem(viewKey),
+          );
+          setView(restoredView);
+          restoreAnswer(opened.response, restoredView === "project");
           await refreshProjects();
           return;
         } catch {
@@ -82,7 +99,7 @@ export function useWorkspace() {
         try {
           const restored = await api<ChatResponse>(`/api/sessions/${previous}`);
           if (!active) return;
-          setData(restored);
+          restoreAnswer(restored);
           saveSession(previous);
           await refreshProjects();
           return;
@@ -111,6 +128,16 @@ export function useWorkspace() {
         evidence,
       },
     ]);
+  }
+  function restoreAnswer(result: ChatResponse, projectDialogue = false) {
+    const evidence = responseSources(result);
+    setData(result);
+    // Восстанавливаем ответ сервера, не создавая вымышленную историю переписки.
+    setMessages(
+      !projectDialogue && result.answer
+        ? [{ role: "assistant", text: result.answer, evidence }]
+        : [],
+    );
   }
   async function send(action: Record<string, string>, label?: string) {
     if (!session) return;
@@ -159,12 +186,15 @@ export function useWorkspace() {
         project?: Project;
         evidence: Evidence[];
         claims: { evidence_ids: string[] }[];
+        review?: ReviewContext | null;
       }>(`/api/projects/${project.project_id}/ask`, {
         question,
         expected_revision: project.revision,
       });
       if (version !== requestVersion.current) return;
       if (result.project) rememberProject(result.project);
+      if (result.review !== undefined)
+        setData((old) => (old ? { ...old, review: result.review } : old));
       const available = new Set(result.evidence.map((e) => e.evidence_id));
       if (
         result.claims.some((c) =>
@@ -203,8 +233,7 @@ export function useWorkspace() {
       if (version !== requestVersion.current) return;
       rememberProject(result.project);
       saveSession(result.project.session_id);
-      setData(result.response);
-      setMessages([]);
+      restoreAnswer(result.response, true);
       setView("project");
     });
   }

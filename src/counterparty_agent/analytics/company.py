@@ -98,8 +98,8 @@ def _analyze_company(
         builder.add(
             "bank_risk_unavailable",
             FindingCategory.DATA_QUALITY,
-            "Банковская оценка отсутствует или имеет неизвестное значение; GREY не означает "
-            "низкий риск. Методика скоринга не восстанавливается.",
+            "Оценка отсутствует или её значение не распознано. "
+            "Это не означает низкий риск.",
             {"raw_level": snapshot.bank_risk.raw_level},
             parents,
             status=FindingDataStatus.INSUFFICIENT,

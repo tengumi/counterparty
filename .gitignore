@@ -22,11 +22,15 @@ node_modules/
 !src/counterparty_agent/ui/build/
 !src/counterparty_agent/ui/build/**
 tmp/
-src/counterparty_agent/ui/
+src/counterparty_agent/ui/*
+!src/counterparty_agent/ui/build/
+!src/counterparty_agent/ui/build/**
 
 # Исходные отчёты могут содержать реквизиты компаний и персональные данные.
 data/*.csv
 data/*.json
 data/*.parquet
 !data/README.md
-benchmarks/
+benchmarks/*
+!benchmarks/*.py
+!benchmarks/README.md

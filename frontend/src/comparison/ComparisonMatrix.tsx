@@ -1,6 +1,6 @@
 import type { Card, Row } from "../types";
 import type { SourceDetails } from "../components/EvidenceDrawer";
-import { Bank, date } from "../components/Primitives";
+import { Bank, bankLabel, date } from "../components/Primitives";
 import {
   comparisonBankKey,
   comparisonCellSources,
@@ -110,10 +110,7 @@ export function ComparisonMatrix({
                       onClick={() =>
                         source({
                           title: "Банковский светофор",
-                          value:
-                            "Внешний сигнал банка: " +
-                            (card.bank_risk.raw_level ?? "не передан") +
-                            ". Методика закрыта, другие строки не объясняют цвет и не гарантируют безопасность сделки.",
+                          value: `Оценка в отчёте: ${bankLabel(card.bank_risk.raw_level)}.`,
                           company: card.name,
                           evidence: card.evidence.filter(
                             (item) =>
@@ -138,7 +135,7 @@ export function ComparisonMatrix({
           {rows.map((row) => (
             <tr key={row.key} data-financial={row.key.startsWith("financial_")}>
               <th scope="row">
-                {row.label}
+                {row.key === "company_status" ? "Статус компании" : row.label}
                 {row.comparison_note && (
                   <details className="row-note">
                     <summary>О показателе</summary>

@@ -7,7 +7,31 @@ from counterparty_agent.ai.contracts import ApprovedFact
 
 
 def topic_key(fact: ApprovedFact) -> str:
-    return f"{fact.topic}:{fact.metric}" if fact.topic == "comparison_financial" else fact.topic
+    if fact.topic == "comparison_financial" or fact.metric == "reason_unavailable":
+        return f"{fact.topic}:{fact.metric}"
+    return fact.topic
+
+
+def needs_bank_reason(question: str, previous_facts: Sequence[ApprovedFact] = ()) -> bool:
+    """Причину оценки сообщать только при прямом вопросе или адресном продолжении."""
+
+    text = question.casefold().replace("ё", "е")
+    causal = re.search(
+        r"\b(?:почему|отчего|из[\s-]+за\s+чего|причин\w*|объясни\w*|поясни\w*)\b", text
+    )
+    bank = re.search(
+        r"\b(?:светофор\w*|цвет\w*|оценк\w*|желт\w*|красн\w*|зелен\w*|сер\w*|"
+        r"надеж(?:н\w*|ен)|yellow|red|green|grey)\b|\bтребует\s+внимани\w*\b",
+        text,
+    )
+    if causal and bank:
+        return True
+    short_followup = re.fullmatch(
+        r"(?:а\s+)?(?:почему|отчего|поясни(?:\s+подробнее)?|объясни)[?!.\s]*", text
+    )
+    return bool(short_followup) and any(
+        item.topic in {"bank_signal", "comparison_bank_signal"} for item in previous_facts
+    )
 
 
 def required_group_topics(question: str) -> set[str]:

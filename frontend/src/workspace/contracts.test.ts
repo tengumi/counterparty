@@ -13,7 +13,10 @@ import { ComparisonTable } from "../comparison/ComparisonTable";
 import { responseSources } from "./evidence";
 import { scrollConversation } from "../components/ChatPanel";
 import { EvidenceDrawer } from "../components/EvidenceDrawer";
+import { bankLabel } from "../components/Primitives";
 import type { Card, Cell, ChatResponse, Row } from "../types";
+import { api } from "../api";
+import { restoredWorkspaceView } from "./useWorkspace";
 
 // В Node проверяем нашу таблицу; CSS внешней библиотеки проверяется браузером.
 vi.mock("@alfalab/core-components-button", () => ({
@@ -84,6 +87,63 @@ function response(n = 3): ChatResponse {
   };
 }
 describe("Представление без пересчёта фактов", () => {
+  it("восстанавливает выбранный проектный диалог после обновления страницы", () => {
+    expect(restoredWorkspaceView("project")).toBe("project");
+    expect(restoredWorkspaceView("comparison")).toBe("comparison");
+    expect(restoredWorkspaceView(null)).toBe("project");
+    expect(restoredWorkspaceView("unknown")).toBe("project");
+  });
+  it("ошибки валидации и сети показываются понятным текстом без внутренних структур", async () => {
+    const fetch = vi.spyOn(globalThis, "fetch");
+    try {
+      fetch.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            detail: [{ loc: ["body", "question"], msg: "Field required" }],
+          }),
+          { status: 422 },
+        ),
+      );
+      await expect(api("/api/chat")).rejects.toThrow(
+        "Проверьте введённые данные",
+      );
+      fetch.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+      await expect(api("/api/chat")).rejects.toThrow("Нет связи с приложением");
+      fetch.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ detail: "Сначала завершите выбор компаний." }),
+          { status: 409 },
+        ),
+      );
+      await expect(api("/api/chat")).rejects.toThrow(
+        "Сначала завершите выбор компаний",
+      );
+      fetch.mockResolvedValueOnce(new Response("не JSON", { status: 200 }));
+      await expect(api("/api/chat")).rejects.toThrow("Получен неполный ответ");
+    } finally {
+      fetch.mockRestore();
+    }
+  });
+  it("принимает условия пользователя как отдельный источник, без замены фактов отчёта", () => {
+    const data = response();
+    data.evidence = [
+      {
+        evidence_id: "deal:advance",
+        source_name: "Сообщено пользователем",
+        report_at: "2026-09-01",
+        quality: "user_context",
+        coverage: "provided",
+        canonical_path: "deal.advance",
+        value: "50%",
+      },
+    ];
+    data.answer_claims = [
+      { text: "Вы указали аванс 50%", evidence_ids: ["deal:advance"] },
+    ];
+    expect(responseSources(data)[0].quality).toBe("user_context");
+    data.evidence[0].evidence_id = "e0";
+    expect(() => responseSources(data)).toThrow("не может заменять");
+  });
   it("новый ответ прокручивает только сообщения, а не страницу отчёта", () => {
     const container = {
       scrollTop: 0,
@@ -101,6 +161,27 @@ describe("Представление без пересчёта фактов", ()
     ).toBe("18\u202f014\u202f398\u202f509\u202f481\u202f985,03");
     expect(displayCell("financial_profit", cell(0, "Нет данных"))).toBe(
       "Нет данных",
+    );
+  });
+  it.each([
+    ["GREEN", "Надёжный"],
+    ["YELLOW", "Требует внимания"],
+    ["RED", "В зоне риска"],
+    ["GREY", "Нет оценки"],
+    [null, "Сигнал не передан"],
+    ["NEW_CODE", "Сигнал не распознан"],
+    ["__proto__", "Сигнал не распознан"],
+  ])("подписи оценки %s русифицируются без изменения источника", (raw, label) => {
+    const sourceCell = Object.freeze({
+      ...cell(0),
+      value: raw,
+      display_value: `${raw} — исходная подпись поставщика`,
+    });
+    expect(bankLabel(raw)).toBe(label);
+    expect(displayCell("bank_risk", sourceCell)).toBe(label);
+    expect(sourceCell.value).toBe(raw);
+    expect(sourceCell.display_value).toBe(
+      `${raw} — исходная подпись поставщика`,
     );
   });
   it("совмещает поиск, банковский фильтр и ручной отбор без нового ранжирования", () => {

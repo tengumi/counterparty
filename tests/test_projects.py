@@ -16,9 +16,12 @@ from fastapi.testclient import TestClient
 from pypdf import PdfWriter
 
 from benchmarks.synthetic import synthetic_factory
+from counterparty_agent.ai.deal import DealContext, DealPatch, apply_deal
 from counterparty_agent.api.routes import create_app
 from counterparty_agent.config import Settings
+from counterparty_agent.projects.commands import apply_command
 from counterparty_agent.projects.documents import extract_document
+from counterparty_agent.projects.models import Project, ProjectCommand
 
 
 def test_parser_resource_limit_kills_child_and_does_not_pass_secrets(monkeypatch):
@@ -130,7 +133,8 @@ def test_five_to_three_document_plan_and_confirmed_memo(client: TestClient) -> N
     assert response.status_code == 201
     project = command(client, response.json(), "run")
     assert project["memo"] is None and project["proposal"]
-    assert [s["status"] for s in project["plan"]] == ["complete"] * 3
+    assert project["plan_mode"] == "fallback"
+    assert project["plan"] and all(step["status"] == "limited" for step in project["plan"])
     proposed = project["proposal"]["memo"]
     assert proposed["selected_snapshot_ids"] == project["shortlist_ids"]
     assert set(item["company_id"] for item in proposed["items"] if item["kind"] == "fact") == set(
@@ -262,6 +266,7 @@ def test_revision_scope_and_source_change_are_not_silently_accepted(client: Test
         ).status_code
         == 409
     )
+
     client.app.state.runtime.source._source_hash = "changed"
     assert (
         client.post(
@@ -270,6 +275,57 @@ def test_revision_scope_and_source_change_are_not_silently_accepted(client: Test
         ).status_code
         == 409
     )
+
+
+async def test_proposal_hash_rejects_changed_terms_even_when_proposal_was_not_cleared(client):
+    data = command(client, create(client), "run")
+    project = Project.model_validate(data)
+    project.deal = apply_deal(
+        project.deal, DealPatch(advance="оплата после поставки"), "оплата после поставки"
+    )
+    with pytest.raises(HTTPException) as error:
+        await apply_command(
+            project,
+            ProjectCommand(
+                action="accept_memo",
+                expected_revision=project.revision,
+                proposal_id=data["proposal"]["proposal_id"],
+            ),
+            client.app.state.runtime,
+            None,
+        )
+    assert error.value.status_code == 409
+    assert project.memo is None
+
+
+def test_save_project_copies_only_its_explicit_session_conditions(client):
+    session = client.post("/api/sessions").json()["session_id"]
+    inn = synthetic_factory(n=1).truth[0].inn
+    card = client.post("/api/chat", json={"session_id": session, "question": inn}).json()["card"]
+    deal = apply_deal(
+        DealContext(),
+        DealPatch(goal="Проверка поставщика", advance="аванс 20 процентов"),
+        "Проверка поставщика, аванс 20 процентов",
+    )
+    deal.snapshot_ids = [card["snapshot_id"]]
+    deal.source_hash = client.app.state.runtime.source.source_hash
+
+    async def store_context():
+        connection = client.app.state.runtime.saver.conn
+        await connection.execute(
+            "UPDATE browser_sessions SET review_context = ? WHERE session_id = ?",
+            (deal.model_dump_json(), session),
+        )
+        await connection.commit()
+
+    client.portal.call(store_context)
+    saved = client.post("/api/projects", json={"title": "Проверка", "session_id": session}).json()
+    assert saved["goal"] == "Проверка поставщика"
+    assert saved["deal"]["advance"] == "аванс 20 процентов"
+    assert saved["deal"]["terms"]["advance"]["evidence_id"] == deal.terms["advance"].evidence_id
+    assert saved["session_id"] != session
+    independent = create(client)
+    assert independent["deal"]["advance"] is None
 
 
 @pytest.mark.parametrize(

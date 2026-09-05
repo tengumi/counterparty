@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Project, Card } from "../types";
 import { Action, date, Icon } from "../components/Primitives";
 import type { SourceDetails } from "../components/EvidenceDrawer";
@@ -18,15 +18,21 @@ export function ProjectPanel({
   cards: Card[];
   source: (details: SourceDetails) => void;
 }) {
-  const [tab, setTab] = useState("plan");
+  const [tab, setTab] = useState(
+    project.proposal || project.memo ? "memo" : "plan",
+  );
   const [goal, setGoal] = useState(project.goal);
   const [showOld, setShowOld] = useState(false);
   const [showChanges, setShowChanges] = useState(false);
   const memo = project.proposal?.memo || project.memo;
+  useEffect(() => {
+    if (project.proposal) setTab("memo");
+  }, [project.proposal?.proposal_id]);
   const selected = project.shortlist_ids.length || project.snapshot_ids.length;
   const stale =
     project.memo &&
-    (project.memo.goal !== project.goal ||
+    (project.memo_stale ||
+      project.memo.goal !== project.goal ||
       JSON.stringify(project.memo.selected_snapshot_ids) !==
         JSON.stringify(
           project.shortlist_ids.length
@@ -156,22 +162,20 @@ export function ProjectPanel({
           {!!project.plan.length && (
             <p className="small muted">
               {project.plan_mode === "ai"
-                ? "Темы подобраны помощником по цели. Факты проверены сервером."
-                : "Выполнен базовый план: модель недоступна или не выбрала допустимые темы."}
+                ? "Проверка учитывает вашу цель и доступные сведения."
+                : "Выполнена базовая проверка. Углублённый анализ сейчас недоступен."}
             </p>
           )}
           {!!project.questions.length && (
             <div className="open-questions">
-              <h3>Что ещё уточнить</h3>
+              <h3>Уточнения к проверке</h3>
               {project.questions.map((q) => (
-                <div key={q.question_id}>
-                  <p>{q.text}</p>
-                  <span className="small muted">
-                    {q.document_ids.length
-                      ? `Документов связано: ${q.document_ids.length}. Требует вашего подтверждения.`
-                      : "Нет связанного документа"}
-                  </span>
-                </div>
+                <QuestionAnswer
+                  key={`${q.question_id}:${q.answer || ""}`}
+                  question={q}
+                  busy={busy}
+                  command={command}
+                />
               ))}
             </div>
           )}
@@ -298,8 +302,8 @@ export function ProjectPanel({
           )}
           {!project.proposal && stale && (
             <p className="notice">
-              После сохранения изменились цель, состав или документы. Запустите
-              план, чтобы обновить резюме.
+              После сохранения изменились условия, состав или документы.
+              Запустите план, чтобы обновить резюме.
             </p>
           )}
           {!memo && (
@@ -346,13 +350,25 @@ export function ProjectPanel({
           {memo && (
             <>
               <p className="memo-goal">Цель: {memo.goal}</p>
-              {(["fact", "document", "limitation", "action"] as const).map(
-                (kind) => (
+              {(
+                [
+                  "analysis",
+                  "fact",
+                  "condition",
+                  "document",
+                  "limitation",
+                  "action",
+                ] as const
+              )
+                .filter((kind) => memo.items.some((item) => item.kind === kind))
+                .map((kind) => (
                   <div className="memo-section" key={kind}>
                     <h3>
                       {
                         {
+                          analysis: "Вывод по вашей задаче",
                           fact: "Факты отчётов",
+                          condition: "Условия, которые вы сообщили",
                           document: "Из пользовательских документов",
                           limitation: "Ограничения",
                           action: "Следующие действия",
@@ -375,13 +391,77 @@ export function ProjectPanel({
                         </div>
                       ))}
                   </div>
-                ),
-              )}
+                ))}
               <p className="small muted">{memo.note}</p>
             </>
           )}
         </div>
       )}
     </section>
+  );
+}
+
+function QuestionAnswer({
+  question,
+  busy,
+  command,
+}: {
+  question: Project["questions"][number];
+  busy: boolean;
+  command: (action: string, values?: Record<string, unknown>) => void;
+}) {
+  const [answer, setAnswer] = useState(question.answer || "");
+  const [editing, setEditing] = useState(!question.answer);
+  return (
+    <div className="project-question">
+      <p>{question.text}</p>
+      {question.answer && (
+        <p className="question-answer">Ваш ответ: {question.answer}</p>
+      )}
+      <span className="small muted">
+        {question.status === "answered"
+          ? "Ответ учтён; это сведения пользователя."
+          : question.status === "needs_confirmation"
+            ? "Нужны дополнительные подтверждения."
+            : "Можно ответить здесь или в чате."}
+        {!!question.document_ids.length &&
+          ` Документов связано: ${question.document_ids.length}.`}
+      </span>
+      {editing ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            command("answer_question", {
+              question_id: question.question_id,
+              value: answer,
+            });
+          }}
+        >
+          <textarea
+            aria-label={`Ответ: ${question.text}`}
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            rows={2}
+            maxLength={2000}
+            disabled={busy}
+            placeholder="Что известно об этом условии?"
+          />
+          <Action
+            type="submit"
+            disabled={busy || !answer.trim() || answer === question.answer}
+          >
+            Учесть ответ
+          </Action>
+        </form>
+      ) : (
+        <button
+          className="text-button"
+          disabled={busy}
+          onClick={() => setEditing(true)}
+        >
+          Изменить ответ
+        </button>
+      )}
+    </div>
   );
 }

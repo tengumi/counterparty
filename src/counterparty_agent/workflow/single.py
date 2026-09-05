@@ -8,6 +8,7 @@ from counterparty_agent.ai.selector import answer_question
 from counterparty_agent.ai.validation import validate_grounded_answer
 from counterparty_agent.analytics.core import analyze_snapshot, validate_analysis
 from counterparty_agent.workflow.contracts import WorkflowContext, WorkflowResult, WorkflowState
+from counterparty_agent.workflow.review_session import wants_review
 from counterparty_agent.workflow.selection import _no_selection
 
 
@@ -45,6 +46,8 @@ async def _answer_question(
     """Передать адаптеру только проверенный снимок и ID предыдущей темы."""
 
     context = runtime.context
+    if wants_review(context):
+        return {"status": "compose_comparison" if context._focus_question else "compose"}
     if context._snapshot is None or context._analysis is None:
         raise RuntimeError("Проверенные данные для вопроса отсутствуют")
     if context.settings is None:

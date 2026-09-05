@@ -108,6 +108,9 @@ async def _request_completion(
     """Общий ограниченный Chat Completions вызов без отражения payload в ошибках."""
 
     options: dict[str, object] = {}
+    reasoning: dict[str, object] = {"enabled": settings.llm_reasoning_enabled}
+    if settings.llm_reasoning_enabled:
+        reasoning["max_tokens"] = settings.llm_reasoning_max_tokens
     if json_mode:
         options["response_format"] = {"type": "json_object"}
     completion = await llm_client.chat.completions.create(
@@ -115,7 +118,7 @@ async def _request_completion(
         messages=messages,
         temperature=settings.llm_temperature,
         max_tokens=settings.llm_max_tokens,
-        extra_body={"reasoning": {"enabled": settings.llm_reasoning_enabled}},
+        extra_body={"reasoning": reasoning},
         **options,
     )
 

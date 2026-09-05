@@ -1,63 +1,38 @@
-"""Ограниченный LangGraph: три чтения и черновик; сохранение только на HTTP-границе."""
+"""Проверка под цель и версионируемое резюме с явным подтверждением пользователя."""
 
 from __future__ import annotations
 
 import difflib
 import secrets
-from dataclasses import dataclass, field
+from collections.abc import Sequence
 from datetime import datetime
-from typing import Any, TypedDict
+from typing import Any
 
 from fastapi import HTTPException
-from langgraph.graph import END, START, StateGraph
-from langgraph.runtime import Runtime
-from langsmith import tracing_context
 
+from counterparty_agent.ai.catalog import build_fact_catalog
+from counterparty_agent.ai.contracts import ApprovedFact, GroundedClaim
+from counterparty_agent.ai.deal import DealField
 from counterparty_agent.analytics.core import analyze_snapshot, validate_analysis
 from counterparty_agent.config import Settings
 from counterparty_agent.data.repository import JsonCounterpartySource
 from counterparty_agent.models import AnalysisResult, CounterpartySnapshot
+from counterparty_agent.projects.evidence import document_facts, project_sources, question_facts
 from counterparty_agent.projects.models import (
     DecisionMemo,
     MemoItem,
     MemoProposal,
-    MemoSource,
     Project,
     ReviewStep,
 )
-from counterparty_agent.projects.planning import PlanChoice, choose_plan, questions_for
-
-BANK_LABELS = {
-    "GREEN": "надёжный",
-    "YELLOW": "требует внимания",
-    "RED": "в зоне риска",
-    "GREY": "нет данных для оценки",
-}
-TOPIC_LABELS = {
-    "finance": "финансы",
-    "arbitration": "суды",
-    "enforcement": "исполнительные производства",
-    "reputation": "сигналы источника",
-    "licenses": "лицензии",
-    "data_quality": "качество данных",
-}
-
-
-class ReviewState(TypedDict, total=False):
-    completed_steps: list[str]
-
-
-@dataclass
-class ReviewContext:
-    project: Project = field(repr=False)
-    source: JsonCounterpartySource = field(repr=False)
-    settings: Settings = field(repr=False)
-    client: Any = field(repr=False)
-    now: datetime
-    choice: PlanChoice | None = None
-    snapshots: list[CounterpartySnapshot] = field(default_factory=list, repr=False)
-    analyses: list[AnalysisResult] = field(default_factory=list, repr=False)
-    items: list[MemoItem] = field(default_factory=list, repr=False)
+from counterparty_agent.projects.planning import (
+    accept_context,
+    context_hash,
+    remember_question,
+    synchronize_goal,
+)
+from counterparty_agent.workflow.review import run_review as run_agent_review
+from counterparty_agent.workflow.review import validate_review_run
 
 
 def current_snapshots(
@@ -76,217 +51,209 @@ def current_snapshots(
     return [item for item in snapshots if item is not None]
 
 
-async def _plan(state: ReviewState, runtime: Runtime[ReviewContext]) -> ReviewState:
-    context = runtime.context
-    if not context.project.goal.strip():
-        raise HTTPException(422, "Укажите цель проверки перед запуском плана.")
-    choice, mode = await choose_plan(context.project.goal, context.settings, context.client)
-    context.choice = choice
-    context.project.plan_mode = mode  # type: ignore[assignment]
-    context.project.questions = questions_for(choice, context.project.questions)
-    context.project.plan = [
-        ReviewStep(step_id="reports", title="Прочитать отчёты выбранных компаний"),
-        ReviewStep(step_id="evidence", title="Проверить факты по выбранным темам"),
-        ReviewStep(step_id="documents", title="Прочитать документы и связать открытые вопросы"),
-    ]
-    return {"completed_steps": []}
-
-
-def _reports(state: ReviewState, runtime: Runtime[ReviewContext]) -> ReviewState:
-    context = runtime.context
-    context.snapshots = current_snapshots(context.project, context.source)
-    step = context.project.plan[0]
-    step.status, step.detail = "complete", f"Прочитано отчётов: {len(context.snapshots)}."
-    step.evidence_ids = [
-        next(e.evidence_id for e in s.evidence if e.canonical_path == "report_at")
-        for s in context.snapshots
-    ]
-    return {"completed_steps": ["reports"]}
-
-
-def _evidence(state: ReviewState, runtime: Runtime[ReviewContext]) -> ReviewState:
-    context = runtime.context
-    assert context.choice is not None
-    for snapshot in context.snapshots:
-        analysis = analyze_snapshot(snapshot, evaluated_at=context.now)
-        validate_analysis(analysis, snapshot)
-        context.analyses.append(analysis)
+def _offline_items(
+    snapshots: Sequence[CounterpartySnapshot],
+    analyses: Sequence[AnalysisResult],
+    extra_facts: Sequence[ApprovedFact],
+) -> list[MemoItem]:
+    """Без модели доступен явно ограниченный просмотр фактов, без агентского заключения."""
+    items = []
+    for snapshot, analysis in zip(snapshots, analyses, strict=True):
+        catalog = build_fact_catalog(snapshot, analysis)
+        bank = next(item for item in catalog if item.topic == "bank_signal" and not item.metric)
+        attention = [item for item in catalog if item.topic == "attention_signal"][:3]
         identity_id = next(
-            e.evidence_id for e in snapshot.evidence if e.canonical_path == "identity"
+            item.evidence_id for item in snapshot.evidence if item.canonical_path == "identity"
         )
-        context.items.append(
-            MemoItem(
-                kind="fact",
-                text=f"{snapshot.identity.short_name}: банковский светофор — "
-                f"{BANK_LABELS[snapshot.bank_risk.display_level]}. "
-                f"Дата отчёта (UTC): {snapshot.report_at.date()}.",
-                evidence_ids=[identity_id, analysis.bank_evidence_id],
-                company_id=snapshot.snapshot_id,
-            )
-        )
-        selected = [
-            f
-            for f in analysis.findings
-            if f.category in context.choice.categories
-            or ("licenses" in context.choice.categories and f.code == "license_coverage")
-        ]
-        selected.sort(
-            key=lambda f: (
-                f.severity != "attention",
-                -(f.period if isinstance(f.period, int) else 0),
-                f.data_status == "confirmed",
-            )
-        )
-        for finding in selected[:4]:
-            context.items.append(
+        for fact in (bank, *attention):
+            items.append(
                 MemoItem(
                     kind="fact",
-                    text=f"{snapshot.identity.short_name}: {finding.statement}",
-                    evidence_ids=[identity_id, *finding.evidence_ids],
+                    text=f"{snapshot.identity.short_name}: {fact.claim.text}",
+                    evidence_ids=list(dict.fromkeys((identity_id, *fact.claim.evidence_ids))),
                     company_id=snapshot.snapshot_id,
                 )
             )
-    step = context.project.plan[1]
-    step.status = "complete"
-    step.detail = (
-        "Проверены темы: "
-        + ", ".join(TOPIC_LABELS[key] for key in context.choice.categories)
-        + ". В резюме — выборка, полный отчёт остаётся доступен."
-    )
-    step.evidence_ids = list(
-        dict.fromkeys(key for item in context.items for key in item.evidence_ids)
-    )
-    return {"completed_steps": [*state["completed_steps"], "evidence"]}
-
-
-def _documents(state: ReviewState, runtime: Runtime[ReviewContext]) -> ReviewState:
-    context = runtime.context
-    for document in context.project.documents:
-        for fragment in document.fragments[:2]:
-            context.items.append(
-                MemoItem(
-                    kind="document",
-                    text=f"Документ «{document.name}», {fragment.location}: «{fragment.text}». "
-                    "Это текст пользователя, не подтверждённый банковский факт.",
-                    evidence_ids=[fragment.evidence_id],
-                )
+    for fact in extra_facts:
+        items.append(
+            MemoItem(
+                kind="document"
+                if fact.topic in {"user_document", "document_coverage"}
+                else "condition",
+                text=fact.claim.text,
+                evidence_ids=list(fact.claim.evidence_ids),
             )
-    step = context.project.plan[2]
-    ready = [d for d in context.project.documents if d.status == "ready"]
-    step.status = "complete" if ready else "limited"
-    step.detail = (
-        f"Прочитано документов: {len(ready)}. В резюме первые два фрагмента каждого; "
-        "вопросы требуют подтверждения."
-        if ready
-        else "Нет документов с доступным текстом. Открытые вопросы не считаются решёнными."
-    )
-    step.evidence_ids = [f.evidence_id for d in ready for f in d.fragments]
-    return {"completed_steps": [*state["completed_steps"], "documents"]}
-
-
-def _draft(state: ReviewState, runtime: Runtime[ReviewContext]) -> ReviewState:
-    context = runtime.context
-    context.items.append(
+        )
+    items.append(
         MemoItem(
             kind="limitation",
-            text="Резюме содержит выбранные факты, а не весь отчёт. "
-            "Пропуски не равны отсутствию риска. "
-            "Денежное ранжирование и новый риск-скоринг не выполняются.",
+            text="Модель недоступна. Показана ограниченная выборка проверенных фактов и цитат. "
+            "Сопоставление с целью и аналитическое заключение не выполнялись.",
         )
     )
-    context.items.extend(MemoItem(kind="action", text=q.text) for q in context.project.questions)
-    needed = {key for item in context.items for key in item.evidence_ids}
-    sources = []
-    for snapshot, analysis in zip(context.snapshots, context.analyses, strict=True):
-        for item in (*snapshot.evidence, *analysis.derived_evidence):
-            if item.evidence_id in needed:
-                sources.append(
-                    MemoSource(
-                        evidence_id=item.evidence_id,
-                        source_name=item.source_name,
-                        company_name=snapshot.identity.short_name or snapshot.identity.full_name,
-                        report_at=item.report_at,
-                        quality=item.quality,
-                        coverage=item.coverage,
-                        canonical_path=item.canonical_path,
-                    )
-                )
-    for document in context.project.documents:
-        sources.extend(
-            MemoSource(
-                evidence_id=f.evidence_id,
-                source_name=document.name,
-                report_at=document.uploaded_at,
-                quality="user_document",
-                coverage="provided",
-                canonical_path=f.location,
-            )
-            for f in document.fragments
-            if f.evidence_id in needed
-        )
-    memo = DecisionMemo(
-        goal=context.project.goal,
-        created_at=context.now,
-        items=context.items,
-        source_hash=context.source.source_hash,
-        selected_snapshot_ids=[s.snapshot_id for s in context.snapshots],
-        document_hashes={d.document_id: d.content_hash for d in context.project.documents},
-        sources=sources,
-    )
-    validate_memo(memo, context)
-    old = [item.text for item in context.project.memo.items] if context.project.memo else []
-    diff = [
-        {"kind": "add" if line.startswith("+ ") else "remove", "text": line[2:]}
-        for line in difflib.ndiff(old, [i.text for i in memo.items])
-        if line.startswith(("+ ", "- "))
-    ]
-    context.project.proposal = MemoProposal(
-        proposal_id=f"proposal_{secrets.token_hex(12)}",
-        base_revision=context.project.revision + 1,
-        memo=memo,
-        diff=diff,
-    )
-    return state
+    return items
 
 
-def validate_memo(memo: DecisionMemo, context: ReviewContext) -> None:
-    """Факты не покидают свой snapshot; документ имеет отдельный namespace evidence."""
-    ledgers = {
-        s.snapshot_id: {e.evidence_id for e in (*s.evidence, *a.derived_evidence)}
-        for s, a in zip(context.snapshots, context.analyses, strict=True)
+def _claim_items(
+    claims: Sequence[GroundedClaim],
+    project: Project,
+) -> list[MemoItem]:
+    document_ids = {item.evidence_id for doc in project.documents for item in doc.fragments}
+    condition_ids = {item.evidence_id for item in project.deal.terms.values()} | {
+        key for question in project.questions for key in question.evidence_ids
     }
-    docs = {f.evidence_id for d in context.project.documents for f in d.fragments}
+    items = []
+    for claim in claims:
+        ids = set(claim.evidence_ids)
+        kind = (
+            "document"
+            if ids <= document_ids
+            else "condition"
+            if ids <= condition_ids
+            else "analysis"
+        )
+        items.append(
+            MemoItem(kind=kind, text=claim.text, evidence_ids=list(claim.evidence_ids))  # type: ignore[arg-type]
+        )
+    return items
+
+
+def validate_memo(
+    memo: DecisionMemo,
+    project: Project,
+    snapshots: Sequence[CounterpartySnapshot],
+    analyses: Sequence[AnalysisResult],
+) -> None:
+    """Проверяем и принадлежность отдельного факта, и источники совместного вывода."""
+    ledgers = {
+        snapshot.snapshot_id: {
+            item.evidence_id for item in (*snapshot.evidence, *analysis.derived_evidence)
+        }
+        for snapshot, analysis in zip(snapshots, analyses, strict=True)
+    }
+    sources = project_sources(project, snapshots, analyses)
+    document_ids = {item.evidence_id for doc in project.documents for item in doc.fragments}
+    condition_ids = {term.evidence_id for term in project.deal.terms.values()} | {
+        key for question in project.questions for key in question.evidence_ids
+    }
+    allowed = {item.evidence_id for item in sources}
+    needed = {key for item in memo.items for key in item.evidence_ids}
+    if not needed <= allowed or {item.evidence_id for item in memo.sources} != needed:
+        raise ValueError("Резюме содержит источники вне текущего проекта")
     for item in memo.items:
-        if item.kind == "fact" and (
-            not item.evidence_ids
-            or not set(item.evidence_ids) <= ledgers.get(item.company_id or "", set())
+        if item.kind in {"fact", "document", "analysis", "condition"} and not item.evidence_ids:
+            raise ValueError("Содержательный вывод должен иметь основание")
+        if item.kind == "fact" and not set(item.evidence_ids) <= ledgers.get(
+            item.company_id or "", set()
         ):
             raise ValueError("Факт резюме не принадлежит выбранной компании")
-        if item.kind == "document" and (
-            not item.evidence_ids or not set(item.evidence_ids) <= docs
-        ):
-            raise ValueError("Фрагмент не принадлежит документам проекта")
+        if item.kind == "document" and not set(item.evidence_ids) <= document_ids:
+            raise ValueError("Цитата не принадлежит документам проекта")
+        if item.kind == "condition" and not set(item.evidence_ids) <= condition_ids:
+            raise ValueError("Условия не сообщены пользователем этого проекта")
 
 
 async def run_review(
     project: Project, source: JsonCounterpartySource, settings: Settings, client: Any, now: datetime
 ) -> Project:
-    context = ReviewContext(project, source, settings, client, now)
-    graph = StateGraph(ReviewState, context_schema=ReviewContext)
-    for name, function in (
-        ("plan", _plan),
-        ("reports", _reports),
-        ("evidence", _evidence),
-        ("documents", _documents),
-        ("draft", _draft),
-    ):
-        graph.add_node(name, function)
-    for start, end in zip(
-        (START, "plan", "reports", "evidence", "documents", "draft"),
-        ("plan", "reports", "evidence", "documents", "draft", END),
-        strict=True,
-    ):
-        graph.add_edge(start, end)
-    with tracing_context(enabled=False):
-        await graph.compile().ainvoke({}, context=context)
-    return context.project
+    synchronize_goal(project)
+    snapshots = current_snapshots(project, source)
+    analyses = [analyze_snapshot(snapshot, evaluated_at=now) for snapshot in snapshots]
+    for snapshot, analysis in zip(snapshots, analyses, strict=True):
+        validate_analysis(analysis, snapshot)
+    project.deal.snapshot_ids = [snapshot.snapshot_id for snapshot in snapshots]
+    project.deal.source_hash = source.source_hash
+    question = "Проанализируй выбранных контрагентов с учётом цели и условий проверки."
+    extra_facts = (*document_facts(project, question), *question_facts(project))
+    if settings.llm_configured and client is not None:
+        result = await run_agent_review(
+            settings,
+            question,
+            snapshots,
+            analyses,
+            project.deal,
+            client=client,
+            extra_facts=extra_facts,
+        )
+        validate_review_run(result)
+        accept_context(project, result.deal)
+        project.plan_mode = "ai"
+        project.plan = [
+            ReviewStep(
+                step_id=f"step_{index}",
+                title=step,
+                status="complete" if result.answer.status == "answered" else "limited",
+            )
+            for index, step in enumerate(result.steps, start=1)
+        ]
+        if result.answer.status != "answered":
+            project.proposal = None
+            project.plan.append(
+                ReviewStep(step_id="result", title=result.answer.answer, status="limited")
+            )
+            return project
+        items = _claim_items(result.answer.claims, project)
+        project.last_fact_ids = list(result.answer.fact_ids)
+    else:
+        project.plan_mode = "fallback"
+        items = _offline_items(snapshots, analyses, extra_facts)
+        project.plan = [
+            ReviewStep(
+                step_id="facts",
+                title="Просмотр доступных фактов",
+                status="limited",
+                detail="Для анализа под цель подключите модель.",
+                evidence_ids=list(
+                    dict.fromkeys(key for item in items for key in item.evidence_ids)
+                ),
+            )
+        ]
+        field: DealField = "advance" if project.goal.strip() else "goal"
+        if (
+            not project.deal.general_check
+            and not getattr(project.deal, field)
+            and field not in project.deal.asked_fields
+            and len(project.deal.asked_fields) < 2
+        ):
+            question_text = (
+                "Какие условия оплаты согласованы?"
+                if field == "advance"
+                else "Для какого решения вы проверяете эти компании?"
+            )
+            # Вопрос уже показан: последующее включение модели не начинает счётчик заново.
+            project.deal.question = question_text
+            project.deal.asked_fields.append(field)
+            remember_question(project, question_text, field=field)
+    items.extend(
+        MemoItem(kind="action", text=question.text)
+        for question in project.questions
+        if question.status != "answered"
+    )
+    needed = {key for item in items for key in item.evidence_ids}
+    sources = [
+        item for item in project_sources(project, snapshots, analyses) if item.evidence_id in needed
+    ]
+    memo = DecisionMemo(
+        goal=project.goal,
+        created_at=now,
+        items=items,
+        source_hash=source.source_hash,
+        selected_snapshot_ids=[snapshot.snapshot_id for snapshot in snapshots],
+        document_hashes={doc.document_id: doc.content_hash for doc in project.documents},
+        context_hash=context_hash(project),
+        sources=sources,
+    )
+    validate_memo(memo, project, snapshots, analyses)
+    old = [item.text for item in project.memo.items] if project.memo else []
+    diff = [
+        {"kind": "add" if line.startswith("+ ") else "remove", "text": line[2:]}
+        for line in difflib.ndiff(old, [item.text for item in memo.items])
+        if line.startswith(("+ ", "- "))
+    ]
+    project.proposal = MemoProposal(
+        proposal_id=f"proposal_{secrets.token_hex(12)}",
+        base_revision=project.revision + 1,
+        memo=memo,
+        diff=diff,
+    )
+    return project

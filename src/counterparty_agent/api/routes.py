@@ -111,7 +111,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             session_id = secrets.token_hex(16)
             checkpoint_key = hashlib.sha256(f"{user_id}:{session_id}".encode()).hexdigest()
             await runtime.saver.conn.execute(
-                "INSERT INTO browser_sessions VALUES (?, ?, ?, ?)",
+                "INSERT INTO browser_sessions "
+                "(session_id, user_id, checkpoint_key, updated_at) VALUES (?, ?, ?, ?)",
                 (session_id, user_id, checkpoint_key, time.time()),
             )
             await runtime.saver.conn.execute(

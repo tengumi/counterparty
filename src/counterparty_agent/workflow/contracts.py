@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Any, TypedDict
 
 from counterparty_agent.ai.contracts import GroundedAnswer, GroundedClaim
+from counterparty_agent.ai.deal import DealContext
 from counterparty_agent.ai.router import IntentPlan
 from counterparty_agent.config import Settings
 from counterparty_agent.data.repository import JsonCounterpartySource
@@ -75,6 +76,9 @@ class WorkflowResult:
     comparison_selections: list[ComparisonSelection] = field(default_factory=list, repr=False)
     focus_snapshot_id: str | None = None
     comparison_pending: bool = False
+    review: DealContext | None = field(default=None, repr=False)
+    review_steps: list[str] = field(default_factory=list)
+    review_run: Any = field(default=None, repr=False)
 
 
 @dataclass(slots=True)
@@ -90,6 +94,7 @@ class WorkflowContext:
     llm_client: Any | None = field(default=None, repr=False)
     candidate_selection_id: str | None = None
     result: WorkflowResult | None = field(default=None, init=False, repr=False)
+    deal: DealContext | None = field(default=None, repr=False)
     _plan: QueryPlan | None = field(default=None, init=False, repr=False)
     _target_snapshot_id: str | None = field(default=None, init=False, repr=False)
     _snapshot: CounterpartySnapshot | None = field(default=None, init=False, repr=False)

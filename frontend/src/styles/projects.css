@@ -139,6 +139,36 @@
   padding: 15px 0;
   font-size: 14px;
 }
+.project-question .question-answer {
+  margin: 8px 0;
+  padding: 10px 14px;
+  background: #f6f7f5;
+  border-radius: 8px;
+  white-space: pre-wrap;
+}
+.project-question > .text-button {
+  display: block;
+  margin-top: 10px;
+}
+.project-question form {
+  display: flex;
+  gap: 12px;
+  align-items: start;
+  margin-top: 12px;
+}
+.project-question textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  resize: vertical;
+  font-size: 14px;
+}
+@media (max-width: 540px) {
+  .project-question form {
+    flex-direction: column;
+  }
+}
 .memo-callout {
   display: flex;
   width: 100%;

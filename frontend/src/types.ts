@@ -65,6 +65,18 @@ export interface Selection {
   message: string;
   candidates: Candidate[];
 }
+export interface ReviewContext {
+  goal: string | null;
+  role: string | null;
+  subject: string | null;
+  amount: string | null;
+  advance: string | null;
+  deadline: string | null;
+  general_check: boolean;
+  question: string | null;
+  steps: string[];
+  context_revision: number;
+}
 export interface ChatResponse {
   session_id: string;
   answer: string;
@@ -83,6 +95,8 @@ export interface ChatResponse {
   focus_snapshot_id: string | null;
   comparison_pending: boolean;
   answer_claims: { text: string; evidence_ids: string[] }[];
+  review?: ReviewContext | null;
+  evidence?: Evidence[];
 }
 export interface Message {
   role: "user" | "assistant";
@@ -105,7 +119,8 @@ export interface ProjectDocument {
   fragments: { evidence_id: string; text: string; location: string }[];
 }
 export interface MemoItem {
-  kind: "fact" | "document" | "limitation" | "action";
+  kind:
+    "fact" | "document" | "analysis" | "condition" | "limitation" | "action";
   text: string;
   evidence_ids: string[];
   company_id: string | null;
@@ -127,14 +142,25 @@ export interface ProjectSummary {
   shortlist_ids: string[];
 }
 export interface Project extends ProjectSummary {
+  focused_snapshot_id?: string | null;
+  deal?: Omit<ReviewContext, "steps">;
   snapshot_ids: string[];
   session_id: string;
   updated_at: string;
   documents: ProjectDocument[];
   plan_mode: string;
   plan: { step_id: string; title: string; status: string; detail: string }[];
-  questions: { question_id: string; text: string; document_ids: string[] }[];
+  questions: {
+    question_id: string;
+    text: string;
+    document_ids: string[];
+    answer?: string | null;
+    status?: "open" | "answered" | "needs_confirmation";
+    evidence_ids?: string[];
+    answered_at?: string | null;
+  }[];
   memo: Memo | null;
+  memo_stale?: boolean;
   proposal: {
     proposal_id: string;
     base_revision: number;

@@ -51,11 +51,15 @@ const banks: Record<string, string> = {
   RED: "В зоне риска",
   GREY: "Нет оценки",
 };
+export function bankLabel(level: string | null | undefined): string {
+  if (level == null) return "Сигнал не передан";
+  return Object.hasOwn(banks, level) ? banks[level] : "Сигнал не распознан";
+}
 export function Bank({ level }: { level?: string | null }) {
   return (
     <span className={`bank-badge ${(level || "GREY").toLowerCase()}`}>
       <i />
-      {banks[level || "GREY"] || "Нет оценки"}
+      {bankLabel(level)}
     </span>
   );
 }

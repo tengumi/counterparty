@@ -8,6 +8,7 @@ from typing import Any, Literal, Self
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from counterparty_agent.ai.contracts import GroundedClaim
+from counterparty_agent.ai.deal import DealPatch
 from counterparty_agent.api.constants import SESSION_PATTERN
 from counterparty_agent.models import (
     BankRiskAssessment,
@@ -91,6 +92,12 @@ class ComparisonSelectionView(BaseModel):
     message: str
 
 
+class ReviewView(DealPatch):
+    question: str | None = None
+    context_revision: int = 0
+    steps: list[str] = Field(default_factory=list)
+
+
 class ChatResponse(BaseModel):
     """Единый ответ поиска, уточнения и восстановления текущей карточки."""
 
@@ -108,3 +115,5 @@ class ChatResponse(BaseModel):
     comparison_selections: list[ComparisonSelectionView] = Field(default_factory=list)
     focus_snapshot_id: str | None = None
     comparison_pending: bool = False
+    review: ReviewView | None = None
+    evidence: list[EvidenceView] = Field(default_factory=list)

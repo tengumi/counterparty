@@ -11,6 +11,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 
+from counterparty_agent.ai.deal import DealContext, validate_deal
 from counterparty_agent.api.runtime import _Runtime
 from counterparty_agent.projects.commands import apply_command, invalidate_review, require_revision
 from counterparty_agent.projects.dialogue import answer_sources, ask_project
@@ -21,6 +22,7 @@ from counterparty_agent.projects.models import (
     ProjectCommand,
     ProjectQuestion,
 )
+from counterparty_agent.projects.planning import remember_question, synchronize_goal
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -48,6 +50,18 @@ async def create_project(payload: CreateProject, request: Request) -> Project:
         raise HTTPException(422, "Для локального прототипа достигнут лимит в 100 проектов.")
     async with runtime.session(request, payload.session_id) as key:
         response = await runtime.execute(payload.session_id, key, restore=True)
+        async with runtime.saver.conn.execute(
+            "SELECT review_context FROM browser_sessions "
+            "WHERE session_id = ? AND user_id = ? AND checkpoint_key = ?",
+            (payload.session_id, owner, key),
+        ) as cursor:
+            context_row = await cursor.fetchone()
+        deal = (
+            DealContext.model_validate_json(context_row[0])
+            if context_row and context_row[0]
+            else DealContext()
+        )
+        validate_deal(deal)
     if (
         response.comparison_pending
         or response.candidates
@@ -56,11 +70,18 @@ async def create_project(payload: CreateProject, request: Request) -> Project:
         raise HTTPException(409, "Сначала завершите выбор компаний.")
     assert runtime.source is not None
     cards = response.cards if response.comparison else [response.card] if response.card else []
+    if (deal.source_hash and deal.source_hash != runtime.source.source_hash) or (
+        deal.snapshot_ids and set(deal.snapshot_ids) != {card.snapshot_id for card in cards}
+    ):
+        deal = DealContext()
+    deal.snapshot_ids = [card.snapshot_id for card in cards]
+    deal.source_hash = runtime.source.source_hash
     # Каждый проект получает отдельную сессию: тема другого проекта не наследуется.
     session_id = secrets.token_hex(16)
     checkpoint_key = hashlib.sha256(f"{owner}:{session_id}".encode()).hexdigest()
     await runtime.saver.conn.execute(
-        "INSERT INTO browser_sessions VALUES (?, ?, ?, ?)",
+        "INSERT INTO browser_sessions (session_id, user_id, checkpoint_key, updated_at) "
+        "VALUES (?, ?, ?, ?)",
         (session_id, owner, checkpoint_key, time.time()),
     )
     await runtime.saver.conn.commit()
@@ -70,11 +91,14 @@ async def create_project(payload: CreateProject, request: Request) -> Project:
     project = Project(
         project_id=secrets.token_hex(16),
         title=payload.title.strip(),
-        goal=payload.goal.strip(),
+        goal=payload.goal.strip() or deal.goal or "",
+        deal=deal,
         snapshot_ids=[c.snapshot_id for c in cards],
         session_id=session_id,
         source_hash=runtime.source.source_hash,
     )
+    synchronize_goal(project)
+    remember_question(project, project.deal.question)
     return await runtime.projects.create(project, owner)
 
 
@@ -106,7 +130,8 @@ async def open_project(project_id: str, request: Request) -> dict[str, Any]:
     session_id = secrets.token_hex(16)
     checkpoint_key = hashlib.sha256(f"{owner}:{session_id}".encode()).hexdigest()
     await runtime.saver.conn.execute(
-        "INSERT INTO browser_sessions VALUES (?, ?, ?, ?)",
+        "INSERT INTO browser_sessions (session_id, user_id, checkpoint_key, updated_at) "
+        "VALUES (?, ?, ?, ?)",
         (session_id, owner, checkpoint_key, time.time()),
     )
     await runtime.saver.conn.commit()
@@ -169,6 +194,7 @@ async def question_project(
     if runtime.source is None:
         raise HTTPException(503, "Источник отчётов недоступен.")
     evaluated_at = datetime.now(UTC)
+    previous = project.model_dump()
     answer = await ask_project(
         project,
         runtime.source,
@@ -179,12 +205,27 @@ async def question_project(
     )
     latest = await runtime.projects.load(project_id, owner)
     require_revision(latest, payload.expected_revision)
-    evidence = answer_sources(latest, runtime.source, answer, evaluated_at)
+    evidence = answer_sources(project, runtime.source, answer, evaluated_at)
     if answer.status == "answered":
-        latest.last_fact_ids = list(answer.fact_ids)
-        if latest.proposal is not None:
-            latest.proposal.base_revision += 1
-        latest = await runtime.projects.save(latest, owner, latest.revision)
+        project.last_fact_ids = list(answer.fact_ids)
+    if answer.status == "answered" or project.model_dump() != previous:
+        if project.proposal is not None:
+            project.proposal.base_revision += 1
+        latest = await runtime.projects.save(project, owner, payload.expected_revision)
+    review = latest.deal.model_dump(
+        include={
+            "goal",
+            "role",
+            "subject",
+            "amount",
+            "advance",
+            "deadline",
+            "general_check",
+            "question",
+            "context_revision",
+        }
+    )
+    review["steps"] = [step.title for step in latest.plan]
     return {
         "answer": answer.answer,
         "status": answer.status,
@@ -192,4 +233,5 @@ async def question_project(
         "llm_used": answer.used_llm,
         "project": latest,
         "evidence": evidence,
+        "review": review,
     }

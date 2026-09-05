@@ -9,13 +9,13 @@ from typing import Any
 
 from langgraph.runtime import Runtime
 
+from counterparty_agent.ai.deal import DealPatch
 from counterparty_agent.ai.router import IntentPlan, route_intent
 from counterparty_agent.models import EntityKind, EntityMention, QueryIntent, QueryPlan
 from counterparty_agent.query import QueryParseError, parse_query
 from counterparty_agent.workflow.contracts import WorkflowContext, WorkflowResult, WorkflowState
 from counterparty_agent.workflow.intents import (
     _ADD_COMPARISON,
-    _GROUP_QUESTION,
     _LEGAL_FORM_IN_QUESTION,
     _REOPEN_COMPARISON_REQUESTS,
     _REOPEN_REQUESTS,
@@ -25,8 +25,8 @@ from counterparty_agent.workflow.intents import (
     _is_question,
     _ordinal_positions,
     _parse_workflow_query,
-    _unclear_named_company,
 )
+from counterparty_agent.workflow.review_session import is_short_relative_question, previous_topics
 from counterparty_agent.workflow.selection import (
     _focus_clarification,
     _keep_committed_comparison,
@@ -66,6 +66,12 @@ def _is_control(context: WorkflowContext) -> bool:
         or _normalized(context.question) in _REOPEN_REQUESTS | _REOPEN_COMPARISON_REQUESTS
         or _IDENTIFIER_ONLY.fullmatch(context.question.strip()) is not None
         or _IDENTIFIER_LIST.fullmatch(context.question.strip()) is not None
+        or re.fullmatch(
+            r"(?:покажи\s+)?карточк[ау]\s*№\s*\d{1,6}",
+            context.question.strip(),
+            re.IGNORECASE,
+        )
+        is not None
     )
 
 
@@ -121,7 +127,8 @@ def _session_summary(state: WorkflowState, context: WorkflowContext) -> dict[str
             state.get("pending_snapshot_ids")
             or any(item["status"] != "resolved" for item in state.get("comparison_slots", []))
         ),
-        "last_topics": [],
+        "last_topics": previous_topics(state, context),
+        "review_context": context.deal.model_dump(mode="json") if context.deal else None,
     }
 
 
@@ -129,6 +136,16 @@ async def _route_intent(state: WorkflowState, runtime: Runtime[WorkflowContext])
     context = runtime.context
     if _is_control(context):
         return {"status": "parse_request"}
+    if context.deal is not None and _normalized(context.question) == "общая проверка":
+        context._intent_plan = IntentPlan(
+            action="ask",
+            scope="group"
+            if context._base_snapshot_ids and not context._focus_snapshot_id
+            else "current",
+            answer_mode="analysis",
+            deal_patch=DealPatch(general_check=True),
+        )
+        return {"status": "apply_intent"}
     if context.settings is None or not context.settings.llm_configured:
         try:
             if _offline_supported(context.question):
@@ -151,6 +168,12 @@ async def _route_intent(state: WorkflowState, runtime: Runtime[WorkflowContext])
             _ROUTING_UNAVAILABLE if result.status == "llm_unavailable" else _ROUTING_FAILED,
         )
     context._intent_plan = result.plan
+    if (
+        result.plan.action == "ask"
+        and is_short_relative_question(context.question)
+        and not any(result.plan.deal_patch.model_dump(exclude_none=True).values())
+    ):
+        context._intent_plan = result.plan.model_copy(update={"answer_mode": "facts"})
     return {"status": "apply_intent"}
 
 
@@ -216,12 +239,12 @@ def _target_plan(intent: IntentPlan, question: str) -> QueryPlan:
     )
     if required != actual:
         raise QueryParseError("Модель изменила набор реквизитов")
-    normalized = _normalized(question)
-    safe_group_reference = bool(
-        _GROUP_QUESTION.search(normalized) and not _LEGAL_FORM_IN_QUESTION.search(normalized)
-    )
-    if not mentions and _unclear_named_company(normalized) and not safe_group_reference:
-        raise QueryParseError("Нельзя пропускать возможное название новой компании")
+    if not mentions and _LEGAL_FORM_IN_QUESTION.search(_normalized(question)):
+        raise QueryParseError("Модель пропустила компанию с явно указанной формой организации")
+    # Свободную фразу уже разобрала модель. Старый эвристический фильтр «по/у ...»
+    # принимает «по этим поставщикам» или «у второго» за неизвестное название.
+    # Здесь сохраняем проверку явных реквизитов, кавычек и организационных форм ниже;
+    # ограниченный эвристический режим остаётся только для работы без модели.
     explicit_names = [
         item
         for item in original.mentions

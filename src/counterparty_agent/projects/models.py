@@ -7,6 +7,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from counterparty_agent.ai.deal import DealContext, DealField
+
 
 class ProjectModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -41,10 +43,15 @@ class OpenQuestion(ProjectModel):
     question_id: str
     text: str
     document_ids: list[str] = Field(default_factory=list)
+    field: DealField | None = None
+    answer: str | None = Field(default=None, max_length=2000, repr=False)
+    status: Literal["open", "answered", "needs_confirmation"] = "open"
+    evidence_ids: list[str] = Field(default_factory=list)
+    answered_at: datetime | None = None
 
 
 class MemoItem(ProjectModel):
-    kind: Literal["fact", "document", "limitation", "action"]
+    kind: Literal["fact", "document", "analysis", "condition", "limitation", "action"]
     text: str = Field(repr=False)
     evidence_ids: list[str] = Field(default_factory=list)
     company_id: str | None = None
@@ -68,6 +75,7 @@ class DecisionMemo(ProjectModel):
     source_hash: str
     selected_snapshot_ids: list[str]
     document_hashes: dict[str, str]
+    context_hash: str = ""
     sources: list[MemoSource] = Field(default_factory=list)
     note: str = "Черновик для решения пользователя. Не является одобрением сделки."
 
@@ -84,15 +92,18 @@ class Project(ProjectModel):
     revision: int = 1
     title: str = Field(min_length=1, max_length=120, repr=False)
     goal: str = Field(default="", max_length=2000, repr=False)
+    deal: DealContext = Field(default_factory=DealContext, repr=False)
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     source_hash: str
     snapshot_ids: list[str] = Field(default_factory=list)
     shortlist_ids: list[str] = Field(default_factory=list)
+    focused_snapshot_id: str | None = None
     session_id: str
     plan: list[ReviewStep] = Field(default_factory=list)
     questions: list[OpenQuestion] = Field(default_factory=list)
     documents: list[ProjectDocument] = Field(default_factory=list, repr=False)
     memo: DecisionMemo | None = Field(default=None, repr=False)
+    memo_stale: bool = False
     proposal: MemoProposal | None = Field(default=None, repr=False)
     plan_mode: Literal["manual", "ai", "fallback"] = "manual"
     last_fact_ids: list[str] = Field(default_factory=list)
@@ -106,7 +117,14 @@ class CreateProject(ProjectModel):
 
 class ProjectCommand(ProjectModel):
     action: Literal[
-        "set_goal", "set_shortlist", "capture_selection", "link_document", "run", "accept_memo"
+        "set_goal",
+        "set_shortlist",
+        "set_focus",
+        "capture_selection",
+        "link_document",
+        "answer_question",
+        "run",
+        "accept_memo",
     ]
     expected_revision: int = Field(ge=1)
     value: str = Field(default="", max_length=2000, repr=False)

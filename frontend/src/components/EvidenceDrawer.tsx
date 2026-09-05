@@ -66,18 +66,24 @@ export function EvidenceDrawer({
               <p className="source-owner">{item.company_name}</p>
             )}
             <strong>
-              {item.quality === "user_document"
+              {["user_document", "user_context"].includes(item.quality)
                 ? item.source_name
                 : "Отчёт о контрагенте"}
             </strong>
             <p>
-              {item.quality === "user_document" ? "Загружен" : "Данные на"}{" "}
+              {item.quality === "user_document"
+                ? "Загружен"
+                : item.quality === "user_context"
+                  ? "Сообщено"
+                  : "Данные на"}{" "}
               {date(item.report_at)}
             </p>
             <p className="muted">
               {item.quality === "user_document"
-                ? "Пользовательский документ. Не подтверждает сведения банковского отчёта."
-                : "Состояние и полнота данных учитываются при анализе."}
+                ? "Документ пользователя; его подлинность не проверялась."
+                : item.quality === "user_context"
+                  ? "Условия, которые вы сообщили в этой проверке. Это не данные отчёта."
+                  : "Состояние и полнота данных учитываются при анализе."}
             </p>
             <p className="small">
               {coverage[item.coverage] || "Покрытие не определено"}
@@ -88,8 +94,7 @@ export function EvidenceDrawer({
           </section>
         ))}
         <p className="muted small">
-          Отсутствие сведений не означает отсутствие риска. Банковский светофор
-          показан без изменения оценки.
+          Отсутствие сведений не означает отсутствие риска.
         </p>
       </div>
     </dialog>

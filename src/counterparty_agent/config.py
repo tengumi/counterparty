@@ -23,9 +23,13 @@ class Settings(BaseSettings):
     llm_api_key: SecretStr | None = None
     llm_temperature: float = Field(default=0.1, ge=0, le=2)
     llm_max_tokens: int = Field(default=1200, ge=1, le=64_000)
+    llm_review_max_tokens: int = Field(default=2400, ge=500, le=8000)
     llm_timeout_seconds: float = Field(default=90, ge=1, le=300)
+    llm_review_timeout_seconds: float = Field(default=120, ge=10, le=300)
     llm_max_retries: int = Field(default=2, ge=0, le=5)
     llm_reasoning_enabled: bool = False
+    llm_reasoning_max_tokens: int = Field(default=1024, ge=128, le=8000)
+    llm_review_reasoning_enabled: bool = False
 
     snapshot_json_path: Path = Path("data/snapshot.json")
     snapshot_csv_path: Path | None = None

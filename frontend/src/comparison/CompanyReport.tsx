@@ -1,7 +1,7 @@
 import { lazy, Suspense, useId, useState } from "react";
 import type { Card, Finding } from "../types";
 import type { SourceDetails } from "../components/EvidenceDrawer";
-import { Bank, Icon, date } from "../components/Primitives";
+import { Bank, bankLabel, Icon, date } from "../components/Primitives";
 import { annualPoints, exactNumber } from "./chartData";
 import {
   findingPeriod,
@@ -154,20 +154,14 @@ function ReportContent({ card, source }: ReportProps) {
           </div>
         </div>
         <div className="dossier-bank">
-          <span className="dossier-bank-label">Банковский светофор</span>
+          <span className="dossier-bank-label">Оценка в отчёте</span>
           <button
             disabled={!hasSource(card.bank_evidence_id)}
             onClick={() =>
               showSource(
                 card.bank_evidence_id,
-                "Банковский светофор",
-                bankKnown
-                  ? "Сигнал банка: " +
-                      rawBank +
-                      ". Методика закрыта. Цвет не пересчитывается помощником и не гарантирует безопасность сделки."
-                  : rawBank === null
-                    ? "Банковский сигнал не передан."
-                    : "Значение банковского сигнала не распознано.",
+                "Оценка в отчёте",
+                `Оценка в отчёте: ${bankLabel(rawBank)}.`,
               )
             }
           >
@@ -181,7 +175,6 @@ function ReportContent({ card, source }: ReportProps) {
             )}
             <span className="dossier-source-link">Источник и пояснение ↗</span>
           </button>
-          <p>Оценка банка, не вывод помощника</p>
         </div>
       </header>
       <div className="dossier-summary-heading">
@@ -249,7 +242,7 @@ function ReportContent({ card, source }: ReportProps) {
       </div>
       <p className="dossier-scope-note">
         Счётчики показывают записи отчёта, а не число независимых рисков.
-        Подборки могут пересекаться и не объясняют цвет банковского светофора.
+        Подборки могут пересекаться.
       </p>
       <div className="dossier-details-heading">
         <div>

@@ -8,6 +8,12 @@ from typing import Any
 from fastapi import HTTPException, Request
 
 from counterparty_agent.projects.models import Project, ProjectCommand
+from counterparty_agent.projects.planning import (
+    context_hash,
+    record_answer,
+    synchronize_goal,
+    update_context,
+)
 from counterparty_agent.projects.review import current_snapshots, run_review
 
 
@@ -20,6 +26,10 @@ def invalidate_review(project: Project) -> None:
     project.proposal = None
     project.plan = []
     project.last_fact_ids = []
+    if project.focused_snapshot_id not in (project.shortlist_ids or project.snapshot_ids):
+        project.focused_snapshot_id = None
+    if project.memo is not None:
+        project.memo_stale = True
 
 
 async def apply_command(
@@ -28,7 +38,27 @@ async def apply_command(
     require_revision(project, command.expected_revision)
     if command.action == "set_goal":
         project.goal = command.value.strip()
+        if project.goal:
+            synchronize_goal(project)
+        else:
+            project.deal.goal = None
+            project.deal.terms.pop("goal", None)
+            project.deal.context_revision += 1
+            project.deal.question = None
         invalidate_review(project)
+    elif command.action == "set_focus":
+        if runtime.source is None:
+            raise HTTPException(503, "Источник отчётов недоступен.")
+        allowed = {snapshot.snapshot_id for snapshot in current_snapshots(project, runtime.source)}
+        focus = command.value.strip() or None
+        if focus is not None and focus not in allowed:
+            raise HTTPException(422, "Выберите компанию из текущего состава проверки.")
+        if project.focused_snapshot_id != focus:
+            project.last_fact_ids = []
+        project.focused_snapshot_id = focus
+        if project.proposal is not None:
+            # Фокус диалога не меняет факты и состав уже подготовленного резюме.
+            project.proposal.base_revision += 1
     elif command.action == "set_shortlist":
         if len(set(command.snapshot_ids)) != len(command.snapshot_ids) or not set(
             command.snapshot_ids
@@ -70,7 +100,17 @@ async def apply_command(
             item.document_ids = [key for key in item.document_ids if key != document.document_id]
         document.question_id = question.question_id
         question.document_ids.append(document.document_id)
+        if question.answer is None:
+            question.status = "needs_confirmation"
         project.proposal = None
+    elif command.action == "answer_question":
+        question = next(
+            (item for item in project.questions if item.question_id == command.question_id), None
+        )
+        if question is None or not command.value.strip():
+            raise HTTPException(422, "Выберите вопрос проекта и укажите ответ.")
+        record_answer(project, question, command.value.strip())
+        await update_context(project, command.value, runtime.settings, runtime.llm_client)
     elif command.action == "run":
         if runtime.source is None:
             raise HTTPException(503, "Источник отчётов недоступен.")
@@ -98,6 +138,9 @@ async def apply_command(
             raise HTTPException(
                 409, "Состав или документы изменились. Сформируйте новое предложение."
             )
+        if proposal.memo.context_hash != context_hash(project):
+            raise HTTPException(409, "Условия проверки изменились. Сформируйте новое предложение.")
         project.memo = proposal.memo
+        project.memo_stale = False
         project.proposal = None
     return project

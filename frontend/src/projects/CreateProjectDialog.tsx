@@ -5,14 +5,16 @@ export function CreateProjectDialog({
   close,
   create,
   busy,
+  initialGoal = "",
 }: {
   close: () => void;
   create: (title: string, goal: string) => void;
   busy: boolean;
+  initialGoal?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [title, setTitle] = useState("");
-  const [goal, setGoal] = useState("");
+  const [goal, setGoal] = useState(initialGoal);
   useEffect(() => {
     dialog.current?.showModal();
   }, []);

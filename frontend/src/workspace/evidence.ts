@@ -25,6 +25,15 @@ export function responseSources(result: ChatResponse): Evidence[] {
       owners.set(item.evidence_id, card.snapshot_id);
     }
   });
+  for (const item of result.evidence || []) {
+    if (ledger.has(item.evidence_id))
+      throw new Error(
+        "Дополнительный источник не может заменять данные отчёта.",
+      );
+    if (!["user_context", "user_document"].includes(item.quality))
+      throw new Error("Тип дополнительного источника не подтверждён.");
+    ledger.set(item.evidence_id, item);
+  }
   const ids = [...new Set(result.answer_claims.flatMap((c) => c.evidence_ids))];
   if (ids.some((id) => !ledger.has(id)))
     throw new Error(

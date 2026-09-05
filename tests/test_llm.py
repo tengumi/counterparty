@@ -23,7 +23,7 @@ from counterparty_agent.ai.contracts import (
     LlmInvalidResponseError,
 )
 from counterparty_agent.ai.selector import answer_comparison_question, answer_question
-from counterparty_agent.ai.topics import needs_attention_explanation
+from counterparty_agent.ai.topics import needs_attention_explanation, needs_bank_reason
 from counterparty_agent.ai.transport import build_messages, create_client, generate_answer
 from counterparty_agent.ai.validation import validate_comparison_answer, validate_grounded_answer
 from counterparty_agent.analytics.comparison import compare_snapshots
@@ -87,6 +87,15 @@ def test_generate_answer_uses_confirmed_dslab_parameters() -> None:
     assert result.answer == "Данных недостаточно."
     assert completions.kwargs["model"] == "qwen3.7-plus"
     assert completions.kwargs["extra_body"] == {"reasoning": {"enabled": False}}
+
+
+def test_enabled_reasoning_has_an_explicit_budget_and_hidden_content_is_not_returned() -> None:
+    completions = _FakeCompletions()
+    client = SimpleNamespace(chat=SimpleNamespace(completions=completions))
+    settings = Settings(_env_file=None, llm_reasoning_enabled=True, llm_reasoning_max_tokens=1024)
+    answer = asyncio.run(generate_answer(settings, "Что известно?", {}, client=client))
+    assert completions.kwargs["extra_body"] == {"reasoning": {"enabled": True, "max_tokens": 1024}}
+    assert answer.answer == "Данных недостаточно."
 
 
 @pytest.fixture(scope="module")
@@ -188,13 +197,20 @@ async def test_attention_question_requires_bank_boundary_and_independent_signal(
     catalog = build_fact_catalog(snapshot, analysis)
     bank = next(item for item in catalog if item.topic == "bank_signal")
     signal = next(item for item in catalog if item.topic == "attention_signal")
-    client = _ScriptedClient(_selection(bank.fact_id), _selection(bank.fact_id, signal.fact_id))
+    reason = next(item for item in catalog if item.metric == "reason_unavailable")
+    expected = (
+        (bank.fact_id, reason.fact_id, signal.fact_id)
+        if needs_bank_reason(question)
+        else (bank.fact_id, signal.fact_id)
+    )
+    client = _ScriptedClient(_selection(bank.fact_id), _selection(*expected))
     result = await answer_question(settings, question, snapshot, analysis, client=client)
     assert result.status == "answered" and result.used_llm
     assert len(client.calls) == 2
-    assert result.fact_ids == (bank.fact_id, signal.fact_id)
-    assert "не объяснение банковского цвета" in result.answer
-    assert "методика и причины не раскрыты" in result.answer
+    assert result.fact_ids == expected
+    assert (reason.claim.text in result.answer) is needs_bank_reason(question)
+    assert "методик" not in result.answer and "скоринг" not in result.answer
+    assert "Отдельный сигнал внимания по данным отчёта" in result.answer
     finding = next(
         item
         for item in analysis.findings
@@ -236,7 +252,8 @@ async def test_short_why_uses_bank_topic_from_same_company_only(
     catalog = build_fact_catalog(snapshot, analysis)
     bank = next(item for item in catalog if item.topic == "bank_signal")
     signal = next(item for item in catalog if item.topic == "attention_signal")
-    client = _ScriptedClient(_selection(bank.fact_id, signal.fact_id))
+    reason = next(item for item in catalog if item.metric == "reason_unavailable")
+    client = _ScriptedClient(_selection(bank.fact_id, reason.fact_id, signal.fact_id))
     result = await answer_question(
         settings, "А почему?", snapshot, analysis, (bank.fact_id, "foreign_fact"), client=client
     )
@@ -257,14 +274,15 @@ async def test_attention_answer_always_starts_with_bank_boundary(
     catalog = build_fact_catalog(snapshot, analysis)
     bank = next(item for item in catalog if item.topic == "bank_signal")
     signal = next(item for item in catalog if item.topic == "attention_signal")
+    reason = next(item for item in catalog if item.metric == "reason_unavailable")
     result = await answer_question(
         settings,
         "Почему жёлтая?",
         snapshot,
         analysis,
-        client=_ScriptedClient(_selection(signal.fact_id, bank.fact_id)),
+        client=_ScriptedClient(_selection(signal.fact_id, reason.fact_id, bank.fact_id)),
     )
-    assert result.fact_ids == (bank.fact_id, signal.fact_id)
+    assert result.fact_ids == (bank.fact_id, reason.fact_id, signal.fact_id)
     validate_grounded_answer(result, snapshot, analysis)
 
 
@@ -317,17 +335,19 @@ async def test_no_attention_findings_are_not_replaced_by_invented_reason(
     catalog = build_fact_catalog(snapshot, analysis)
     bank = next(item for item in catalog if item.topic == "bank_signal")
     empty = next(item for item in catalog if item.topic == "attention_signal")
+    reason = next(item for item in catalog if item.metric == "reason_unavailable")
     assert empty.metric == "none"
     assert set(empty.claim.evidence_ids) == {
         key for finding in analysis.findings for key in finding.evidence_ids
     }
-    client = _ScriptedClient(_selection(bank.fact_id, empty.fact_id))
+    client = _ScriptedClient(_selection(bank.fact_id, reason.fact_id, empty.fact_id))
     result = await answer_question(
         settings, "Почему первая требует внимания?", snapshot, analysis, client=client
     )
     assert result.status == "answered"
     assert "отдельных сигналов внимания не выявлено" in result.answer
     assert "Это не означает отсутствия риска" in result.answer
+    assert "Причина этой оценки в отчёте не указана." in result.answer
     validate_grounded_answer(result, snapshot, analysis)
 
 
@@ -770,7 +790,8 @@ async def test_missing_key_and_transport_failures_do_not_fabricate_facts(
     missing = settings.model_copy(update={"llm_api_key": None})
     answer = await answer_question(missing, "Факты?", snapshot, analysis, client=client)
     assert answer.status == "llm_unavailable" and answer.used_llm is False
-    assert "COUNTERPARTY_LLM_API_KEY" in answer.answer
+    assert "недоступен" in answer.answer
+    assert "COUNTERPARTY_LLM_API_KEY" not in answer.answer and ".env" not in answer.answer
     assert not client.calls
     answer = await answer_question(settings, "Факты?", snapshot, analysis, client=client)
     assert answer.status == "llm_unavailable" and answer.used_llm is True
@@ -909,7 +930,7 @@ def test_group_catalog_scopes_each_fact_to_all_ten_companies(
 ) -> None:
     snapshots, comparison = comparison_context
     facts = build_comparison_fact_catalog(snapshots, comparison)
-    assert len(facts) == 24
+    assert len(facts) == 25
     assert facts == build_comparison_fact_catalog(snapshots, comparison)
     ledger = {}
     for snapshot in snapshots:
@@ -955,7 +976,8 @@ async def test_group_answer_covers_every_company_with_one_fact(
     assert result.status == "answered"
     assert result.claims == (fact.claim,)
     assert result.answer == fact.claim.text
-    assert "Методика закрыта" in result.answer
+    assert "Методика закрыта" not in result.answer
+    assert "Причина этой оценки" not in result.answer
     assert "не гарантирует" in result.answer
     assert "Компания №10:" in result.answer
     assert len(client.calls) == 1 and client.closed == 0
@@ -1179,7 +1201,8 @@ async def test_group_context_bound_preserves_all_ten_members_and_no_raw_ledger(
         context = _context(client.calls[0])
         assert len(json.dumps(context, ensure_ascii=False, separators=(",", ":"))) <= 30_000
         assert context["company_count"] == 10
-        assert len(context["approved_facts"]) == len(facts)
+        assert len(context["approved_facts"]) == len(facts) - 1
+        assert not any(f["metric"] == "reason_unavailable" for f in context["approved_facts"])
         for item in context["approved_facts"]:
             assert "Компания №10:" in item["text"]
             assert "evidence_ids" not in item

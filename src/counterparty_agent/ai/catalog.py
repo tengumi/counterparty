@@ -88,8 +88,7 @@ def build_fact_catalog(
         add(
             "attention_signal:none",
             "В выполненных проверках этого отчёта отдельных сигналов внимания не выявлено. "
-            "Это не означает отсутствия риска или полноты данных и не объясняет "
-            "банковский цвет. Причина банковской оценки остаётся неизвестной.",
+            "Это не означает отсутствия риска или полноты данных.",
             tuple(
                 dict.fromkeys(key for finding in analysis.findings for key in finding.evidence_ids)
             ),
@@ -111,15 +110,20 @@ def build_fact_catalog(
     }
     bank = analysis.bank_risk
     bank_text = (
-        f"Банковский светофор на дату {bank.assessed_at.isoformat()}: "
+        f"Оценка в отчёте на дату {bank.assessed_at.isoformat()}: "
         f"{bank.recognized_level.value} — {bank_labels[bank.recognized_level]}. "
         if bank.recognized_level is not None
-        else "Банковская оценка отсутствует или не распознана; GREY показан как «нет данных». "
+        else "Оценка в отчёте отсутствует. "
+        if bank.raw_level is None
+        else "Значение оценки в отчёте не распознано. "
     )
-    bank_text += (
-        "Это готовый внешний сигнал закрытого банковского скоринга. Его методика и причины "
-        "не раскрыты; агент не пересчитывает цвет. Цвет не гарантирует безопасность сделки."
-        " Отдельные сигналы по данным отчёта — не объяснение банковского цвета."
+    add("bank_signal", bank_text.strip(), (analysis.bank_evidence_id,))
+    add(
+        "bank_signal:reason_unavailable",
+        "Причина этой оценки в отчёте не указана."
+        if bank.recognized_level is not None
+        else "В отчёте нет распознанной оценки, причину её отсутствия определить нельзя.",
+        (analysis.bank_evidence_id,),
+        metric="reason_unavailable",
     )
-    add("bank_signal", bank_text, (analysis.bank_evidence_id,))
     return tuple(facts)

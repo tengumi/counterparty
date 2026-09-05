@@ -212,7 +212,7 @@ def compare_snapshots(
     }
     add(
         "bank_risk",
-        "Банковский светофор",
+        "Оценка в отчёте",
         "company",
         [
             column.cell(
@@ -226,13 +226,15 @@ def compare_snapshots(
                     f"{column.snapshot.bank_risk.recognized_level.value} — "
                     f"{bank_labels[column.snapshot.bank_risk.recognized_level.value]}"
                     if column.snapshot.bank_risk.recognized_level
-                    else "GREY — оценка отсутствует или не распознана"
+                    else "Оценка отсутствует"
+                    if column.snapshot.bank_risk.raw_level is None
+                    else "Значение оценки не распознано"
                 ),
             )
             for column in columns
         ],
-        "Готовый внешний банковский сигнал. Методика закрыта; цвета не пересчитываются "
-        "и не объясняются другими строками.",
+        "Оценки приведены на даты соответствующих отчётов. "
+        "Обстоятельства, требующие проверки, показаны отдельно.",
     )
     for metric, label in (
         ("proceeds", "Выручка"),
@@ -374,8 +376,8 @@ def compare_snapshots(
         "Сигналы, требующие внимания",
         "company",
         cells,
-        "Приоритет просмотра подтверждённых выводов, не новый скоринг. "
-        "Количество сигналов не используется для выбора победителя.",
+        "Отдельные обстоятельства для проверки. "
+        "Количество сигналов не определяет надёжность компании.",
     )
     return ComparisonResult(
         snapshot_ids=tuple(item.snapshot_id for item in selected),

@@ -72,6 +72,22 @@ def build_comparison_fact_catalog(
             period=row.period,
             metric=metric,
         )
+        if row.key == "bank_risk":
+            add(
+                "comparison_bank_signal",
+                "\n".join(
+                    f"Компания №{position}: "
+                    + (
+                        "Причина этой оценки в отчёте не указана."
+                        if snapshot.bank_risk.recognized_level is not None
+                        else "В отчёте нет распознанной оценки, "
+                        "причину её отсутствия определить нельзя."
+                    )
+                    for position, snapshot in enumerate(snapshots, start=1)
+                ),
+                [key for cell in row.cells for key in cell.evidence_ids],
+                metric="reason_unavailable",
+            )
 
     profit = next(row for row in comparison.rows if row.key == "financial_profit")
     parts = []
@@ -99,7 +115,7 @@ def build_comparison_fact_catalog(
             (
                 f"Проверка знака прибыли {period_text}.",
                 *parts,
-                "Это знак отдельного показателя, не общий скоринг. Значения в единицах источника; "
+                "Значения в единицах источника; "
                 "масштаб и валюта неизвестны, денежное ранжирование не выполняется.",
             )
         ),

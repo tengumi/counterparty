@@ -145,8 +145,8 @@ def _analyze_reputation(builder: _AnalysisBuilder) -> None:
         "reputation_summary",
         FindingCategory.REPUTATION,
         f"В отчёте поставщика положительных сигналов: {len(profile.positive)}, "
-        f"отрицательных: {len(profile.negative)}. Они не взаимозачитываются "
-        "и не объясняют закрытую методику банковского светофора.",
+        f"отрицательных: {len(profile.negative)}. "
+        "Положительные сигналы не отменяют отрицательные.",
         {"positive_count": len(profile.positive), "negative_count": len(profile.negative)},
         inputs,
         severity=FindingSeverity.ATTENTION if profile.negative else FindingSeverity.INFO,

@@ -9,3 +9,7 @@
 - CSV остаётся резервным форматом для следующего этапа.
 - Исходные snapshots, SQLite сессий, секреты и PII нельзя коммитить или
   выводить в логи.
+
+Полученные файлы: `contractors_audit.snapshot.json` и
+`contractors_audit.snapshot_C12613591.csv`. Происхождение материалов описано в
+[`artifacts/INDEX.md`](../artifacts/INDEX.md), без копирования исходных данных в Git.

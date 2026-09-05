@@ -260,8 +260,7 @@ function ComparisonContent({
       )}
       <p className="comparison-money-note">
         Суммы — в единицах источника: валюта и масштаб не подтверждены.
-        Количество записей не является рейтингом риска и не объясняет банковский
-        светофор.
+        Количество записей не является рейтингом риска.
       </p>
       <div className="dossier-details-heading">
         <div>

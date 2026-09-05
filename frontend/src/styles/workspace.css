@@ -1,0 +1,526 @@
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px max(28px, calc((100vw - 1180px) / 2));
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+.app-header .brand {
+  padding: 0;
+  font-size: 17px;
+  font-weight: 650;
+}
+.app-header .brand-sub {
+  display: block;
+  font-size: 12px;
+  margin-top: 2px;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.saved-projects {
+  position: relative;
+  font-size: 13px;
+}
+.saved-projects summary {
+  cursor: pointer;
+  color: #5b626e;
+}
+.saved-project-list {
+  position: absolute;
+  right: 0;
+  top: 32px;
+  z-index: 5;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px #18212d12;
+  width: 260px;
+  max-height: 350px;
+  overflow-y: auto;
+}
+.saved-project-list button {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: none;
+  border-radius: 7px;
+  padding: 12px;
+  text-align: left;
+}
+.saved-project-list button:hover {
+  background: #f6f6f5;
+}
+.app-shell .main-workspace {
+  max-width: 1236px;
+  margin: 0 auto;
+}
+.app-shell .workspace-content {
+  padding: 26px 28px;
+}
+.search-start {
+  max-width: 760px;
+  margin: min(16vh, 150px) auto 0;
+  padding: 0 28px;
+}
+.search-start .eyebrow {
+  color: #9a5359;
+  font-size: 13px;
+}
+.search-start h1 {
+  font-size: clamp(34px, 4.4vw, 48px);
+  font-weight: 620;
+  letter-spacing: -1.8px;
+  margin: 14px 0 20px;
+}
+.start-description {
+  color: #6d727b;
+  line-height: 1.75;
+  margin-bottom: 30px;
+}
+.search-start .search-section form {
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 5px 20px #19242f05;
+}
+.app-shell.is-start .workspace-content {
+  max-width: 760px;
+  margin: 0 auto;
+  padding-top: 0;
+}
+.search-answer {
+  color: #626872;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+}
+.selection-confirmation {
+  margin-bottom: 24px;
+}
+.check-heading {
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 22px;
+}
+.check-heading h1 {
+  font-size: 24px;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+.check-heading .text-button {
+  flex-shrink: 0;
+}
+.check-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 290px;
+  align-items: start;
+  gap: 24px;
+}
+.check-dialogue {
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.check-dialogue .focus-return {
+  padding: 14px 24px 0;
+}
+.app-shell .assistant-panel {
+  border: 0;
+  position: static;
+  height: auto;
+  min-height: 530px;
+  background: transparent;
+}
+.app-shell .assistant-header {
+  min-height: 0;
+  padding: 22px 26px;
+  gap: 12px;
+}
+.app-shell .assistant-header strong {
+  font-size: 17px;
+  font-weight: 600;
+}
+.app-shell .assistant-header p {
+  font-size: 13px;
+}
+.app-shell .assistant-symbol {
+  color: #6f727a;
+  background: #f4f4f3;
+}
+.app-shell .conversation {
+  padding: 24px 26px 10px;
+  max-height: min(600px, 65vh);
+  min-height: 240px;
+}
+.app-shell .message {
+  font-size: 15px;
+  line-height: 1.8;
+  margin-bottom: 26px;
+}
+.app-shell .message.user {
+  margin-left: 12%;
+  padding: 12px 18px;
+  background: #f4f4f3;
+}
+.app-shell .message-label {
+  font-size: 12px;
+}
+.app-shell .message.assistant .message-label {
+  color: #727880;
+}
+.app-shell .chat-bottom {
+  padding: 10px 24px 20px;
+}
+.app-shell .question-hints {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.app-shell .question-hints button {
+  font-size: 13px;
+  padding: 7px 11px;
+  border-radius: 20px;
+}
+.app-shell .composer {
+  background: #fafafa;
+}
+.app-shell .chat-disclaimer {
+  font-size: 11px;
+  margin-top: 10px;
+  text-align: left;
+}
+.review-context {
+  margin: 18px 24px 0;
+  padding: 16px 18px;
+  background: #f7f7f5;
+  border-radius: 10px;
+}
+.review-context .eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.review-context > p {
+  margin-top: 4px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.review-context dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 10px 0 8px;
+  font-size: 12px;
+}
+.review-context dl:empty {
+  display: none;
+}
+.review-context dl > div {
+  display: flex;
+  gap: 5px;
+  overflow-wrap: anywhere;
+}
+.review-context dt {
+  color: #7c8188;
+}
+.review-context dd {
+  margin: 0;
+}
+.review-context small {
+  color: #858a90;
+  font-size: 11px;
+}
+.review-steps {
+  font-size: 12px;
+  color: #707781;
+  margin-bottom: 16px;
+}
+.review-steps summary {
+  cursor: pointer;
+}
+.review-steps ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+.selection-summary {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  min-width: 0;
+  overflow: hidden;
+}
+.selection-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.selection-heading h2 {
+  font-size: 14px;
+}
+.selection-heading > span {
+  font-size: 12px;
+  color: #858a90;
+}
+.selection-companies {
+  max-height: 560px;
+  overflow-y: auto;
+}
+.selection-company {
+  padding: 18px;
+  border-bottom: 1px solid #f0f0ef;
+}
+.selection-company:last-child {
+  border-bottom: 0;
+}
+.selection-company[data-focused="true"] {
+  background: #fff8f6;
+  box-shadow: inset 3px 0 #c76862;
+}
+.selection-identity {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.selection-identity h3,
+.selection-identity .company-name {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.selection-identity .company-name {
+  border: 0;
+  padding: 0;
+  background: none;
+  text-align: left;
+}
+.selection-identity .company-name:hover {
+  text-decoration: underline;
+}
+.company-position {
+  color: #93979e;
+  font-size: 12px;
+}
+.selection-company > p {
+  font-size: 12px;
+  color: #777e86;
+  margin-top: 5px;
+}
+.selection-company > .selection-date {
+  font-size: 11px;
+  color: #969ba1;
+}
+.selection-risk {
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  display: block;
+  margin-top: 15px;
+}
+.selection-risk:disabled {
+  opacity: 1;
+}
+.selection-risk-label {
+  display: block;
+  color: #92969d;
+  font-size: 11px;
+  margin-bottom: 5px;
+}
+.selection-risk .bank-badge {
+  font-size: 12px;
+}
+.selection-hint {
+  color: #90959c;
+  font-size: 11px;
+  line-height: 1.65;
+  padding: 12px 18px;
+  background: #fcfcfb;
+  border-top: 1px solid var(--line);
+}
+.report-disclosure {
+  margin-top: 24px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.report-disclosure > summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  cursor: pointer;
+  list-style: none;
+  padding: 20px 24px;
+  font-size: 15px;
+  font-weight: 550;
+}
+.report-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+.report-disclosure > summary small {
+  display: block;
+  color: #92969c;
+  font-size: 12px;
+  font-weight: 400;
+  margin-top: 4px;
+}
+.report-disclosure > summary > svg {
+  color: #8a9199;
+  flex-shrink: 0;
+}
+.report-disclosure[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+.report-disclosure[open] > summary > svg {
+  transform: rotate(45deg);
+}
+.report-disclosure > .surface {
+  border: 0;
+  border-radius: 0;
+}
+.additional-search {
+  margin-top: 20px;
+  font-size: 13px;
+  color: #858b93;
+}
+.additional-search > summary {
+  cursor: pointer;
+}
+.additional-search .search-section {
+  margin-top: 14px;
+  max-width: 760px;
+}
+.app-shell .workspace-footnote {
+  font-size: 12px;
+  color: #959ba2;
+  padding: 18px 0 0;
+}
+@media (max-width: 850px) {
+  .app-header {
+    padding: 18px 22px;
+  }
+  .header-actions {
+    gap: 12px;
+  }
+  .check-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .selection-companies {
+    display: flex;
+    max-height: 270px;
+    overflow-x: auto;
+  }
+  .selection-company {
+    flex: 1 0 230px;
+    border-bottom: 0;
+    border-right: 1px solid var(--line);
+  }
+  .selection-heading {
+    padding: 14px 18px;
+  }
+  .selection-hint {
+    display: none;
+  }
+  .check-heading h1 {
+    font-size: 21px;
+  }
+  .app-shell .conversation {
+    max-height: 55vh;
+  }
+}
+@media (max-width: 540px) {
+  .app-header {
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 15px 18px;
+  }
+  .app-header .brand {
+    font-size: 15px;
+  }
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .header-actions:empty {
+    display: none;
+  }
+  .search-start {
+    margin-top: 65px;
+    padding: 0 18px;
+  }
+  .search-start h1 {
+    letter-spacing: -1px;
+  }
+  .start-description {
+    font-size: 14px;
+  }
+  .app-shell .workspace-content {
+    padding: 20px 14px;
+  }
+  .app-shell.is-start .workspace-content {
+    padding: 0 18px 20px;
+  }
+  .app-shell .search-section form {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .app-shell .search-section form > svg {
+    display: none;
+  }
+  .app-shell .search-section input {
+    font-size: 13px;
+    width: 100%;
+    flex-basis: 100%;
+    padding: 8px 5px;
+  }
+  .app-shell .search-section form > button {
+    width: 100%;
+  }
+  .app-shell .search-section > p {
+    font-size: 12px;
+  }
+  .check-heading {
+    display: block;
+    margin-bottom: 16px;
+  }
+  .check-heading .text-button {
+    margin-top: 10px;
+  }
+  .app-shell .assistant-header {
+    padding: 18px;
+  }
+  .app-shell .conversation {
+    padding: 20px 18px 0;
+  }
+  .app-shell .message {
+    font-size: 14px;
+  }
+  .app-shell .chat-bottom {
+    padding: 10px 16px 16px;
+  }
+  .review-context {
+    margin: 16px 16px 0;
+    padding: 14px;
+  }
+  .report-disclosure > summary {
+    padding: 18px;
+    font-size: 14px;
+  }
+}

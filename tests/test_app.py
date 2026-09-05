@@ -416,12 +416,22 @@ class _MockLlmClient:
             if item["topic"] in {"bank_signal", "comparison_bank_signal"}
         )
         selected_ids = [bank["fact_id"]]
-        if context.get("answer_mode") == "attention_explanation":
+        if context.get("explain_bank_reason"):
             selected_ids.append(
                 next(
                     item["fact_id"]
                     for item in context["approved_facts"]
-                    if item["topic"] == "attention_signal"
+                    if item["metric"] == "reason_unavailable"
+                )
+            )
+        if context.get("answer_mode") == "attention_explanation" or context.get(
+            "explain_bank_reason"
+        ):
+            selected_ids.append(
+                next(
+                    item["fact_id"]
+                    for item in context["approved_facts"]
+                    if item["topic"] in {"attention_signal", "comparison_attention_signals"}
                 )
             )
         output = (
@@ -500,7 +510,7 @@ def test_qwen_answer_has_card_sources_and_scoped_topic_memory(
     assert mock.contexts[0]["previous_fact_ids"] == []
     followup = client.post("/api/chat", json={"session_id": session, "question": "А почему?"})
     assert followup.json()["status"] == "answered"
-    assert len(followup.json()["answer_claims"]) == 2
+    assert len(followup.json()["answer_claims"]) == 3
     assert mock.contexts[1]["answer_mode"] == "attention_explanation"
     assert {item["topic"] for item in mock.contexts[1]["approved_facts"]} == {
         "bank_signal",

@@ -1,4 +1,5 @@
 import type { Card, Cell, Row } from "../types";
+import { bankLabel } from "../components/Primitives";
 
 export const summaryRowKeys = [
   "company_status",
@@ -11,7 +12,7 @@ export const summaryRowKeys = [
 export function comparisonSections(rows: Row[]) {
   const labels: Record<string, [string, string]> = {
     company: ["Компания и реквизиты", "Тип, статус и даты отчётов"],
-    bank: ["Банковский светофор", "Готовый внешний сигнал, без пересчёта"],
+    bank: ["Оценка в отчёте", "Уровни оценки выбранных компаний"],
     finance: ["Финансы", "Все показатели за период сравнения"],
     arbitration: ["Судебные дела", "Роли компаний и статус разбирательств"],
     enforcement: [
@@ -67,6 +68,8 @@ export function comparisonBankKey(card: Card) {
 
 // Меняем только представление: денежные значения не преобразуем в Number.
 export function displayCell(key: string, cell: Cell): string {
+  if (key === "bank_risk")
+    return bankLabel(cell.value === null ? null : String(cell.value));
   const text = cell.display_value;
   if (key === "report_date" && /^\d{4}-\d{2}-\d{2}T/.test(text))
     return new Intl.DateTimeFormat("ru-RU", {
@@ -88,7 +91,7 @@ export function displayCell(key: string, cell: Cell): string {
       (fraction ? `,${fraction}` : "")
     );
   }
-  return text;
+  return text.replaceAll("с приоритетом attention", "требующих внимания");
 }
 
 export function filterCards(

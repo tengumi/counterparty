@@ -17,6 +17,7 @@ from counterparty_agent.workflow.comparison import (
     _validate_comparison_answer,
 )
 from counterparty_agent.workflow.contracts import WorkflowContext, WorkflowState
+from counterparty_agent.workflow.review_session import review_session
 from counterparty_agent.workflow.routing import _parse_request, _restore_session
 from counterparty_agent.workflow.selection import (
     _resolve_addition,
@@ -94,6 +95,7 @@ def build_graph(
     graph.add_node("route_intent", _route_intent)
     graph.add_node("apply_intent", _apply_intent)
     graph.add_node("finish_routing", _finish_routing)
+    graph.add_node("review_session", review_session)
     graph.add_node("retain_context", _retain_context)
     graph.add_node("parse_request", _parse_request)
     graph.add_node("resolve_entities", _resolve_entities)
@@ -225,5 +227,6 @@ def build_graph(
         {"compose_comparison": "compose_comparison", "compose": "compose"},
     )
     graph.add_edge("compose", "finish_routing")
-    graph.add_edge("finish_routing", END)
+    graph.add_edge("finish_routing", "review_session")
+    graph.add_edge("review_session", END)
     return graph.compile(checkpointer=checkpointer, debug=False)

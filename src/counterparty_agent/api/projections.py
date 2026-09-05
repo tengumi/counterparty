@@ -8,6 +8,7 @@ from pydantic import TypeAdapter
 
 from counterparty_agent.ai.catalog import build_fact_catalog
 from counterparty_agent.ai.comparison_catalog import build_comparison_fact_catalog
+from counterparty_agent.ai.deal import FIELDS, validate_deal
 from counterparty_agent.analytics.comparison import validate_comparison
 from counterparty_agent.analytics.core import validate_analysis
 from counterparty_agent.api.schemas import (
@@ -15,6 +16,7 @@ from counterparty_agent.api.schemas import (
     CompanyCard,
     ComparisonSelectionView,
     EvidenceView,
+    ReviewView,
 )
 from counterparty_agent.models import (
     AnalysisResult,
@@ -22,6 +24,7 @@ from counterparty_agent.models import (
     Evidence,
 )
 from counterparty_agent.workflow.contracts import WorkflowResult
+from counterparty_agent.workflow.review import review_catalog, validate_review_run
 
 IDENTITY_FIELDS = {"inn", "ogrn", "full_name", "short_name", "party_type"}
 
@@ -70,6 +73,50 @@ def _response(session_id: str, result: WorkflowResult) -> ChatResponse:
             ComparisonSelectionView.model_validate(item) for item in result.comparison_selections
         ],
     )
+    review_verified = False
+    if result.review is not None:
+        deal = result.review
+        validate_deal(deal)
+        response.review = ReviewView(
+            **{key: getattr(deal, key) for key in FIELDS},
+            general_check=deal.general_check,
+            question=deal.question,
+            context_revision=deal.context_revision,
+            steps=result.review_steps,
+        )
+        response.evidence = [
+            EvidenceView(
+                evidence_id=term.evidence_id,
+                canonical_path=f"deal.{key}",
+                kind="user_context",
+                value=term.text,
+                source_name="Сведения пользователя",
+                report_at=term.recorded_at,
+                source_hash=term.evidence_id,
+                record_hash=term.evidence_id,
+                source_paths=(f"deal.{key}",),
+                source_paths_total=1,
+                derived_from=(),
+                derived_from_total=0,
+                quality="user_context",
+                coverage="user_provided",
+                unit=None,
+                currency=None,
+            )
+            for key, term in deal.terms.items()
+        ]
+        if result.review_run is not None:
+            run = result.review_run
+            validate_review_run(run)
+            snapshots = (result.snapshot,) if result.snapshot else result.snapshots
+            analyses = (result.analysis,) if result.analysis else result.analyses
+            catalog, _ = review_catalog(snapshots, analyses, deal)
+            if any(catalog.get(key) != fact for key, fact in run.catalog.items()):
+                raise ValueError("Анализ использует посторонний источник")
+            if result.answer != run.answer.answer or result.answer_claims != run.answer.claims:
+                raise ValueError("Аналитический ответ изменён после проверки")
+            review_verified = True
+    extra_ids = {e.evidence_id for e in response.evidence}
     if result.comparison is not None:
         validate_comparison(result.comparison, result.snapshots)
         if len(result.snapshots) != len(result.analyses):
@@ -117,8 +164,8 @@ def _response(session_id: str, result: WorkflowResult) -> ChatResponse:
             )
         # Граф проверяет fact_id; HTTP-граница повторно проверяет точный текст и scope.
         if any(
-            not set(claim.evidence_ids) <= available_ids
-            or not any(claim == fact.claim for fact in approved)
+            not set(claim.evidence_ids) <= available_ids | extra_ids
+            or (not review_verified and not any(claim == fact.claim for fact in approved))
             for claim in result.answer_claims
         ):
             raise ValueError("Утверждение ответа не принадлежит выбранному контексту")
@@ -138,7 +185,7 @@ def _response(session_id: str, result: WorkflowResult) -> ChatResponse:
     response.card = _company_card(snapshot, analysis)
     available_ids = {item.evidence_id for item in response.card.evidence}
     if any(
-        not claim.evidence_ids or not set(claim.evidence_ids) <= available_ids
+        not claim.evidence_ids or not set(claim.evidence_ids) <= available_ids | extra_ids
         for claim in response.answer_claims
     ):
         raise ValueError("Основание ответа отсутствует в проверенной карточке")

@@ -125,7 +125,7 @@ def _analyze_finances(builder: _AnalysisBuilder) -> None:
                     code,
                     FindingCategory.FINANCE,
                     f"За {item.year} показатель «{label}» отрицательный: {_number(value)} "
-                    "в единицах источника. Это отдельный факт, не итоговый скоринг.",
+                    "в единицах источника.",
                     {"value": value},
                     parent,
                     period=item.year,
