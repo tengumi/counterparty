@@ -16,6 +16,7 @@ __all__ = [
     "MAX_FISCAL_YEAR",
     "MIN_FISCAL_YEAR",
     "MONEY_EXPONENT",
+    "RATIO_EXPONENT",
     "format_decimal",
     "is_zero",
     "parse_date",
@@ -23,10 +24,13 @@ __all__ = [
     "parse_fiscal_year",
     "parse_integer",
     "quantize_money",
+    "ratio",
+    "subtract_decimals",
     "sum_decimals",
 ]
 
 MONEY_EXPONENT = Decimal("0.01")
+RATIO_EXPONENT = Decimal("0.000001")
 MIN_FISCAL_YEAR = 1900
 MAX_FISCAL_YEAR = 2200
 
@@ -184,3 +188,61 @@ def sum_decimals(
             f"{label} had no components to sum", evidence_refs=collected
         )
     return FactSlot[Decimal].available(total, evidence_refs=collected)
+
+
+def subtract_decimals(
+    minuend: FactSlot[Decimal],
+    subtrahend: FactSlot[Decimal],
+    *,
+    label: str = "difference",
+    evidence_refs: Sequence[str] = (),
+) -> FactSlot[Decimal]:
+    """Subtract one decimal from another, refusing to assume an unknown zero.
+
+    Mirrors :func:`sum_decimals`: if either side is not available the result is
+    unknown, because an absent value is not a zero.
+    """
+    collected: list[str] = list(evidence_refs)
+    for slot in (minuend, subtrahend):
+        if not slot.is_available:
+            return FactSlot[Decimal].missing(
+                f"{label} is unknown: an operand is {slot.availability.value}",
+                evidence_refs=collected,
+            )
+        collected.extend(ref for ref in slot.evidence_refs if ref not in collected)
+    return FactSlot[Decimal].available(
+        minuend.unwrap() - subtrahend.unwrap(), evidence_refs=collected
+    )
+
+
+def ratio(
+    numerator: FactSlot[Decimal],
+    denominator: FactSlot[Decimal],
+    *,
+    label: str = "ratio",
+    exponent: Decimal = RATIO_EXPONENT,
+    evidence_refs: Sequence[str] = (),
+) -> FactSlot[Decimal]:
+    """Divide two decimals, keeping an undefined result unknown.
+
+    A zero denominator is a real value, but the quotient it produces does not
+    exist. The result is therefore reported as unknown rather than as ``0``,
+    so no conclusion is drawn from it.
+    """
+    collected: list[str] = list(evidence_refs)
+    for slot in (numerator, denominator):
+        if not slot.is_available:
+            return FactSlot[Decimal].missing(
+                f"{label} is unknown: an operand is {slot.availability.value}",
+                evidence_refs=collected,
+            )
+        collected.extend(ref for ref in slot.evidence_refs if ref not in collected)
+    divisor = denominator.unwrap()
+    if divisor == 0:
+        return FactSlot[Decimal].missing(
+            f"{label} is undefined: the denominator is zero", evidence_refs=collected
+        )
+    with localcontext() as context:
+        context.prec = 34
+        quotient = (numerator.unwrap() / divisor).quantize(exponent, rounding="ROUND_HALF_UP")
+    return FactSlot[Decimal].available(quotient, evidence_refs=collected)
