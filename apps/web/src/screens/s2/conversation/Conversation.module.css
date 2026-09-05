@@ -94,3 +94,6 @@
 
 .bubble p, .answerText p { margin: 0; }
 .steps[hidden] { display: none; }
+
+.resume button, .activity button, .options button, .conclusion button,
+.confirmationActions button, .composerActions button { min-height: 44px; }

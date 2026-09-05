@@ -2,7 +2,7 @@
 .screen[data-panel-open="true"] { grid-template-columns: minmax(0, 1fr) 400px; }
 
 /* S2-01 header */
-.header { grid-column: 1; min-width: 0; flex: none; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 20px; border-bottom: 1px solid #e7e8eb; }
+.header { grid-column: 1; min-width: 0; flex: none; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 20px; border-bottom: 1px solid #e7e8eb; }
 .back { flex: none; white-space: nowrap; color: rgba(4, 4, 19, .55); }
 .divider { flex: none; width: 1px; height: 20px; background: #e7e8eb; }
 .projectTitle { font-size: 14px; line-height: 20px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
@@ -13,7 +13,7 @@
 .headerActions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: none; position: relative; }
 
 /* S2-13/S2-14 chat switcher */
-.switcher { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border: 1px solid #e7e8eb; border-radius: 8px; background: none; cursor: pointer; max-width: 220px; }
+.switcher { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 10px; border: 1px solid #e7e8eb; border-radius: 8px; background: none; cursor: pointer; max-width: 220px; }
 .switcherLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .switcherWrap { position: relative; display: flex; }
 .popover { position: absolute; top: 40px; right: 0; width: 280px; padding: 6px; background: #fff; border: 1px solid #e7e8eb; border-radius: 12px; box-shadow: 0 8px 24px rgba(9, 12, 37, .12); z-index: 5; }
@@ -27,7 +27,7 @@
 .newChat { width: 100%; text-align: left; border: 0; border-radius: 8px; padding: 8px 10px; margin-top: 2px; background: none; cursor: pointer; color: #2a77ef; }
 
 /* S2-02 company context strip */
-.companies { grid-column: 1; min-width: 0; flex: none; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 20px; border-bottom: 1px solid #e7e8eb; color: rgba(4, 4, 19, .55); overflow-x: auto; }
+.companies { grid-column: 1; min-width: 0; flex: none; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 20px; border-bottom: 1px solid #e7e8eb; color: rgba(4, 4, 19, .55); overflow-x: auto; }
 .companyName { flex: 0 1 auto; min-width: 0; max-width: 360px; border: 0; background: none; padding: 0; cursor: pointer; color: rgba(3, 3, 6, .88); text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .demoTag { flex: none; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); border: 1px solid #e7e8eb; border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
 .moreCompanies { flex: none; color: rgba(5, 8, 29, .38); white-space: nowrap; }
@@ -136,7 +136,7 @@
 @media (max-width: 640px) {
   .header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 8px 16px; }
   .divider { display: none; }
-  .projectTitleButton, .titleEditor { grid-column: 1 / -1; grid-row: 2; min-height: 32px; padding: 0; }
+  .projectTitleButton, .titleEditor { grid-column: 1 / -1; grid-row: 2; min-height: 44px; padding: 0; }
   .saveState, .saveError { grid-column: 2; grid-row: 1; font-size: 12px; }
   .headerActions { grid-column: 1 / -1; width: 100%; justify-content: space-between; position: static; }
   .switcherWrap { position: static; min-width: 0; }
@@ -144,7 +144,7 @@
   .popover { position: fixed; inset: 0; width: auto; border: 0; border-radius: 0; padding: 16px; overflow: auto; z-index: 6; }
   .chatList { max-height: none; }
   .companies { gap: 8px; padding: 4px 16px; flex-wrap: wrap; overflow: visible; }
-  .companyName { max-width: 100%; flex: 1 1 180px; min-height: 36px; }
+  .companyName { max-width: 100%; flex: 1 1 180px; min-height: 44px; }
   .projectStatus { padding-left: 0; }
   .companyAction { min-height: 44px; }
   .conversationInner { padding: 20px 16px 8px; }
@@ -160,3 +160,8 @@
 }
 
 .groupBody[hidden] { display: none; }
+
+/* Keep the compact typography while making every control easy to activate. */
+.back { display: inline-flex; align-items: center; min-height: 44px; }
+.projectTitleButton, .companyName, .companyAction, .retryLink,
+.headerActions button, .panel button, .chatItem, .newChat { min-height: 44px; }
