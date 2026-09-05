@@ -21,6 +21,7 @@ streaming protocol.
 
 from collections.abc import Iterable
 from typing import Annotated, Literal, Self
+from uuid import UUID
 
 from pydantic import Field, model_validator
 
@@ -122,12 +123,14 @@ class AnalysisReferenceBlock(ContractModel):
 class ComparisonReferenceBlock(ContractModel):
     """A pointer to a comparison the deterministic layer produced.
 
-    The reference names the compared reports; it carries no winner and no
+    The reference names a stored comparison; it carries no winner and no
     aggregate score, because neither exists.
     """
 
     type: Literal["comparison_reference"] = "comparison_reference"
-    comparison_id: NonEmptyString
+    comparison_id: UUID
+    """The id of a stored :class:`~counterparty_contracts.reports.Comparison`."""
+
     company_ids: list[CompanyId] = Field(default_factory=list)
     label: NonEmptyString | None = None
 
