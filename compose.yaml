@@ -168,6 +168,9 @@ services:
     environment:
       AGENT_POSTGRES_DSN: postgresql://${POSTGRES_USER:-counterparty}:${POSTGRES_PASSWORD:-counterparty_dev}@postgres:5432/${POSTGRES_DB:-counterparty}
     command: ["python", "-m", "counterparty_agent.deploy_checkpoints"]
+    # A job is finished, not healthy; the image healthcheck belongs to the server.
+    healthcheck:
+      disable: true
     restart: "no"
     depends_on:
       migrate:

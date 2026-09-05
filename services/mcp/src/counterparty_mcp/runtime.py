@@ -12,6 +12,7 @@ from counterparty_contracts import (
     CompareCompaniesInput,
     Comparison,
     ComparisonEnvelope,
+    ComparisonRowStatus,
     ContractWarning,
     ErrorCode,
     GetCompanyOverviewInput,
@@ -196,9 +197,21 @@ class ServiceResources:
                         ),
                     )
                 )
-            row_warnings = any(row.warnings for row in data.rows)
+            incomplete = [
+                row for row in data.rows if row.status is not ComparisonRowStatus.COMPLETE
+            ]
+            if incomplete:
+                warnings.append(
+                    ContractWarning(
+                        code=WarningCode.PARTIAL_DATA,
+                        message=(
+                            f"{len(incomplete)} of {len(data.rows)} rows have unavailable cells; "
+                            "an unknown value is not zero and not an absence of risk."
+                        ),
+                    )
+                )
             result = ComparisonEnvelope(
-                status=McpStatus.PARTIAL if warnings or row_warnings else McpStatus.OK,
+                status=McpStatus.PARTIAL if warnings else McpStatus.OK,
                 data=data,
                 warnings=warnings,
                 source_report_ids=[row.report.id for row in data.rows],

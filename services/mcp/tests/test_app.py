@@ -249,7 +249,8 @@ async def test_compare_companies_reports_incomplete_and_missing_reports(
     assert incomplete.structured_content["status"] == "partial"
     assert incomplete.structured_content["data"]["rows"][1]["status"] == "unavailable"
     assert {warning["code"] for warning in incomplete.structured_content["warnings"]} == {
-        "not_comparable"
+        "not_comparable",
+        "partial_data",
     }
     assert absent.structured_content is not None
     assert absent.structured_content["status"] == "partial"
