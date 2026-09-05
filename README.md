@@ -240,10 +240,15 @@ SHA256 digest учётных данных и без digest не принимае
 Своё значение задаётся так:
 
 ```sh
-export MCP_SERVICE_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
-export MCP_AUTH_TOKEN_SHA256="$(python3 -c 'import hashlib, os; print(hashlib.sha256(os.environ["MCP_SERVICE_TOKEN"].encode()).hexdigest())')"
-env -u MCP_SERVICE_TOKEN docker compose up -d mcp
+export AGENT_MCP_AUTH_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+export MCP_AUTH_TOKEN_SHA256="$(python3 -c 'import hashlib, os; print(hashlib.sha256(os.environ["AGENT_MCP_AUTH_TOKEN"].encode()).hexdigest())')"
+docker compose up -d mcp agent
 ```
+
+Agent получает исходный токен только на backend, MCP — его digest. Compose
+связывает agent с внутренними UI API/MCP URL и запускает после их healthchecks.
+`AGENT_MODEL_PROVIDER=deterministic` — воспроизводимый локальный режим; он не
+считается проверкой качества реальной LLM.
 
 `compare_companies` сравнивает 2–20 закреплённых снимков по whitelist-критериям и
 не строит ranking, score или winner. Значения приходят из той же функции

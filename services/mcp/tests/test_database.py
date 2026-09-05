@@ -54,6 +54,8 @@ async def database() -> AsyncIterator[tuple[AsyncEngine, Settings]]:
     url = os.environ.get("MCP_TEST_ADMIN_DATABASE_URL")
     if not url:
         pytest.skip("MCP_TEST_ADMIN_DATABASE_URL missing; PostgreSQL checks not executed")
+    # The disposable role also works against the password-authenticated Compose DB.
+    password = uuid4().hex
     engine = create_database_engine(url)
     async with engine.begin() as connection:
         for schema in ("reports", "workspace"):
@@ -70,6 +72,7 @@ async def database() -> AsyncIterator[tuple[AsyncEngine, Settings]]:
             )
         )
         await connection.execute(text("GRANT counterparty_mcp TO i2_mcp_reader_test"))
+        await connection.execute(text(f"ALTER ROLE i2_mcp_reader_test PASSWORD '{password}'"))
     async with AsyncSession(engine) as session, session.begin():
         batch_id = uuid4()
         session.add(
@@ -150,7 +153,7 @@ async def database() -> AsyncIterator[tuple[AsyncEngine, Settings]]:
                         source_path="/" + key,
                     )
                 )
-    login_url = make_url(url).set(username="i2_mcp_reader_test", password=None)
+    login_url = make_url(url).set(username="i2_mcp_reader_test", password=password)
     settings = Settings(database_url=SecretStr(login_url.render_as_string(hide_password=False)))
     try:
         yield engine, settings

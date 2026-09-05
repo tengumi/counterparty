@@ -15,8 +15,8 @@
 # every password and digest here is a local development default that a
 # deployment overrides through the environment, and nothing here belongs in a
 # shared cluster. No secret reaches the browser: `web` is a static bundle built
-# with no environment at all, and the MCP credential exists only as a server-side
-# SHA256 digest, never as a plaintext token in any service environment. And it
+# with no environment at all. The agent holds its server-side MCP credential;
+# MCP receives only the matching SHA256 digest. And it
 # does not present the corpus as current information — `artifacts/` holds a mock
 # snapshot, read in place and never copied or edited.
 #
@@ -161,7 +161,7 @@ services:
     # LangGraph owns its own checkpoint tables and Alembic does not manage them.
     # The DDL runs once as the schema owner; the agent's runtime login never
     # receives it.
-    image: counterparty-agent:local
+    image: ${COMPOSE_PROJECT_NAME:-counterparty}-agent:local
     build:
       context: .
       dockerfile: services/agent/Dockerfile
@@ -196,12 +196,16 @@ services:
 
   agent:
     # The same image as the checkpoint job: one build, two entrypoints.
-    image: counterparty-agent:local
+    image: ${COMPOSE_PROJECT_NAME:-counterparty}-agent:local
     build:
       context: .
       dockerfile: services/agent/Dockerfile
     environment:
       AGENT_POSTGRES_DSN: postgresql://${AGENT_USER:-counterparty_agent_dev}:${AGENT_PASSWORD:-counterparty_agent_dev}@postgres:5432/${POSTGRES_DB:-counterparty}
+      AGENT_UI_API_URL: http://ui_api:8000
+      AGENT_MCP_URL: http://mcp:8000/mcp
+      AGENT_MCP_AUTH_TOKEN: ${AGENT_MCP_AUTH_TOKEN:-counterparty-local-demo-agent-token}
+      AGENT_MODEL_PROVIDER: ${AGENT_MODEL_PROVIDER:-deterministic}
     # One worker per database: the checkpointer expects a single writer.
     command: ["uvicorn", "counterparty_agent.app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
     ports:
@@ -212,6 +216,10 @@ services:
     depends_on:
       checkpoints:
         condition: service_completed_successfully
+      ui_api:
+        condition: service_healthy
+      mcp:
+        condition: service_healthy
 
   mcp:
     build:
@@ -224,7 +232,7 @@ services:
       # token at all. The default is the digest of the published demo token
       # `counterparty-local-demo-agent-token`, which is therefore not a secret
       # and must not be reused anywhere: a deployment sets MCP_AUTH_TOKEN_SHA256
-      # to the digest of its own credential, and rotation replaces only this.
+      # to the digest of AGENT_MCP_AUTH_TOKEN; rotate both together.
       MCP_AUTH_TOKEN_SHA256: ${MCP_AUTH_TOKEN_SHA256:-4324614cacb9c535d773665d2460baeb7ed664456974c124ce1bfbb767d1b5c4}
     ports:
       - "${MCP_PORT:-8002}:8000"
