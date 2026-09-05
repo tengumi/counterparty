@@ -73,8 +73,8 @@ Gate F0:
 |---|---|---|---|
 | C-01 | DTO отчёта: company/report identity, money/date values, raw enums, source paths | F0-05 | done |
 | C-02 | REST DTO проектов, компаний, threads, условий и решений | F0-05 | done |
-| C-03 | Agent public state, commands, pending command и activity DTO | F0-06 | todo |
-| C-04 | MCP overview/section/comparison DTO и пагинация | F0-08, C-01 | todo |
+| C-03 | Agent public state, commands, pending command и activity DTO | F0-06 | done |
+| C-04 | MCP overview/section/comparison DTO и пагинация | F0-08, C-01 | done |
 | D-01 | ИНН/ОГРН validation, Decimal/date helpers и missing/zero semantics | C-01 | done |
 | D-02 | Evidence ledger и проверка разрешимости refs | C-01 | done |
 | D-03 | Детерминированные summary, finance/proceeding calculations | D-01, D-02 | done |
@@ -86,19 +86,19 @@ Gate F0:
 |---|---|---|---|
 | DB-01 | Alembic base с отдельными схемами `reports` и `workspace` | F0-01 | done |
 | DB-02 | Таблицы import batch, company, report и первая вертикаль report entities | DB-01, C-01 | done |
-| DB-03 | Таблицы project, project_company, thread и idempotency key | DB-01, C-02 | todo |
-| DB-04 | Async repositories/UoW и отдельные права importer, UI API, MCP, Agent | DB-02, DB-03 | todo |
+| DB-03 | Таблицы project, project_company, thread и idempotency key | DB-01, C-02 | done |
+| DB-04 | Async repositories/UoW и отдельные права importer, UI API, MCP, Agent | DB-02, DB-03 | done |
 | IMP-01 | Extended JSON decoder и schema fingerprint для существующего mock JSON | C-01, D-01 | done |
-| IMP-02 | Идемпотентный `scripts/import_reports` с batch/hash и отчётом ошибок | DB-02, DB-04, IMP-01 | todo |
-| IMP-03 | Импорт всех 100 mock snapshots и сверка контрольных примеров Specs | IMP-02 | todo |
+| IMP-02 | Идемпотентный `scripts/import_reports` с batch/hash и отчётом ошибок | DB-02, DB-04, IMP-01 | done |
+| IMP-03 | Импорт всех 100 mock snapshots и сверка контрольных примеров Specs | IMP-02 | done |
 
 ### UI API
 
 | ID | Результат | Depends on | Статус |
 |---|---|---|---|
-| API-01 | Demo auth/session и project ownership dependency | F0-03A, C-02 | todo |
-| API-02 | Create/list/open/rename project и первый thread, идемпотентность request ID | API-01, DB-03, DB-04 | todo |
-| API-03 | Add/remove 1–20 companies с закреплением report_id | API-02, IMP-02 | todo |
+| API-01 | Demo auth/session и project ownership dependency | F0-03A, C-02 | done |
+| API-02 | Create/list/open/rename project и первый thread, идемпотентность request ID | API-01, DB-03, DB-04 | done |
+| API-03 | Add/remove 1–20 companies с закреплением report_id | API-02, IMP-02 | done |
 | API-04 | Deterministic company overview с evidence refs | API-03, D-03 | todo |
 | API-05 | Comparison endpoint и неполные данные | API-04, D-04 | todo |
 
@@ -109,9 +109,9 @@ Gate F0:
 | WEB-01 | App shell, маршруты `/checks` и `/checks/:projectId/chats/:threadId` | F0-04 | done |
 | WEB-02 | S1: поле задачи, примеры и список сохранённых проверок | WEB-01 | done |
 | WEB-03 | S2 shell: header, chat switcher, company context strip, responsive layout | WEB-01 | done |
-| WEB-04 | Conversation blocks, activity/progress и composer states на typed mocks | WEB-03, F0-05 | todo |
-| WEB-05 | Materials panel navigation и локальное сохранение drawer/draft/scroll | WEB-03 | todo |
-| WEB-06 | Company report и evidence detail по typed mocks | WEB-05, C-01 | todo |
+| WEB-04 | Conversation blocks, activity/progress и composer states на typed mocks | WEB-03, F0-05 | done |
+| WEB-05 | Materials panel navigation и локальное сохранение drawer/draft/scroll | WEB-03 | done |
+| WEB-06 | Company report и evidence detail по typed mocks | WEB-05, C-01 | done |
 | WEB-07 | Visual regression/screenshots 390, 1024, 1440 px против HTML reference | WEB-02…WEB-06 | todo |
 
 Gate волны 1: mock JSON импортируется в PostgreSQL; API возвращает одну реальную
@@ -154,6 +154,11 @@ evidence открывает точный источник; решение пол
 | QA-04 | Agent evals из Specs, deterministic mocks и малый набор real-model runs | AG-05, DOC-03 | todo |
 | QA-05 | Security/ownership, PII-safe logs, limits и failure states | OPS-01 | todo |
 | REL-01 | Все V01–V13 и F01–F21, остаточные ограничения и demo runbook | QA-01…QA-05 | todo |
+
+Slim-часть OPS-01 выполнена в волне F: текущий `compose.yaml` поднимает
+PostgreSQL, миграции, роли и импорт. Статус OPS-01 остаётся `todo`, пока в общий
+контур не включены `web`, `ui_api`, `agent`, `mcp`, reverse proxy и service
+healthchecks.
 
 ## 7. UI-декомпозиция дизайнерского HTML
 
