@@ -161,6 +161,7 @@ services:
     # LangGraph owns its own checkpoint tables and Alembic does not manage them.
     # The DDL runs once as the schema owner; the agent's runtime login never
     # receives it.
+    image: counterparty-agent:local
     build:
       context: .
       dockerfile: services/agent/Dockerfile
@@ -191,6 +192,8 @@ services:
         condition: service_completed_successfully
 
   agent:
+    # The same image as the checkpoint job: one build, two entrypoints.
+    image: counterparty-agent:local
     build:
       context: .
       dockerfile: services/agent/Dockerfile
