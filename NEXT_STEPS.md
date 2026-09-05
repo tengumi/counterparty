@@ -623,16 +623,46 @@ J влит. Что дал каждый срез и его известная д�
    - 70 тестов зелёные без изменений, mypy/ruff чистые, образ пересобран,
      контейнер `healthy`. `report_*` в `packages/domain` не выносил — по
      желанию, отдельно.
+7. **Сверка UI с макетом + персист истории диалога** — TODO, отдельным
+   заходом. Инфраструктура под оба уже есть, дописать «последнюю милю».
+   - **7a. UI ↔ `Проверка контрагентов v2.dc.html`.** Выравнивание S1/S2
+     принято в WEB-07/срез H, но decisions/conversation/materials-панель
+     (WEB-08/09/11 + `DecisionPanel`) легли позже и с макетом не сверялись.
+     Пройтись по компонентам S2 (`DecisionPanel`, `AnalysisMemo`,
+     `ResumeCard`, materials-drawer), сверить с неизменяемым дизайнерским
+     HTML, поправить только внешний вид; один браузерный прогон
+     390/1024/1440 + скриншоты, как в H2. Ownership `apps/web/**`,
+     поведение и REST/RPC не трогать.
+   - **7b. Durable публичная проекция разговора.** Что уже есть:
+     контракт `ThreadConversationState` (= `PublicAgentState` + `active_run_id`);
+     эндпоинт `GET /api/v1/projects/{p}/threads/{t}/conversation` (сейчас
+     отдаёт пустую проекцию + lifecycle из `agent_runs`); durable
+     `workspace.agent_runs` (status, `last_public_revision`, `finished_at`);
+     LangGraph checkpointer персистит graph-state треда по ключу
+     `uuid5(tenant:project:thread)`; `RunRegistry` держит replayable
+     event-log (`Run.events`); web `getThreadConversation` + `ProjectChat.tsx`
+     restore-путь это уже потребляют. Чего не хватает: никто не сохраняет
+     сам публичный `PublicAgentState` (messages[]/activities[]) durably.
+     Заход: агент на завершении run пишет финальную проекцию (в `workspace`
+     — отдельная таблица или JSONB на run/thread) и отдаёт её по RPC
+     (`GET /rpc/agent/threads/{t}/conversation`), а ui_api-эндпоинт
+     проксирует её вместо пустой. Ревизии уже упорядочены
+     `last_public_revision`. Граница I7 (один writer на БД, saver на
+     owner-connection) сохраняется. Это же снимает «известное ограничение»
+     из `docs/DEMO_RUNBOOK.md` §4.
 
 Независимый проверяющий — только на п. 2 и живой прогон п. 5.
 
 ## Итог захода 06.09.2026
 
-Все шесть пунктов «Остаток MVP» закрыты и закоммичены в `dev`:
+Пункты 1–6 «Остаток MVP» закрыты и закоммичены в `dev`:
 `d3c8945` (эндпоинты §5), `0b13bad` (AG-04), `294b7bd` (tenant scope в RPC),
 `39cf37d` (OPS-01 bring-up), `19fc450` (MCP content-blocks fix + runbook),
-+ рефакторинг раскладки. Стек поднят на текущем коде, миграция `0006`,
-сквозной сценарий компании А отработал с grounded-evidence.
+`eb944a3` (рефакторинг раскладки). Стек поднят на текущем коде, миграция
+`0006`, сквозной сценарий компании А отработал с grounded-evidence.
+
+Открытый пункт 7 (сверка UI с макетом + durable проекция разговора) —
+следующий заход; инфраструктура под него уже на месте.
 
 Осталось по плану: независимая проверка AG-04 и живого прогона приёмки;
 дожимание агентского сценария и UI/UX, подключение реальной модели —

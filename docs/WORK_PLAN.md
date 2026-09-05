@@ -188,6 +188,8 @@ AG-04 и AG-06. Пользователь решил закончить оста�
 |---|---|---|---|
 | OPS-01 | Общий `compose.yaml`, reverse proxy, PostgreSQL volume и service healthchecks | F0-03A…F0-03C, F0-04, волна 2 | done (06.09.2026: полный `up -d`, миграция 0006, 6 сервисов healthy, ручной проход через proxy) |
 | REFACTOR-01 | Развести плоскую раскладку `services/ui_api` на подпакеты; только перемещение файлов и правка импортов, поведение и тесты без изменений | WEB-09, WEB-11 | done (06.09.2026: `routes/` 8 роутеров, `reads/` models+views, `loaders/`; 11 инфраструктурных модулей остались плоско; 70 тестов зелёные, mypy/ruff чистые, контейнер healthy) |
+| WEB-12 | Сверка S2-компонентов (`DecisionPanel`, `AnalysisMemo`, `ResumeCard`, materials-drawer) с неизменяемым дизайнерским HTML; только внешний вид, один браузерный прогон 390/1024/1440 | WEB-08, WEB-09, WEB-11, срез H | todo |
+| AG-07 | Durable публичная проекция разговора: агент пишет финальный `PublicAgentState` (messages/activities) в `workspace` и отдаёт по RPC; ui_api-эндпоинт `…/conversation` проксирует вместо пустой проекции. Ревизии по `agent_runs.last_public_revision`, граница I7 сохраняется | AG-04 | todo |
 | QA-01 | Contract tests REST/RPC/MCP и generated/checked TS types | C-01…C-04 | todo |
 | QA-02 | Интеграция importer + PostgreSQL + API + MCP | IMP-03, MCP-03 | todo |
 | QA-03 | Browser flow: reconnect, cancel, document, evidence, decision | WEB-11, OPS-01 | todo |
