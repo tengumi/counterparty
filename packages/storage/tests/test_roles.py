@@ -103,15 +103,17 @@ def test_truncate_is_never_granted() -> None:
     assert not any("TRUNCATE" in statement for statement in grant_statements())
 
 
-def test_every_grant_has_a_matching_revoke() -> None:
-    """A downgrade can hand back everything the upgrade handed out."""
+def test_every_grant_has_a_matching_database_local_revoke() -> None:
+    """A downgrade hands back grants without deleting cluster-wide roles."""
     for role in DatabaseRole:
         granted = grant_statements([role])
         revoked = revoke_statements([role])
         for grant in ROLE_GRANTS[role]:
             assert any(grant.target in statement for statement in granted)
             assert any(grant.target in statement for statement in revoked)
-    assert len(drop_role_statements()) == len(DatabaseRole)
+    decommission = drop_role_statements()
+    assert len(decommission) == len(DatabaseRole)
+    assert all(statement.startswith("DROP ROLE IF EXISTS") for statement in decommission)
 
 
 def test_roles_are_created_without_login() -> None:

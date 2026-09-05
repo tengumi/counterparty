@@ -30,7 +30,6 @@ from collections.abc import Sequence
 from alembic import op
 from counterparty_storage.roles import (
     create_role_statements,
-    drop_role_statements,
     grant_statements,
     revoke_statements,
 )
@@ -50,12 +49,13 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Hand every privilege back and drop the roles.
+    """Hand back only the privileges owned by this database.
 
-    ``DROP ROLE`` fails loudly if a privilege was missed, which is the point: a
-    rolled back deployment must not leave a half-privileged role behind.
+    PostgreSQL roles are cluster-wide while Alembic revisions are per database.
+    Dropping a role here would either fail when another project database still
+    grants it privileges or, worse, remove a group role that database needs.
+    The NOLOGIN groups therefore outlive a database-local downgrade; explicit
+    cluster decommissioning owns their eventual removal.
     """
     for statement in revoke_statements():
-        op.execute(statement)
-    for statement in drop_role_statements():
         op.execute(statement)

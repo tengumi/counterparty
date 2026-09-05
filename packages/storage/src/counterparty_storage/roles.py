@@ -231,9 +231,10 @@ def revoke_statements(roles: Sequence[DatabaseRole] | None = None) -> tuple[str,
 
 
 def drop_role_statements() -> tuple[str, ...]:
-    """Drop the group roles, after their privileges have been revoked.
+    """Render role removal for an explicit cluster-decommission operation.
 
-    ``DROP ROLE`` fails loudly if a privilege was missed, which is the point:
-    a downgrade must not leave a half-privileged role behind.
+    Alembic downgrade must not call this helper: roles are cluster-wide and may
+    still carry privileges in another database. A deployment invokes these
+    statements only after every database using the groups has been retired.
     """
     return tuple(f"DROP ROLE IF EXISTS {role.value};" for role in reversed(tuple(DatabaseRole)))

@@ -1,9 +1,13 @@
 """End-to-end migration checks against a real PostgreSQL."""
 
+import os
+from collections.abc import Iterator
+from contextlib import contextmanager
+
 from alembic import command
 from alembic.config import Config
 from counterparty_storage import REPORTS_SCHEMA, WORKSPACE_SCHEMA, metadata
-from sqlalchemy import Engine, inspect, text
+from sqlalchemy import Engine, create_engine, inspect, text
 
 
 def _expected(schema: str) -> set[str]:
@@ -19,6 +23,20 @@ def _schemas(engine: Engine) -> set[str]:
     with engine.connect() as connection:
         rows = connection.execute(text("SELECT schema_name FROM information_schema.schemata"))
         return {row[0] for row in rows}
+
+
+@contextmanager
+def _database_url(url: str) -> Iterator[None]:
+    """Point one Alembic command at a selected database."""
+    previous = os.environ.get("COUNTERPARTY_DATABASE_URL")
+    os.environ["COUNTERPARTY_DATABASE_URL"] = url
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop("COUNTERPARTY_DATABASE_URL", None)
+        else:
+            os.environ["COUNTERPARTY_DATABASE_URL"] = previous
 
 
 def test_upgrade_creates_both_schemas_and_their_tables(
@@ -84,3 +102,37 @@ def test_no_model_drift_between_metadata_and_head(alembic_config: Config, engine
             assert compare_metadata(context, metadata) == []
     finally:
         command.downgrade(alembic_config, "base")
+
+
+def test_database_downgrade_preserves_roles_used_by_another_database(
+    alembic_config: Config,
+    database_url: str,
+    second_database_url: str,
+) -> None:
+    """Rolling back one database leaves the other database's grants usable."""
+    assert database_url != second_database_url
+    second_engine = create_engine(second_database_url)
+    try:
+        with _database_url(database_url):
+            command.upgrade(alembic_config, "head")
+        with _database_url(second_database_url):
+            command.upgrade(alembic_config, "head")
+
+        with _database_url(database_url):
+            command.downgrade(alembic_config, "base")
+
+        with second_engine.connect() as connection, connection.begin():
+            role_exists = connection.execute(
+                text("SELECT 1 FROM pg_roles WHERE rolname = 'counterparty_mcp'")
+            ).scalar_one_or_none()
+            assert role_exists == 1
+            connection.execute(text("SET LOCAL ROLE counterparty_mcp"))
+            connection.execute(text("SELECT count(*) FROM reports.report_snapshots"))
+
+        with _database_url(database_url):
+            command.upgrade(alembic_config, "head")
+            command.downgrade(alembic_config, "base")
+    finally:
+        with _database_url(second_database_url):
+            command.downgrade(alembic_config, "base")
+        second_engine.dispose()
