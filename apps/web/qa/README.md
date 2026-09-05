@@ -1,40 +1,62 @@
-# WEB-07 browser QA
+# Live WEB-08 browser QA
 
-Verified toolchain: **Node 24.19.0**, Chrome **150.0.7871.115**, Playwright Core **1.63.0**. `qa/run.ts` uses Node 24 native TypeScript execution; run QA with Node 24 even though the application itself permits Node >=22.13. Chrome must be installed separately (`playwright-core` does not download a browser).
-
-Standard Playwright drives an installed Chrome through CDP. Each invocation creates and removes its own temporary Chrome profile; existing browser tabs and user profiles are untouched.
+Node **24.19.0**, installed Chrome **150.0.7871.115**, Playwright Core **1.63.0**.
+`qa/web08.ts` uses standard `qa/browser.ts`: Chrome/CDP with its own disposable
+profile. No request interception, production fixture switch or manual CDP protocol.
 
 ```sh
 npm ci
+npm run lint
+npm run typecheck
+npm test
+npm run build
 npm run qa:check
-npm run qa:browser                 # prints the matrix; does not start Chrome
-npm run dev -- --port 5173         # separate terminal, reviewed source commit
-npm run qa:browser -- --capture --mode=fixtures
+npm run qa:web08                       # matrix only; no browser
+npm run dev -- --port 5173             # separate terminal
+npm run qa:web08 -- --capture          # final integrated source only
 ```
 
-Run capture only after the integrated H1 changes are approved for final browser QA. The runner requires clean reviewed source files (generated WEB-07 artifacts are excluded) and records its HEAD in the manifest. Chrome defaults to the macOS application path; set `WEB07_CHROME` or pass `--chrome=/path/to/chrome`. `--url=http://127.0.0.1:5173` and `--output=../../artifacts/qa/WEB-07` are defaults.
+Start UI API on 8000 with the imported disposable demo database and migrations as
+in the root README. Vite proxies same-origin REST/cookies; the runner signs in as
+`demo-analyst`. No secrets are embedded in the browser. It creates two clearly
+named `WEB-08 desktop/mobile ...` projects and leaves them for review.
 
-The fixture mode intercepts REST in the browser using the shared synthetic `src/test/apiProjects.ts` fixture. The unchanged app reads existing typed conversation, material, report and evidence fixtures. Interception is scoped to the test browser; there is no production fallback, fabricated database ID or custom browser protocol.
+Flow: create project → add INNs 1684017097/7449088645 → pinned financial report →
+exact evidence ref/period → back/discuss/draft → server comparison with explicit
+year → comparison source/back → reload preserving draft/context/selection.
+The runner checks desktop 1440×900 and mobile 390×844; tablet 1024×768 checks panel
+bounds. Mobile Enter inserts a newline. Server amounts, report IDs, refs and
+periods are compared with rendered values, not fixture constants.
 
-For the separate live CRUD run, start UI API on port 8000 against a disposable imported demo database, as documented in the root README/G6 checkpoint. The Vite proxy supplies same-origin REST and cookies:
+`--url=http://127.0.0.1:5173`, `--output=../../artifacts/qa/WEB-08` and installed
+macOS Chrome are defaults. Override Chrome via `WEB08_CHROME` or `--chrome=...`.
+Capture requires clean reviewed source and records exact HEAD in `manifest.json`.
+Failures preserve their original manifest and PNGs. Targeted follow-ups use
+separate files; never relabel old evidence with a newer SHA.
+
+Results: [WEB-08 evidence](../../../artifacts/qa/WEB-08/README.md). Scope is live
+REST over provided mock snapshots; chat/agent, documents, user decisions and
+native mobile keyboard remain outside this run. Comparison selection is browser
+state, not a saved comparison artifact.
+
+## Historical WEB-07 harness
+
+`qa/run.ts` / `npm run qa:browser` belong to the earlier runtime-fixture baseline;
+do not use their fixture capture as current production acceptance. Historical
+full capture source was **b13cc17**; reviewed tablet/mobile follow-ups used
+**6942d5a**. Those PNGs and their hashes remain unchanged in
+[WEB-07](../../../artifacts/qa/WEB-07/README.md).
+
+To reproduce old visual fixtures, use that historical source and its runbook.
+Current `fixtureMode` is an explicit component-test option and is not exposed by
+the production entrypoint. Current end-to-end evidence comes from `qa:web08`.
+
+Targeted follow-up for the preserved WEB-08 project, without repeating project
+creation or the full screenshot suite:
 
 ```sh
-npm run qa:browser -- --capture --mode=live
-# Or one final invocation for both:
-npm run qa:browser -- --capture --mode=all
+node qa/web08-followup.ts
 ```
 
-Live mode signs in as `demo-analyst`, creates one server-owned project, renames it, adds two local companies and one missing INN, reloads, removes one company and reloads again. It leaves the clearly named `WEB-07 browser CRUD ...` project for review; this is a disposable demo database operation. It performs no fixture interception.
-
-Outputs: viewport PNGs plus `manifest-{mode}.json` with source SHA, Chrome version, dataset scope, assertions and limitations. Mock screenshots never certify live report/agent wiring (WEB-08/09). Failures make the process exit nonzero while preserving a reviewable manifest. Screenshots use viewport bounds, not tall stitched pages.
-
-The same fixture sweep also opens the unchanged accepted designer HTML as a separate file URL, using its own support.js and the exact CDN dependency versions it declares. Reference captures include S1/S2 at all three widths and materials at desktop/mobile. The HTML and support.js hashes are recorded. Reference narrow-width shell behavior is compared against Specs 07; the harness does not alter its HTML to manufacture pixel equality.
-
-Targeted follow-up after a reviewed fix, retaining first-pass files and their original SHA:
-
-```sh
-npm run qa:browser -- --capture --target=tablet-s2 --output=../../artifacts/qa/WEB-07/follow-up
-npm run qa:browser -- --capture --target=availability --output=../../artifacts/qa/WEB-07/follow-up
-```
-
-The first command repeats tablet S2/panel/report/evidence/draft/scroll; the second checks report source-state wording and panel bounds on mobile/desktop. They create separate manifests, skip reference/live, and never relabel existing PNGs with the newer SHA.
+This checks only new draft-chip touch targets, composer/viewport bounds and the
+favicon resource. It writes one mobile PNG and a separate follow-up manifest.
