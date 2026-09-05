@@ -6,12 +6,14 @@ import os
 import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
+from typing import TypedDict
 from uuid import uuid4
 
 import pytest
 from counterparty_storage import ThreadScope, create_database_engine
 from counterparty_storage.repositories import agent_run_owner
 from counterparty_storage.workspace import AgentRunStatus, Project, Tenant, Thread, User
+from langgraph.graph import END, START, StateGraph
 from psycopg import AsyncConnection
 from psycopg.errors import InsufficientPrivilege
 from sqlalchemy import text
@@ -147,7 +149,7 @@ async def test_scope_mapping_and_runtime_without_ddl(database: Database) -> None
             ),
         )
         assert own != other
-        async with postgres_checkpointer(runtime) as saver:
+        async with postgres_checkpointer(owner) as saver:
             assert await saver.aget_tuple(other) is None
     async with await AsyncConnection.connect(runtime, autocommit=True) as connection:
         with pytest.raises(InsufficientPrivilege, match="permission denied"):
@@ -245,3 +247,79 @@ async def test_app_lifespan_recovers_and_shuts_down_without_setup(database: Data
     async with postgres_run_owner(runtime) as restored, restored.runs(scope) as repository:
         run = await repository.get(active.id)
         assert run is not None and run.status is AgentRunStatus.INTERRUPTED
+
+
+class FencedState(TypedDict):
+    """Payload used to detect a stale native graph write."""
+
+    value: int
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("loss", ["terminate", "unlock"])
+async def test_lost_owner_rejects_already_open_native_saver(database: Database, loss: str) -> None:
+    """No native checkpoint mutation survives loss of its owner's physical connection."""
+    _, runtime, engine, scope = database
+    runtime_engine = create_database_engine(
+        runtime.replace("postgresql://", "postgresql+psycopg://", 1)
+    )
+    builder = StateGraph(FencedState)
+    builder.add_node("increment", lambda state: {"value": state["value"] + 1})
+    builder.add_edge(START, "increment")
+    builder.add_edge("increment", END)
+    try:
+        async with asyncio.timeout(15), agent_run_owner(runtime_engine) as owner:
+            config = await checkpoint_config(owner, scope)
+            async with postgres_checkpointer(owner) as saver:
+                graph = builder.compile(checkpointer=saver)
+                async with owner.runs(scope) as repository:
+                    run = await repository.create(
+                        client_request_id=uuid4(), based_on_context_version=0
+                    )
+                    await repository.set_status(run.id, AgentRunStatus.RUNNING)
+                assert (await graph.ainvoke({"value": 0}, config, durability="sync"))["value"] == 1
+                previous = await saver.aget_tuple(config)
+                assert previous is not None
+                if loss == "unlock":
+                    async with owner.transaction_connection() as connection:
+                        await connection.execute(text("SELECT pg_advisory_unlock(1129337423, 1)"))
+                else:
+                    async with engine.begin() as connection:
+                        pid = await connection.scalar(
+                            text(
+                                "SELECT pid FROM pg_locks WHERE locktype='advisory' "
+                                "AND classid=1129337423 AND objid=1 AND objsubid=2 "
+                                "AND database=(SELECT oid FROM pg_database "
+                                "WHERE datname=current_database())"
+                            )
+                        )
+                        assert pid is not None
+                        await connection.execute(
+                            text("SELECT pg_terminate_backend(:pid)"), {"pid": pid}
+                        )
+                async with postgres_run_owner(runtime) as replacement:
+                    async with replacement.runs(scope) as repository:
+                        recovered = await repository.get(run.id)
+                        assert recovered is not None
+                        assert recovered.status is AgentRunStatus.INTERRUPTED
+                    with pytest.raises((RuntimeError, DBAPIError)):
+                        await graph.ainvoke({"value": 41}, config, durability="sync")
+                    with pytest.raises((RuntimeError, DBAPIError)):
+                        await saver.aput(
+                            previous.config, previous.checkpoint, previous.metadata, {}
+                        )
+                    with pytest.raises((RuntimeError, DBAPIError)):
+                        await saver.aput_writes(previous.config, [("value", 42)], "stale-task")
+                    with pytest.raises((RuntimeError, DBAPIError)):
+                        await saver.adelete_thread(config["configurable"]["thread_id"])
+                    async with postgres_checkpointer(replacement) as live_saver:
+                        fresh = await live_saver.aget_tuple(config)
+                        assert fresh == previous
+                        live_graph = builder.compile(checkpointer=live_saver)
+                        assert (await live_graph.ainvoke({"value": 5}, config, durability="sync"))[
+                            "value"
+                        ] == 6
+                        await live_saver.adelete_thread(config["configurable"]["thread_id"])
+                        assert await live_saver.aget_tuple(config) is None
+    finally:
+        await runtime_engine.dispose()

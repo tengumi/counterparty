@@ -763,7 +763,12 @@ class AgentRunOwner:
         self.id = uuid4()
 
     @asynccontextmanager
-    async def _transaction(self) -> AsyncIterator[AsyncSession]:
+    async def transaction_connection(self) -> AsyncIterator[AsyncConnection]:
+        """Lease the physical owner connection for one serialized atomic operation.
+
+        Native framework adapters must use this connection, never an independent
+        pool. A lost connection is terminal: the owner cannot reconnect.
+        """
         async with self._serial:
             if self._connection.closed or self._connection.invalidated:
                 raise RuntimeError("agent run ownership connection was lost")
@@ -778,9 +783,16 @@ class AgentRunOwner:
                 )
                 if not held:
                     raise RuntimeError("agent run ownership lock was lost")
-                async with AsyncSession(bind=self._connection, expire_on_commit=False) as session:
-                    yield session
-                    await session.flush()
+                yield self._connection
+
+    @asynccontextmanager
+    async def _transaction(self) -> AsyncIterator[AsyncSession]:
+        async with (
+            self.transaction_connection() as connection,
+            AsyncSession(bind=connection, expire_on_commit=False) as session,
+        ):
+            yield session
+            await session.flush()
 
     @asynccontextmanager
     async def runs(self, scope: ThreadScope) -> AsyncIterator[AgentRunRepository]:
