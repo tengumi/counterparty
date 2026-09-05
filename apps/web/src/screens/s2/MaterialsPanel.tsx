@@ -181,7 +181,7 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, c
           {titles[view.kind]}
         </h2>
         <span className={styles.panelClose}>
-          <Button aria-label="Закрыть" onClick={onClose} size={40} view="text">
+          <Button aria-label="Назад к разговору — закрыть материалы" onClick={onClose} size={40} view="text">
             <span className={styles.panelCloseDesktop}>Закрыть</span>
             <span className={styles.panelCloseMobile}>Назад</span>
           </Button>

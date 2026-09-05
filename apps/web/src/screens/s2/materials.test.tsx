@@ -166,7 +166,7 @@ describe('S2 materials panel navigation', () => {
 
     const trigger = screen.getByRole('button', { name: 'Материалы' });
     await user.click(trigger);
-    await user.click(screen.getByRole('button', { name: 'Закрыть' }));
+    await user.click(screen.getByRole('button', { name: 'Назад к разговору — закрыть материалы' }));
 
     expect(screen.queryByRole('complementary', { name: 'Материалы проверки' })).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
