@@ -75,3 +75,175 @@ class ErrorCode(StrEnum):
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
     INTERNAL_ERROR = "internal_error"
+
+
+class ValueType(StrEnum):
+    """Declared type of a :class:`FactValue` payload.
+
+    A non-null value matches its type exactly. ``DECIMAL`` travels as a plain
+    string, ``DATE`` as a display-layer ``YYYY-MM-DD`` day, and ``ENUM`` as the
+    raw external token, which is never rewritten into a known member.
+    """
+
+    DECIMAL = "decimal"
+    INTEGER = "integer"
+    BOOLEAN = "boolean"
+    STRING = "string"
+    DATE = "date"
+    ENUM = "enum"
+
+
+class DisplayLevel(StrEnum):
+    """How a raw external assessment may be presented.
+
+    The level is a presentation decision over a value we did not compute. An
+    unmapped or unknown raw value is ``NEUTRAL`` with an explanation; it never
+    falls back to a favourable level.
+    """
+
+    POSITIVE = "positive"
+    NEUTRAL = "neutral"
+    ATTENTION = "attention"
+    NEGATIVE = "negative"
+
+
+class ReportSectionName(StrEnum):
+    """Addressable section of one report snapshot.
+
+    Names are public and stable; the source keys they were parsed from are in
+    :data:`counterparty_contracts.reports.SECTION_SOURCE_KEYS`.
+    """
+
+    PROFILE = "profile"
+    STATUS = "status"
+    ACTIVITIES = "activities"
+    FINANCIALS = "financials"
+    COEFFICIENTS = "coefficients"
+    FOUNDERS = "founders"
+    TAX_SYSTEMS = "tax_systems"
+    CONTACTS = "contacts"
+    EXECUTION_PROCEEDINGS = "execution_proceedings"
+    ARBITRATION = "arbitration"
+    PROCUREMENTS = "procurements"
+    LICENSES = "licenses"
+    INSPECTIONS = "inspections"
+    RELATED_COMPANIES = "related_companies"
+    BRANCHES = "branches"
+    RISK_SIGNALS = "risk_signals"
+    ZSK = "zsk"
+
+
+class PartyRole(StrEnum):
+    """Side a company took in an arbitration aggregate."""
+
+    PLAINTIFF = "plaintiff"
+    DEFENDANT = "defendant"
+
+
+class ArbitrationAggregation(StrEnum):
+    """Dimension one arbitration aggregate is grouped by.
+
+    Status and year aggregates describe the same cases from two angles and are
+    never summed together: doing so double counts.
+    """
+
+    BY_STATUS = "status"
+    BY_YEAR = "year"
+
+
+class RiskSignalPolarity(StrEnum):
+    """Direction of a reputational signal as published by the source."""
+
+    NEGATIVE = "negative"
+    POSITIVE = "positive"
+
+
+class ComparisonCriterion(StrEnum):
+    """Whitelisted comparison criterion. No free-form expression is accepted."""
+
+    BANK_RISK = "bank_risk"
+    STATUS = "status"
+    FINANCIALS = "financials"
+    PROCEEDINGS = "proceedings"
+    ARBITRATION = "arbitration"
+    ACTIVITIES = "activities"
+    LICENSES = "licenses"
+    PROCUREMENT = "procurement"
+    COMPLETENESS = "completeness"
+
+
+class YearPolicy(StrEnum):
+    """How comparable financial periods are chosen across companies."""
+
+    COMMON_LATEST = "common_latest"
+    LATEST_AVAILABLE = "latest_available"
+    EXPLICIT = "explicit"
+
+
+class ComparisonRowStatus(StrEnum):
+    """Per-company outcome of one comparison row.
+
+    A partial or unavailable row is reported as such; an unknown value is never
+    ranked as the worst number.
+    """
+
+    COMPLETE = "complete"
+    PARTIAL = "partial"
+    UNAVAILABLE = "unavailable"
+
+
+class CounterpartyRole(StrEnum):
+    """Role the counterparty plays in the deal under review."""
+
+    SUPPLIER = "supplier"
+    BUYER = "buyer"
+    CONTRACTOR = "contractor"
+    OTHER = "other"
+    UNKNOWN = "unknown"
+
+
+class ProjectFactKey(StrEnum):
+    """Whitelisted deal-term keys of the project context."""
+
+    COUNTERPARTY_ROLE = "counterparty_role"
+    SUBJECT = "subject"
+    AMOUNT = "amount"
+    PAYMENT_TYPE = "payment_type"
+    ADVANCE_PERCENT = "advance_percent"
+    DELIVERY_DEADLINE = "delivery_deadline"
+    DELIVERY_TERMS = "delivery_terms"
+    USER_PRIORITY = "user_priority"
+
+
+class ConfirmationStatus(StrEnum):
+    """How trustworthy one deal term is."""
+
+    USER_CONFIRMED = "user_confirmed"
+    EXTRACTED_UNCONFIRMED = "extracted_unconfirmed"
+    INFERRED = "inferred"
+
+
+class ArtifactFreshness(StrEnum):
+    """Whether an AI artifact still matches the project context it used."""
+
+    CURRENT = "current"
+    OUTDATED = "outdated"
+    SOURCE_REMOVED = "source_removed"
+
+
+class CompanyAddOutcome(StrEnum):
+    """Per-item result of adding companies to a project."""
+
+    ADDED = "added"
+    ALREADY_PRESENT = "already_present"
+    NOT_FOUND = "not_found"
+    INVALID = "invalid"
+
+
+class ProjectDeletionState(StrEnum):
+    """Progress of an accepted project deletion."""
+
+    ACCEPTED = "accepted"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
