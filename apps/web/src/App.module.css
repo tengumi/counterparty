@@ -24,6 +24,8 @@
   .content { padding-top: 48px; }
 }
 @media (max-width: 640px) {
+  /* Fullscreen panels are fixed to the viewport, not a query container. */
+  .main { container-type: normal; }
   .sidebar { height: 48px; gap: 12px; padding: 0 16px; }
   .sidebar nav { display: none; }
   .demo { max-width: 125px; font-size: 11px; line-height: 14px; text-align: right; }
