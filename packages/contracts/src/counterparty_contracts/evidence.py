@@ -1,5 +1,6 @@
 """Typed, resolvable evidence references and document locators."""
 
+import re
 from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
@@ -15,6 +16,9 @@ from .identifiers import (
     ReportId,
 )
 
+NonEmptyString = Annotated[str, Field(min_length=1)]
+_JSON_POINTER = re.compile(r"/(?:[^~]|~[01])*")
+
 
 class SpreadsheetRangeLocator(ContractModel):
     """A cell or range in a named spreadsheet sheet."""
@@ -28,8 +32,8 @@ class WordBlockLocator(ContractModel):
     """A paragraph or table location in a word-processing document."""
 
     kind: Literal["word_block"] = "word_block"
-    paragraph_id: str | None = None
-    table_id: str | None = None
+    paragraph_id: NonEmptyString | None = None
+    table_id: NonEmptyString | None = None
     row: int | None = Field(default=None, ge=0)
     column: int | None = Field(default=None, ge=0)
 
@@ -78,17 +82,17 @@ class EvidenceRef(ContractModel):
     kind: EvidenceKind
     report_id: ReportId | None = None
     company_id: CompanyId | None = None
-    source_path: str | None = None
+    source_path: NonEmptyString | None = None
     document_id: DocumentId | None = None
     fragment_id: FragmentId | None = None
     page: int | None = Field(default=None, ge=1)
     locator: DocumentLocator | None = None
     artifact_id: ArtifactId | None = None
     artifact_version: int | None = Field(default=None, ge=1)
-    message_id: str | None = None
+    message_id: NonEmptyString | None = None
     period: int | str | None = None
     input_refs: list[EvidenceRefId] = Field(default_factory=list)
-    rule_version: str | None = None
+    rule_version: NonEmptyString | None = None
 
     @model_validator(mode="after")
     def validate_kind_requirements(self) -> "EvidenceRef":
@@ -105,7 +109,7 @@ class EvidenceRef(ContractModel):
         if (
             self.kind is EvidenceKind.REPORT_FIELD
             and self.source_path is not None
-            and not self.source_path.startswith("/")
+            and _JSON_POINTER.fullmatch(self.source_path) is None
         ):
-            raise ValueError("report source_path must be a JSON Pointer")
+            raise ValueError("report source_path must be a non-empty RFC 6901 JSON Pointer")
         return self

@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta, timezone
 from uuid import UUID
 
 import pytest
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
 from counterparty_contracts import (
     DecisionOutcome,
@@ -66,7 +66,7 @@ def test_naive_timestamp_is_rejected() -> None:
 def test_report_evidence_preserves_lossless_json_pointer() -> None:
     """Evidence refers to raw report data without assuming its Mongo source shape."""
     evidence = EvidenceRef(
-        id=EvidenceRefId("report:fixture:finance:2025:proceeds"),
+        id="report:fixture:finance:2025:proceeds",
         kind=EvidenceKind.REPORT_FIELD,
         report_id=REPORT_ID,
         source_path="/finReports/0/common/proceeds",
@@ -75,6 +75,30 @@ def test_report_evidence_preserves_lossless_json_pointer() -> None:
 
     assert evidence.source_path == "/finReports/0/common/proceeds"
     assert evidence.model_dump(mode="json")["report_id"] == str(REPORT_ID)
+
+
+def test_report_evidence_accepts_rfc_6901_escaped_tokens() -> None:
+    """RFC 6901 tilde and slash escapes remain valid logical source paths."""
+    evidence = EvidenceRef(
+        id="report:escaped",
+        kind=EvidenceKind.REPORT_FIELD,
+        report_id=REPORT_ID,
+        source_path="/field~0name/nested~1key",
+    )
+
+    assert evidence.source_path == "/field~0name/nested~1key"
+
+
+@pytest.mark.parametrize("source_path", ["", "not/a/pointer", "/bad~2escape", "/trailing~"])
+def test_report_evidence_rejects_invalid_json_pointer(source_path: str) -> None:
+    """A report field must use a non-empty, correctly escaped RFC 6901 pointer."""
+    with pytest.raises(ValidationError):
+        EvidenceRef(
+            id="report:invalid-pointer",
+            kind=EvidenceKind.REPORT_FIELD,
+            report_id=REPORT_ID,
+            source_path=source_path,
+        )
 
 
 @pytest.mark.parametrize(
@@ -91,6 +115,70 @@ def test_unresolvable_evidence_is_rejected(kind: EvidenceKind, fields: dict[str,
     """Every evidence kind requires enough fields for server-side resolution."""
     with pytest.raises(ValidationError, match="missing its required locator"):
         EvidenceRef.model_validate({"id": "invalid", "kind": kind, **fields})
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {
+            "id": "",
+            "kind": EvidenceKind.REPORT_FIELD,
+            "report_id": REPORT_ID,
+            "source_path": "/field",
+        },
+        {"id": "ref", "kind": EvidenceKind.USER_MESSAGE, "message_id": ""},
+        {
+            "id": "ref",
+            "kind": EvidenceKind.DERIVED,
+            "input_refs": [""],
+            "rule_version": "rule-v1",
+        },
+        {
+            "id": "ref",
+            "kind": EvidenceKind.DERIVED,
+            "input_refs": ["input-ref"],
+            "rule_version": "",
+        },
+    ],
+)
+def test_opaque_evidence_identifiers_are_non_empty(payload: dict[str, object]) -> None:
+    """Required opaque IDs and rule versions cannot be empty strings."""
+    with pytest.raises(ValidationError, match="at least 1 character"):
+        EvidenceRef.model_validate(payload)
+
+
+def test_evidence_ref_id_alias_rejects_empty_value() -> None:
+    """The reusable opaque ID type carries its non-empty wire constraint."""
+    with pytest.raises(ValidationError, match="at least 1 character"):
+        TypeAdapter(EvidenceRefId).validate_python("")
+
+
+def test_derived_evidence_accepts_non_empty_inputs_and_rule_version() -> None:
+    """A resolvable derivation retains its complete provenance chain."""
+    evidence = EvidenceRef.model_validate(
+        {
+            "id": "derived:liquidity:v1",
+            "kind": EvidenceKind.DERIVED,
+            "input_refs": ["report:cash", "report:payables"],
+            "rule_version": "liquidity-v1",
+        }
+    )
+
+    assert evidence.input_refs == ["report:cash", "report:payables"]
+    assert evidence.rule_version == "liquidity-v1"
+
+
+def test_artifact_version_must_be_positive() -> None:
+    """An artifact reference must identify an existing immutable version."""
+    with pytest.raises(ValidationError, match="greater than or equal to 1"):
+        EvidenceRef.model_validate(
+            {
+                "id": "artifact:invalid-version",
+                "kind": EvidenceKind.ARTIFACT_SECTION,
+                "artifact_id": "00000000-0000-4000-8000-000000000005",
+                "artifact_version": 0,
+            }
+        )
 
 
 def test_text_line_locator_must_be_ordered() -> None:
