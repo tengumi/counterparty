@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "counterparty-mcp"
+version = "0.1.0"
+description = "Read-only report tools for Counterparty Workspace"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "counterparty-contracts",
+  "fastapi>=0.117,<1",
+  "fastmcp>=3.0,<4",
+  "pydantic>=2.12,<3",
+  "uvicorn>=0.36,<1",
+]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28,<1",
+  "mypy>=1.18,<2",
+  "pytest>=8.4,<10",
+  "pytest-asyncio>=1.2,<2",
+  "ruff>=0.13,<0.16",
+]
+
+[tool.uv.sources]
+counterparty-contracts = { path = "../../packages/contracts" }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/counterparty_mcp"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
