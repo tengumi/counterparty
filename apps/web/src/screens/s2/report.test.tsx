@@ -123,6 +123,8 @@ describe('company report', () => {
 
     await user.click(within(detail).getByRole('button', { name: 'К отчёту' }));
     expect(screen.getByRole('heading', { name: 'Компания А' })).toBeVisible();
+    expect(within(panel()).getByRole('button', { name: /Финансы/ })).toHaveAttribute('aria-expanded', 'true');
+    expect(within(panel()).getByText('−300 000 ₽')).toBeVisible();
   });
 
   it('opens the file behind a basis that was read from a document', async () => {

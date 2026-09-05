@@ -13,6 +13,7 @@ const THRESHOLD = 48;
 export function useAutoScroll(
   containerRef: { current: HTMLElement | null },
   contentRef: { current: HTMLElement | null },
+  followOnMount = true,
 ): () => void {
   const atBottom = useRef(true);
 
@@ -29,12 +30,18 @@ export function useAutoScroll(
     if (container === null || content === null) return;
     if (typeof ResizeObserver === 'undefined') return;
 
+    // Scroll restoration runs before this effect. Initialise from the restored
+    // location before ResizeObserver delivers its first notification.
+    if (!followOnMount) {
+      atBottom.current = container.scrollHeight - container.scrollTop - container.clientHeight <= THRESHOLD;
+    }
+
     const observer = new ResizeObserver(() => {
       if (atBottom.current) container.scrollTop = container.scrollHeight;
     });
     observer.observe(content);
     return () => observer.disconnect();
-  }, [containerRef, contentRef]);
+  }, [containerRef, contentRef, followOnMount]);
 
   return onScroll;
 }

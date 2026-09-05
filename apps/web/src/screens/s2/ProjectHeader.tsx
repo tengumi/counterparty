@@ -60,6 +60,8 @@ export function ProjectHeader(props: Props) {
       <span aria-hidden="true" className={styles.divider} />
       {editing ? (
         <Input
+          className={styles.titleEditor}
+          autoFocus={true}
           block={true}
           label="Название проверки"
           labelView="outer"
@@ -101,9 +103,10 @@ export function ProjectHeader(props: Props) {
         />
         <Button
           aria-expanded={props.materialsOpen}
+          className={styles.headerAction}
           onClick={props.onToggleMaterials}
           size={40}
-          view="secondary"
+          view="outlined"
         >
           Материалы
         </Button>

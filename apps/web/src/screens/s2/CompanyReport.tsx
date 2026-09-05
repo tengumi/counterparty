@@ -8,7 +8,6 @@
  * result. The two external signals are shown with their raw values.
  */
 
-import { useState } from 'react';
 import { Button } from '@alfalab/core-components/button';
 import type { CompanyReport as Report, ReportSection } from '../../mocks/types';
 import { sectionAvailabilityLabels } from '../../mocks/types';
@@ -20,10 +19,12 @@ import {
   describeZsk,
   resolveFact,
 } from './reportView';
+import { usePersistentState } from './persisted';
 import styles from './S2.module.css';
 
 interface Props {
   readonly report: Report;
+  readonly projectId: string;
   /** Opens the basis of a row; the panel keeps its own navigation stack. */
   readonly onOpenEvidence: (evidenceId: string) => void;
   /** Puts a removable context chip into the composer (07 S2-08). */
@@ -53,6 +54,7 @@ function Signal({
         <span className={styles.signalRaw}>Исходное значение: {signal.raw}</span>
       </span>
       <Button
+        className={styles.signalAction}
         onClick={() => onOpenEvidence(signal.evidenceId)}
         size={32}
         view="text"
@@ -112,7 +114,7 @@ function Section({
             const resolved = resolveFact(fact, findEvidence);
             if (resolved.kind === 'withheld') {
               return (
-                <div className={styles.row} key={fact.id}>
+                <div className={styles.factRow} key={fact.id}>
                   <span className={styles.factLabel}>{fact.label}</span>
                   <span className={styles.rowMain}>
                     <span className={styles.unknown}>{WITHHELD_VALUE_TEXT}</span>
@@ -121,7 +123,7 @@ function Section({
               );
             }
             return (
-              <div className={styles.row} key={fact.id}>
+              <div className={styles.factRow} key={fact.id}>
                 <span className={styles.factLabel}>{fact.label}</span>
                 <span className={styles.rowMain}>
                   <span
@@ -164,8 +166,12 @@ function Section({
   );
 }
 
-export function CompanyReport({ report, onOpenEvidence, onDiscuss }: Props) {
-  const [expanded, setExpanded] = useState<readonly string[]>([]);
+export function CompanyReport({ report, projectId, onOpenEvidence, onDiscuss }: Props) {
+  const [expanded, setExpanded] = usePersistentState<readonly string[]>(
+    `report-sections:${projectId}:${report.companyId}`,
+    [],
+    (value) => Array.isArray(value) && value.every((item) => typeof item === 'string') ? value as string[] : null,
+  );
 
   const toggle = (id: string) =>
     setExpanded((current) =>

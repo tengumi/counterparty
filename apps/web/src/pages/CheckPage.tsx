@@ -116,16 +116,20 @@ function ProjectScreen({ apiProject, project, threadId }: { apiProject: ApiProje
   };
 
   return (
-    <div className={styles.screen}>
+    <div className={styles.screen} data-panel-open={materials.open}>
       <ProjectHeader
         activeChatId={activeChat?.id}
         chats={chats}
         materialsOpen={materials.open}
         onCreateChat={createChat}
         onSelectChat={openChat}
-        onToggleMaterials={() =>
-          materials.open ? closeMaterials() : openMaterials({ kind: 'list' })
-        }
+        onToggleMaterials={() => {
+          if (materials.open) closeMaterials();
+          else {
+            opener.current = document.activeElement as HTMLElement | null;
+            setMaterials({ ...materials, open: true });
+          }
+        }}
         onRename={(title) => rename.mutate(title)}
         onRetryRename={rename.variables ? () => rename.mutate(rename.variables) : undefined}
         saveError={rename.error ? requestErrorMessage(rename.error) : null}
@@ -157,7 +161,10 @@ function ProjectScreen({ apiProject, project, threadId }: { apiProject: ApiProje
             project={project}
           />
         )}
-        {materials.open ? (
+      </div>
+      {materials.open ? (
+        <>
+          <button aria-label="Закрыть материалы" className={styles.panelBackdrop} onClick={closeMaterials} tabIndex={-1} type="button" />
           <MaterialsPanel
             companyChange={{
               busy: add.isPending || remove.isPending,
@@ -168,12 +175,15 @@ function ProjectScreen({ apiProject, project, threadId }: { apiProject: ApiProje
             }}
             onChange={setMaterials}
             onClose={closeMaterials}
-            onDiscuss={(text) => insertDraft.current?.(text)}
+            onDiscuss={(text) => {
+              setMaterials({ ...materials, open: false });
+              insertDraft.current?.(text);
+            }}
             project={project}
             state={materials}
           />
-        ) : null}
-      </div>
+        </>
+      ) : null}
     </div>
   );
 }
