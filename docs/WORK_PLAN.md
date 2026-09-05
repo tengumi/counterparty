@@ -71,13 +71,13 @@ Gate F0:
 
 | ID | Результат | Depends on | Статус |
 |---|---|---|---|
-| C-01 | DTO отчёта: company/report identity, money/date values, raw enums, source paths | F0-05 | todo |
-| C-02 | REST DTO проектов, компаний, threads, условий и решений | F0-05 | todo |
+| C-01 | DTO отчёта: company/report identity, money/date values, raw enums, source paths | F0-05 | done |
+| C-02 | REST DTO проектов, компаний, threads, условий и решений | F0-05 | done |
 | C-03 | Agent public state, commands, pending command и activity DTO | F0-06 | todo |
 | C-04 | MCP overview/section/comparison DTO и пагинация | F0-08, C-01 | todo |
 | D-01 | ИНН/ОГРН validation, Decimal/date helpers и missing/zero semantics | C-01 | done |
 | D-02 | Evidence ledger и проверка разрешимости refs | C-01 | done |
-| D-03 | Детерминированные summary, finance/proceeding calculations | D-01, D-02 | todo |
+| D-03 | Детерминированные summary, finance/proceeding calculations | D-01, D-02 | done |
 | D-04 | Сравнение 2–20 компаний без общего score/winner | D-03 | todo |
 
 ### Data
@@ -107,8 +107,8 @@ Gate F0:
 | ID | Результат | Depends on | Статус |
 |---|---|---|---|
 | WEB-01 | App shell, маршруты `/checks` и `/checks/:projectId/chats/:threadId` | F0-04 | done |
-| WEB-02 | S1: поле задачи, примеры и список сохранённых проверок | WEB-01 | todo |
-| WEB-03 | S2 shell: header, chat switcher, company context strip, responsive layout | WEB-01 | todo |
+| WEB-02 | S1: поле задачи, примеры и список сохранённых проверок | WEB-01 | done |
+| WEB-03 | S2 shell: header, chat switcher, company context strip, responsive layout | WEB-01 | done |
 | WEB-04 | Conversation blocks, activity/progress и composer states на typed mocks | WEB-03, F0-05 | todo |
 | WEB-05 | Materials panel navigation и локальное сохранение drawer/draft/scroll | WEB-03 | todo |
 | WEB-06 | Company report и evidence detail по typed mocks | WEB-05, C-01 | todo |
