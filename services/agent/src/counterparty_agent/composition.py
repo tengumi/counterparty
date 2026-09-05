@@ -12,7 +12,7 @@ from .checkpointing import Checkpointer, postgres_checkpointer
 from .config import AgentSettings
 from .harness.runner import create_harness_runner
 from .persistence import postgres_run_owner
-from .transport import RunContext, RunRegistry, deterministic_agent
+from .transport import DurableRuns, RunContext, RunRegistry, deterministic_agent
 
 CheckpointerFactory = Callable[[AgentRunOwner], AbstractAsyncContextManager[Checkpointer]]
 RunOwnerFactory = Callable[[str], AbstractAsyncContextManager[AgentRunOwner]]
@@ -61,7 +61,7 @@ def create_lifespan(
         async with (
             run_owner_factory(dsn.get_secret_value()) as owner,
             checkpointer_factory(owner) as checkpointer,
-            RunRegistry(select_runner(settings, checkpointer)) as runs,
+            RunRegistry(select_runner(settings, checkpointer), durable=DurableRuns(owner)) as runs,
         ):
             app.state.runs = runs
             app.state.resources = AgentResources(

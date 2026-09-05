@@ -10,10 +10,13 @@ import logging
 from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
 from types import TracebackType
+from uuid import UUID
 
 from counterparty_contracts import ClientRequestId, RunId, RunStatus
+from counterparty_storage import ThreadScope
 from pydantic import JsonValue
 
+from .durable import DurableRuns
 from .public_state import PublicAgentState
 
 logger = logging.getLogger(__name__)
@@ -179,15 +182,29 @@ class RunContext:
 AgentRunner = Callable[[RunContext], Awaitable[None]]
 
 
-class RunRegistry:
-    """Process-local owner of active run tasks."""
+def _based_on_context_version(run: Run) -> int:
+    """The project context version this run was accepted against."""
+    info = run.initial_state.run
+    return 0 if info is None else info.based_on_context_version
 
-    def __init__(self, runner: AgentRunner) -> None:
-        """Store the runner used for every run started here."""
+
+class RunRegistry:
+    """Process-local owner of active run tasks.
+
+    The replayable event log stays in memory on purpose (Specs 04 §7). When a
+    :class:`DurableRuns` mirror is supplied, the run's *lifecycle* is also
+    written to ``workspace.agent_runs`` so a restart leaves no run reading as
+    forever running and a reconnect can report its durable state.
+    """
+
+    def __init__(self, runner: AgentRunner, *, durable: DurableRuns | None = None) -> None:
+        """Store the runner and the optional durable lifecycle mirror."""
         self._runner = runner
+        self.durable = durable
         self._runs: dict[RunId, Run] = {}
         self._by_request: dict[ClientRequestId, Run] = {}
         self._tasks: dict[RunId, asyncio.Task[None]] = {}
+        self._scopes: dict[RunId, ThreadScope] = {}
 
     def get(self, run_id: RunId) -> Run | None:
         """Look up a run that this process started."""
@@ -197,10 +214,23 @@ class RunRegistry:
         """Look up the run a client request already started (retry safety)."""
         return self._by_request.get(client_request_id)
 
-    def start(self, run: Run) -> Run:
-        """Start the run in its own task, independent of any HTTP response."""
+    async def start(self, run: Run, *, scope: ThreadScope | None = None) -> Run:
+        """Start the run in its own task, independent of any HTTP response.
+
+        With a durable mirror and a resolved scope, acceptance is written first:
+        its failure (a thread that already has an active run) propagates so the
+        caller can refuse instead of starting a second run.
+        """
         if run.id in self._runs:
             raise ValueError(f"run {run.id} already started")
+        if self.durable is not None and scope is not None:
+            await self.durable.accept(
+                scope,
+                run_id=run.id,
+                client_request_id=UUID(str(run.client_request_id)),
+                based_on_context_version=_based_on_context_version(run),
+            )
+            self._scopes[run.id] = scope
         self._runs[run.id] = run
         self._by_request[run.client_request_id] = run
         task = asyncio.create_task(self._execute(run), name=f"agent-run-{run.id}")
@@ -208,17 +238,25 @@ class RunRegistry:
         task.add_done_callback(lambda _: self._tasks.pop(run.id, None))
         return run
 
-    def cancel(self, run_id: RunId) -> Run | None:
+    async def cancel(self, run_id: RunId) -> Run | None:
         """Request cooperative cancellation; idempotent per Specs 10 §6."""
         run = self._runs.get(run_id)
-        if run is not None:
-            run.request_cancel()
+        if run is None:
+            return None
+        run.request_cancel()
+        scope = self._scopes.get(run_id)
+        if self.durable is not None and scope is not None and not run.finished:
+            await self.durable.advance(scope, run_id, RunStatus.CANCELLING)
         return run
 
     async def _execute(self, run: Run) -> None:
+        scope = self._scopes.get(run.id)
         try:
+            await self._mirror(run.id, scope, RunStatus.RUNNING)
             await self._runner(RunContext(run))
         except asyncio.CancelledError:
+            # The process is stopping. The durable row is left to shutdown
+            # recovery (interrupt_active), which cannot race a closing stream.
             run.publish(SetOperation(("run", "status"), RunStatus.CANCELLED.value))
             run.finish()
             raise
@@ -228,9 +266,19 @@ class RunRegistry:
                 SetOperation(("run", "status"), RunStatus.FAILED.value),
                 TerminalError("Внутренняя ошибка агента"),
             )
+            # Mirror the terminal state before the stream is allowed to close,
+            # so a reader that follows the response sees a settled row.
+            await self._mirror(run.id, scope, RunStatus.FAILED)
             run.finish()
         else:
+            await self._mirror(run.id, scope, run.status)
             run.finish()
+
+    async def _mirror(self, run_id: RunId, scope: ThreadScope | None, status: RunStatus) -> None:
+        """Mirror one lifecycle transition when a durable scope is known."""
+        if self.durable is None or scope is None:
+            return
+        await self.durable.advance(scope, run_id, status)
 
     async def aclose(self) -> None:
         """Stop remaining tasks during a bounded graceful shutdown."""
@@ -246,6 +294,7 @@ class RunRegistry:
         self._runs.clear()
         self._by_request.clear()
         self._tasks.clear()
+        self._scopes.clear()
 
     async def __aenter__(self) -> "RunRegistry":
         """Enter the registry scope."""

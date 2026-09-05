@@ -999,6 +999,40 @@ class AgentRunOwner:
         async with self._transaction() as session:
             yield AgentRunRepository(session, scope, self.id)
 
+    async def resolve_thread_scope(
+        self, *, project_id: UUID, thread_id: UUID
+    ) -> ThreadScope | None:
+        """Turn a project and thread id into a trusted scope, or ``None``.
+
+        The tenant is read from the project row, never taken from the caller: a
+        project belongs to exactly one tenant. The thread must belong to that
+        exact project and the project must still be live. This crosses tenant
+        scopes on purpose — it is how the internal RPC, which has no session,
+        obtains the scope every owner operation requires.
+        """
+        async with self._transaction() as session:
+            project = await session.get(Project, project_id)
+            if project is None or project.deleted_at is not None:
+                return None
+            thread = await session.get(Thread, thread_id)
+            if thread is None or thread.project_id != project_id:
+                return None
+            return ThreadScope(
+                tenant_id=project.tenant_id,
+                project_id=project_id,
+                thread_id=thread_id,
+            )
+
+    async def find_run(self, run_id: UUID) -> AgentRun | None:
+        """Read one run row by id alone, across scopes.
+
+        Used by the RPC lifecycle endpoints to answer for a run this process
+        did not start — after a restart, or for another dead worker's run that
+        recovery has already marked ``interrupted``.
+        """
+        async with self._transaction() as session:
+            return await session.get(AgentRun, run_id)
+
     async def interrupt_active(self, *, only_current: bool = False) -> int:
         """Recover abandoned active runs, or finish this owner's bounded shutdown.
 

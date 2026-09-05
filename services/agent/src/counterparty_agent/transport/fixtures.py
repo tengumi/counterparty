@@ -62,7 +62,7 @@ async def render(name: str) -> str:
     """Encode one named V01 case exactly as the service would send it."""
     run = _build_run(FIXTURE_PROMPTS[name])
     async with RunRegistry(deterministic_agent) as registry:
-        registry.start(run)
+        await registry.start(run)
         if name == "cancelled":
             while len(run.events) < _CANCEL_AFTER_EVENTS:
                 await asyncio.sleep(0)

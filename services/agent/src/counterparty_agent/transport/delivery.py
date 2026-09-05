@@ -8,6 +8,7 @@ from assistant_stream import RunController, create_run
 from assistant_stream.serialization import AssistantTransportResponse
 from starlette.responses import Response
 
+from .public_state import PublicAgentState
 from .runs import (
     AppendItemOperation,
     AppendTextOperation,
@@ -54,6 +55,21 @@ def stream_run(run: Run) -> Response:
 
     async def callback(controller: RunController) -> None:
         await _deliver(controller, run)
+
+    response: Response = AssistantTransportResponse(create_run(callback, state={}))
+    return response
+
+
+def stream_projection(state: PublicAgentState) -> Response:
+    """Stream one static projection for a run known only durably.
+
+    After a restart there is no event log to replay, so the whole projection is
+    published as a single root ``set`` and the stream then completes. An
+    interrupted run therefore reads as interrupted, not as forever running.
+    """
+
+    async def callback(controller: RunController) -> None:
+        controller.state = state.model_dump(mode="json")
 
     response: Response = AssistantTransportResponse(create_run(callback, state={}))
     return response

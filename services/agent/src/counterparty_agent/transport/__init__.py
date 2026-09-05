@@ -4,6 +4,7 @@ Everything on the wire is produced by the supported ``assistant-stream``
 encoder; this package only decides *what* public projection is published.
 """
 
+from .durable import ActiveRunExists, DurableRuns
 from .public_state import (
     PublicActivity,
     PublicAgentState,
@@ -25,8 +26,10 @@ from .runs import (
 from .stub_agent import Scenario, deterministic_agent
 
 __all__ = [
+    "ActiveRunExists",
     "AppendItemOperation",
     "AppendTextOperation",
+    "DurableRuns",
     "PublicActivity",
     "PublicAgentState",
     "PublicMessage",

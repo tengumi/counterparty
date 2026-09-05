@@ -15,8 +15,9 @@ from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.responses import Response
 
-from .delivery import stream_run
-from .public_state import PublicMessage, TextBlock, initial_state
+from .delivery import stream_projection, stream_run
+from .durable import ActiveRunExists, is_terminal
+from .public_state import PublicAgentState, PublicMessage, TextBlock, initial_state
 from .runs import Run, RunRegistry
 
 
@@ -76,6 +77,25 @@ def _run_info(run: Run) -> RunInfo:
     return info.model_copy(update={"status": run.status})
 
 
+def _durable_projection(info: RunInfo) -> PublicAgentState:
+    """Build the whole projection a reconnect gets when the run is only durable.
+
+    There is no in-memory event log, so the message and activity lists are
+    empty; the run's lifecycle is what carries over.
+    """
+    terminal = is_terminal(info.status)
+    return PublicAgentState(
+        project_id=info.project_id,
+        thread_id=info.thread_id,
+        run=info,
+        revision=info.last_public_revision,
+        messages=[],
+        activities=[],
+        context_version=info.based_on_context_version,
+        save_status="saved" if terminal else "unsaved",
+    )
+
+
 def create_transport_router() -> APIRouter:
     """Build the `/rpc/agent` router; resources come from the app lifespan."""
     router = APIRouter(prefix="/rpc/agent", tags=["agent-rpc"])
@@ -88,6 +108,18 @@ def create_transport_router() -> APIRouter:
         if existing is not None:
             # Retrying with the same client_request_id must not start a second run.
             return stream_run(existing)
+
+        scope = None
+        if registry.durable is not None:
+            scope = await registry.durable.resolve_scope(
+                project_id=UUID(str(body.project_id)),
+                thread_id=UUID(str(body.thread_id)),
+            )
+            if scope is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="unknown project or thread",
+                )
 
         command = body.commands[0]
         now = datetime.now(UTC)
@@ -110,31 +142,57 @@ def create_transport_router() -> APIRouter:
             ),
             prompt=command.message.text,
         )
-        registry.start(run)
+        try:
+            await registry.start(run, scope=scope)
+        except ActiveRunExists as error:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="this thread already has an active run",
+            ) from error
         return stream_run(run)
 
     @router.post("/runs/{run_id}/subscribe")
     async def subscribe(request: Request, run_id: RunId) -> Response:
-        """Re-attach to an active or finished run without re-running it."""
-        run = _resources(request).get(run_id)
-        if run is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="unknown run")
-        return stream_run(run)
+        """Re-attach to a run without re-running it.
+
+        A run this process still holds is replayed from its event log. A run
+        only known durably — after a restart — is returned as one projection
+        frame carrying its lifecycle.
+        """
+        registry = _resources(request)
+        run = registry.get(run_id)
+        if run is not None:
+            return stream_run(run)
+        if registry.durable is not None:
+            info = await registry.durable.lookup(run_id)
+            if info is not None:
+                return stream_projection(_durable_projection(info))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="unknown run")
 
     @router.post("/runs/{run_id}/cancel", response_model=RunSnapshot)
     async def cancel(request: Request, run_id: RunId) -> Annotated[RunSnapshot, "Idempotent"]:
         """Stop the run; repeated calls return the same terminal state."""
-        run = _resources(request).cancel(run_id)
-        if run is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="unknown run")
-        return RunSnapshot(run=_run_info(run), revision=len(run.events))
+        registry = _resources(request)
+        run = await registry.cancel(run_id)
+        if run is not None:
+            return RunSnapshot(run=_run_info(run), revision=len(run.events))
+        if registry.durable is not None:
+            info = await registry.durable.lookup(run_id)
+            if info is not None:
+                return RunSnapshot(run=info, revision=info.last_public_revision)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="unknown run")
 
     @router.get("/runs/{run_id}", response_model=RunSnapshot)
     async def get_run(request: Request, run_id: RunId) -> Annotated[RunSnapshot, "Lifecycle"]:
         """Report run lifecycle without opening a stream."""
-        run = _resources(request).get(run_id)
-        if run is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="unknown run")
-        return RunSnapshot(run=_run_info(run), revision=len(run.events))
+        registry = _resources(request)
+        run = registry.get(run_id)
+        if run is not None:
+            return RunSnapshot(run=_run_info(run), revision=len(run.events))
+        if registry.durable is not None:
+            info = await registry.durable.lookup(run_id)
+            if info is not None:
+                return RunSnapshot(run=info, revision=info.last_public_revision)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="unknown run")
 
     return router

@@ -543,14 +543,35 @@ J влит. Что дал каждый срез и его известная д�
      (иначе 404); `context_version` в теле — записывается, не guard;
      `workflow_status` проекта не трогается. Проверки: contracts 144,
      storage 88, migrations 19, ui_api 70 — все зелёные на живом PostgreSQL.
-2. **AG-04** — `transport/runs.py::RunRegistry` сейчас явно in-memory spike
-   (`persistence.py`). Персист run в `workspace` (таблица `AgentRun` из I3 есть),
-   reconnect после рестарта, cancel, публичная проекция по RPC. Перед проектом
-   записи читать `docs/checkpoints/tasks/I7.md`: saver обязан работать на той же
-   физической connection, что и owner lock; один writer на БД; protected
-   `_cursor` hook привязан к locked `langgraph-checkpoint-postgres 3.1.2`.
-3. **Проброс tenant scope в RPC агента** — заменить тонкие defaults J1 на
-   авторизованный workspace-загрузчик. Шов между J1 и AG-04, можно делать вместе.
+2. **AG-04** — ✅ сделано 06.09.2026. Run lifecycle пережил и процесс, и рестарт.
+   - `transport/durable.py::DurableRuns` — зеркалит lifecycle
+     (`accepted → running → cancelling → terminal`) в `workspace.agent_runs`
+     через единственный fenced `AgentRunOwner` (та же физическая connection,
+     что и owner lock; ограничения I7 не нарушены — saver не трогали).
+   - `RunRegistry` получил опциональный `durable`: `start()` теперь async и
+     сперва пишет acceptance — её отказ (на треде уже есть активный run,
+     partial unique index) поднимается как `409`. Терминальный статус
+     зеркалится **до** закрытия стрима, чтобы читатель ответа видел
+     осевшую строку. In-memory лог событий по-прежнему не персистится
+     (Specs 10 §7: воспроизведение токенов не требуется).
+   - Storage: `AgentRunOwner.resolve_thread_scope()` (доверенный
+     `(tenant, project, thread)` из строки проекта — у RPC нет сессии) и
+     `find_run()` (чтение по id для чужого/после-рестартного run).
+   - RPC: `/chat` резолвит scope и отвергает нерезолвимый project/thread
+     (`404`); `/runs/{id}`, `/subscribe`, `/cancel` при отсутствии run в
+     памяти читают durable строку — `interrupted` после рестарта не
+     показывается вечно running, `/subscribe` отдаёт одну проекцию.
+   - Recovery на старте/выключении — существующий `postgres_run_owner`
+     (`interrupt_active`), не трогал.
+   - Проверки: agent 66 (5 новых durable-тестов на изолированной
+     PostgreSQL + non-owner runtime login), storage 88, ui_api 70, mcp 32 —
+     зелёные. Независимый проверяющий по плану ещё нужен.
+3. **Проброс tenant scope в RPC агента** — фундамент готов
+   (`resolve_thread_scope` + `/chat` проверяет scope). Осталось: заменить
+   тонкие `default_context`/`default_config` в `harness/runner.py` на
+   `WorkspaceContextSource` + `checkpoint_config(owner, scope)`, пробросив
+   резолвнутый `ThreadScope` в runner. Нужен небольшой read-only session
+   factory в композиции агента (или чтение контекста на owner-connection).
 4. **OPS-01 до конца** — реально поднять стек, чинить что сломается на живом
    старте, подтвердить healthchecks, один ручной проход. Нужен Docker в окружении
    (в прошлых сессиях его не было).
