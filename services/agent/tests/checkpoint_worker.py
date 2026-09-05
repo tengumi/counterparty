@@ -42,7 +42,7 @@ async def run() -> None:
 
     async with postgres_run_owner(dsn) as owner:
         config = await checkpoint_config(owner, scope)
-        async with postgres_checkpointer(dsn) as saver:
+        async with postgres_checkpointer(owner) as saver:
             builder = StateGraph(SpikeState)
             builder.add_node("prepare", prepare)
             builder.add_node("complete", complete)

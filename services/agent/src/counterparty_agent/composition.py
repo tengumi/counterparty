@@ -12,8 +12,8 @@ from .config import AgentSettings
 from .persistence import postgres_run_owner
 from .transport import RunRegistry, deterministic_agent
 
-CheckpointerFactory = Callable[[str], AbstractAsyncContextManager[Checkpointer]]
-RunOwnerFactory = Callable[[str], AbstractAsyncContextManager[AgentRunOwner | None]]
+CheckpointerFactory = Callable[[AgentRunOwner], AbstractAsyncContextManager[Checkpointer]]
+RunOwnerFactory = Callable[[str], AbstractAsyncContextManager[AgentRunOwner]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,7 +44,7 @@ def create_lifespan(
 
             async with (
                 run_owner_factory(dsn.get_secret_value()) as owner,
-                checkpointer_factory(dsn.get_secret_value()) as checkpointer,
+                checkpointer_factory(owner) as checkpointer,
             ):
                 app.state.resources = AgentResources(
                     checkpointer=checkpointer,
