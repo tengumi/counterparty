@@ -28,6 +28,7 @@ from .errors import install_error_handlers
 from .health import router as health_router
 from .projects import router as projects_router
 from .provisioning import ensure_demo_identities
+from .reports import router as reports_router
 from .sessions import InMemorySessionStore, SessionStore
 from .workspace import ProjectDirectory
 
@@ -106,6 +107,7 @@ def create_app(
     application.include_router(projects_router)
     application.include_router(company_directory_router)
     application.include_router(project_companies_router)
+    application.include_router(reports_router)
     return application
 
 

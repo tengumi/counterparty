@@ -9,6 +9,7 @@ description = "Deterministic UI backend for Counterparty Workspace"
 requires-python = ">=3.13,<3.14"
 dependencies = [
   "counterparty-contracts",
+  "counterparty-domain",
   "counterparty-storage",
   "fastapi>=0.116,<1",
   "psycopg[binary]>=3.2,<4",
@@ -26,6 +27,7 @@ dev = [
 
 [tool.uv.sources]
 counterparty-contracts = { path = "../../packages/contracts" }
+counterparty-domain = { path = "../../packages/domain" }
 counterparty-storage = { path = "../../packages/storage" }
 
 [tool.hatch.build.targets.wheel]

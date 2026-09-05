@@ -16,6 +16,7 @@ from counterparty_contracts import (
     ContractWarning,
     FactValue,
     ReportId,
+    ReportSectionName,
     ValueType,
     WarningCode,
     YearPolicy,
@@ -26,6 +27,13 @@ __all__ = ["COMPARISON_RULE_VERSION", "build_comparison_rows"]
 COMPARISON_RULE_VERSION = "comparison/1"
 
 _FINANCIAL_PREFIX = "financials."
+_SECTION_BY_CRITERION = {
+    ComparisonCriterion.PROCEEDINGS: ReportSectionName.EXECUTION_PROCEEDINGS,
+    ComparisonCriterion.ARBITRATION: ReportSectionName.ARBITRATION,
+    ComparisonCriterion.ACTIVITIES: ReportSectionName.ACTIVITIES,
+    ComparisonCriterion.LICENSES: ReportSectionName.LICENSES,
+    ComparisonCriterion.PROCUREMENT: ReportSectionName.PROCUREMENTS,
+}
 
 
 def _financial_years(overview: CompanyOverview) -> set[int]:
@@ -109,6 +117,32 @@ def _criterion_cells(
     selected = [fact for fact in overview.facts if fact.key.startswith(prefix)]
     if selected:
         return selected
+    section_name = _SECTION_BY_CRITERION.get(criterion)
+    section = next(
+        (item for item in overview.available_sections if item.section is section_name), None
+    )
+    if section is not None:
+        evidence = section.evidence_refs
+        if section.availability is Availability.AVAILABLE and evidence:
+            return [
+                FactValue(
+                    key=criterion.value,
+                    label=criterion.value.replace("_", " ").title(),
+                    value=section.availability.value,
+                    value_type=ValueType.ENUM,
+                    availability=Availability.AVAILABLE,
+                    evidence_refs=evidence,
+                )
+            ]
+        return [
+            FactValue(
+                key=criterion.value,
+                label=criterion.value.replace("_", " ").title(),
+                value_type=ValueType.ENUM,
+                availability=section.availability,
+                evidence_refs=evidence,
+            )
+        ]
     return [_missing_cell(criterion.value, criterion.value.replace("_", " ").title())]
 
 
