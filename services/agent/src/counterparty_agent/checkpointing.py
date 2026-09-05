@@ -2,14 +2,16 @@
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Protocol
+from typing import Any, Protocol
 from uuid import NAMESPACE_URL, uuid5
 
 from counterparty_storage import ThreadScope
 from counterparty_storage.repositories import AgentRunOwner
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from psycopg import AsyncConnection, AsyncCursor
 from psycopg.conninfo import make_conninfo
+from psycopg.rows import DictRow
 
 
 class Checkpointer(Protocol):
@@ -19,15 +21,47 @@ class Checkpointer(Protocol):
         """Delete the checkpoints owned by one thread."""
 
 
-@asynccontextmanager
-async def postgres_checkpointer(dsn: str) -> AsyncIterator[AsyncPostgresSaver]:
-    """Open and close the official asynchronous PostgreSQL saver.
+class OwnedPostgresSaver(AsyncPostgresSaver):
+    """Native saver with every cursor fenced by its physical connection owner.
 
-    Schema setup is intentionally excluded: migrations run as a deployment step,
-    never once per application worker.
+    Only the cursor lifecycle is adapted; SQL, pipeline handling, serialization
+    and checkpoint algorithms belong to langgraph-checkpoint-postgres 3.1.2.
+    Its protected _cursor hook is version-sensitive and covered by native tests.
     """
-    async with AsyncPostgresSaver.from_conn_string(workspace_conninfo(dsn)) as saver:
+
+    def __init__(self, owner: AgentRunOwner, connection: AsyncConnection[Any]) -> None:
+        """Bind the native saver to the dedicated owner connection, never a pool."""
+        super().__init__(connection)
+        self._owner = owner
+        self._closed = False
+
+    @asynccontextmanager
+    async def _cursor(self, *, pipeline: bool = False) -> AsyncIterator[AsyncCursor[DictRow]]:
+        if self._closed:
+            raise RuntimeError("checkpoint saver lifetime has ended")
+        async with (
+            self._owner.transaction_connection(),
+            super()._cursor(pipeline=pipeline) as cursor,
+        ):
+            yield cursor
+
+
+@asynccontextmanager
+async def postgres_checkpointer(owner: AgentRunOwner) -> AsyncIterator[AsyncPostgresSaver]:
+    """Use the live owner's physical connection; deployment alone runs setup."""
+    async with owner.transaction_connection() as connection:
+        raw = await connection.get_raw_connection()
+        driver = raw.driver_connection
+        if not isinstance(driver, AsyncConnection):
+            raise TypeError("the checkpoint owner requires the psycopg async driver")
+        driver.prepare_threshold = 0
+        # Schema placement is local to this dedicated connection. No DDL runs.
+        await driver.execute("SET search_path TO workspace, pg_catalog")
+        saver = OwnedPostgresSaver(owner, driver)
+    try:
         yield saver
+    finally:
+        saver._closed = True
 
 
 def workspace_conninfo(dsn: str) -> str:

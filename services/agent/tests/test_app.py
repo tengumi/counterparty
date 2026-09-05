@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import pytest
 from counterparty_contracts import ThreadId
+from counterparty_storage.repositories import AgentRunOwner
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
@@ -17,9 +18,9 @@ from counterparty_agent.config import AgentSettings
 
 
 @asynccontextmanager
-async def fake_owner(_: str) -> AsyncIterator[None]:
+async def fake_owner(_: str) -> AsyncIterator[AgentRunOwner]:
     """Keep unit resource tests independent of a database."""
-    yield None
+    yield cast(AgentRunOwner, object())
 
 
 class FakeCheckpointer:
@@ -52,7 +53,7 @@ def test_import_does_not_open_checkpointer() -> None:
     opened = False
 
     @asynccontextmanager
-    async def factory(_: str) -> AsyncIterator[Checkpointer]:
+    async def factory(_: AgentRunOwner) -> AsyncIterator[Checkpointer]:
         nonlocal opened
         opened = True
         yield FakeCheckpointer()
@@ -73,8 +74,9 @@ async def test_configured_checkpointer_is_owned_by_lifespan() -> None:
     fake = FakeCheckpointer()
 
     @asynccontextmanager
-    async def factory(dsn: str) -> AsyncIterator[Checkpointer]:
-        events.append(f"open:{dsn}")
+    async def factory(owner: AgentRunOwner) -> AsyncIterator[Checkpointer]:
+        assert owner is not None
+        events.append("open")
         try:
             yield fake
         finally:
@@ -90,6 +92,6 @@ async def test_configured_checkpointer_is_owned_by_lifespan() -> None:
         resources = cast(AgentResources, app.state.resources)
         assert resources.checkpointer is fake
         await fake.adelete_thread(str(ThreadId(uuid4())))
-        assert events == ["open:postgresql://agent:secret@db/workspace"]
+        assert events == ["open"]
 
-    assert events == ["open:postgresql://agent:secret@db/workspace", "close"]
+    assert events == ["open", "close"]
