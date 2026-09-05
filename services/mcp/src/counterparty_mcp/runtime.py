@@ -9,6 +9,9 @@ from counterparty_contracts import (
     Availability,
     CompanyOverview,
     CompanyOverviewEnvelope,
+    CompareCompaniesInput,
+    Comparison,
+    ComparisonEnvelope,
     ContractWarning,
     ErrorCode,
     GetCompanyOverviewInput,
@@ -20,6 +23,7 @@ from counterparty_contracts import (
     ToolError,
     WarningCode,
 )
+from counterparty_domain import COMPARISON_RULE_VERSION, build_comparison_rows
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -156,6 +160,76 @@ class ServiceResources:
                     )
         _log("get_report_section", started, result)
         return result
+
+    async def comparison(self, request: CompareCompaniesInput) -> ComparisonEnvelope:
+        """Place pinned reports side by side through the shared domain rules.
+
+        The rows come from the same pure function the UI backend calls, so the
+        two surfaces cannot drift into different numbers. Nothing here scores or
+        ranks a company, and a snapshot this service could not read stays a
+        named gap instead of an invented row.
+        """
+        started = monotonic()
+        data: Comparison | None = None
+        error = self._unavailable() if self.reader is None else None
+        if self.reader is not None:
+            data, error = await self._read(lambda: self._comparison(request))
+        if error is not None:
+            result = ComparisonEnvelope(
+                status=_error_status(error), errors=[error], rule_version=_RULE_VERSION
+            )
+        else:
+            assert data is not None
+            missing = [
+                report_id
+                for report_id in request.report_ids
+                if all(row.report.id != report_id for row in data.rows)
+            ]
+            warnings = list(data.warnings)
+            if missing:
+                warnings.append(
+                    ContractWarning(
+                        code=WarningCode.PARTIAL_DATA,
+                        message=(
+                            f"{len(missing)} of {len(request.report_ids)} requested reports "
+                            "were not found and have no row; this is not an empty result."
+                        ),
+                    )
+                )
+            row_warnings = any(row.warnings for row in data.rows)
+            result = ComparisonEnvelope(
+                status=McpStatus.PARTIAL if warnings or row_warnings else McpStatus.OK,
+                data=data,
+                warnings=warnings,
+                source_report_ids=[row.report.id for row in data.rows],
+                rule_version=data.rule_version,
+            )
+        if _size(result) > self.settings.max_response_bytes:
+            result = ComparisonEnvelope(
+                status=McpStatus.UNAVAILABLE, errors=[_size_error()], rule_version=_RULE_VERSION
+            )
+        _log("compare_companies", started, result)
+        return result
+
+    async def _comparison(self, request: CompareCompaniesInput) -> Comparison:
+        assert self.reader is not None
+        overviews = await self.reader.overviews(request.report_ids)
+        rows, warnings = build_comparison_rows(
+            request.report_ids,
+            overviews,
+            request.criteria,
+            year_policy=request.year_policy,
+            year=request.year,
+        )
+        return Comparison(
+            report_ids=request.report_ids,
+            criteria=request.criteria,
+            year_policy=request.year_policy,
+            year=request.year,
+            rows=rows,
+            warnings=warnings,
+            rule_version=COMPARISON_RULE_VERSION,
+        )
 
     async def _bounded_section(self, request: GetReportSectionInput) -> ReportSection | None:
         assert self.reader is not None
