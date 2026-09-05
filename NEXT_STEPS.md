@@ -417,9 +417,9 @@ evidence REST, но в API-01…05 они не входили и ещё не р�
 | I1 / API-06 | ready for review | REST sections/evidence, shared projections и repository bundle; 100×17 разделов, 14035 refs; независимые HTTP-проверки пройдены |
 | I2 / MCP-01/02 | ready for review | authenticated read-only tools; независимо 31 tests, 5555 refs, parity 100 overviews/96 pages; Docker build не проверен |
 | I3 / F0-07 | ready for review | native saver в workspace, AgentRun и restart; исправление I7 независимо подтверждено; Docker build не проверен |
-| I4 / WEB-08 report slice | ready, final UI replay pending | live report/evidence/comparison; 92 web tests, lint/typecheck/build; 53 browser checks passed, touch targets/favicon corrected in `42daeb7` |
+| I4 / WEB-08 report slice | ready for review | live report/evidence/comparison; 92 web tests, lint/typecheck/build; 53 browser checks passed, final touch targets/favicon replay passed |
 | I5 / API-agent verification | passed with limitations | `eff2c64`; baseline 441, targeted agent22/storage83/migrations19/domain122, 21 HTTP checks, fencing и framework roundtrip |
-| I6 / MCP-web verification | final targeted replay | MCP/parity passed; live browser 53 checks/13 screenshots; адресная проверка mobile44px и favicon после найденных мелких дефектов |
+| I6 / MCP-web verification | passed with limitations | `b08abe6`; MCP31, parity100 overviews/96 pages; browser53/53, 14 reviewed PNG, mobile44px, favicon200, console clean |
 | I7 / checkpoint write fencing | ready for review | `6377532`; saver использует owner connection, stale graph/aput/aput_writes/delete отвергнуты; I5 подтвердил продолжение новым процессом |
 
 I1–I3 стартуют параллельно от baseline `1173476`. Contracts/domain и storage
@@ -464,8 +464,9 @@ Root обновляет статусы здесь; WORK_PLAN done — после
   отдельной deploy-командой. Live browser на `2dce684`: 53 assertions прошли,
   13 screenshots, все 24 API-ответа без HTTP-ошибок. Единственный console404
   оказался отсутствующим favicon; визуальная проверка нашла mobile context
-  buttons меньше 44px. I4 исправил оба в `42daeb7`; I6 проверяет адресно.
-  Исходный manifest сохранён, повтор полного flow не требуется.
+  buttons меньше 44px. I4 исправил оба; финальный адресный replay на `0c20738`
+  подтвердил 44px, favicon200, отсутствие overflow и ошибок console/page.
+  Исходные manifests сохранены отдельно, повтор полного flow не требуется.
 
 После пользовательского review I:
 
