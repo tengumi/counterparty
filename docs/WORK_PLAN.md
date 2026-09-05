@@ -180,9 +180,14 @@ AG-04 и AG-06. Пользователь решил закончить оста�
 
 ## 6. Волна 3 — сборка системы и приёмка
 
+Остаток MVP (AG-04, недостающие REST Specs 10 §5, OPS-01 live bring-up, сквозная
+приёмка, REFACTOR-01) ведётся одним консолидированным заходом главного агента,
+без деления на параллельные волны. Оперативный порядок — в `NEXT_STEPS.md`.
+
 | ID | Результат | Depends on | Статус |
 |---|---|---|---|
 | OPS-01 | Общий `compose.yaml`, reverse proxy, PostgreSQL volume и service healthchecks | F0-03A…F0-03C, F0-04, волна 2 | todo |
+| REFACTOR-01 | Развести плоскую раскладку `services/ui_api` на подпакеты; только перемещение файлов и правка импортов, поведение и тесты без изменений | WEB-09, WEB-11 | todo |
 | QA-01 | Contract tests REST/RPC/MCP и generated/checked TS types | C-01…C-04 | todo |
 | QA-02 | Интеграция importer + PostgreSQL + API + MCP | IMP-03, MCP-03 | todo |
 | QA-03 | Browser flow: reconnect, cancel, document, evidence, decision | WEB-11, OPS-01 | todo |
