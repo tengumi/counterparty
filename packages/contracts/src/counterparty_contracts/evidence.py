@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
-from .base import ContractModel, SchemaVersion
+from .base import ContractModel, NonEmptyString, SchemaVersion
 from .enums import EvidenceKind
 from .identifiers import (
     ArtifactId,
@@ -16,7 +16,6 @@ from .identifiers import (
     ReportId,
 )
 
-NonEmptyString = Annotated[str, Field(min_length=1)]
 _JSON_POINTER = re.compile(r"/(?:[^~]|~[01])*")
 
 
