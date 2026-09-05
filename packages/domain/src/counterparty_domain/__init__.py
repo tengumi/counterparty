@@ -16,6 +16,7 @@ from .arbitration import (
     RoleTotals,
     summarize_arbitration,
 )
+from .comparison import COMPARISON_RULE_VERSION, build_comparison_rows
 from .derivation import DEFAULT_RULE_VERSION, attach_derivation, derived_evidence
 from .errors import (
     DomainError,
@@ -93,6 +94,7 @@ from .values import (
 __version__ = "0.1.0"
 
 __all__ = [
+    "COMPARISON_RULE_VERSION",
     "DEFAULT_RULE_VERSION",
     "MAX_FISCAL_YEAR",
     "MIN_FISCAL_YEAR",
@@ -140,6 +142,7 @@ __all__ = [
     "UnresolvableEvidenceRefError",
     "__version__",
     "attach_derivation",
+    "build_comparison_rows",
     "calculate_period",
     "compare_metric",
     "derived_evidence",
