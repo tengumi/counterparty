@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from .composition import CheckpointerFactory, create_lifespan
 from .config import AgentSettings
+from .transport import create_transport_router
 
 
 class HealthResponse(BaseModel):
@@ -30,6 +31,7 @@ def create_app(
         else create_lifespan(resolved_settings, checkpointer_factory)
     )
     app = FastAPI(title="Counterparty Agent", version="0.1.0", lifespan=lifespan)
+    app.include_router(create_transport_router())
 
     @app.get("/healthz", response_model=HealthResponse)
     async def health() -> Annotated[HealthResponse, "Liveness only"]:

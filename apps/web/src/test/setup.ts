@@ -17,4 +17,15 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
+// jsdom ships no ResizeObserver; assistant-ui's viewport primitives observe content.
+class ResizeObserverStub implements ResizeObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+globalThis.ResizeObserver = ResizeObserverStub;
+
+// jsdom implements no scrolling; the thread viewport auto-scrolls on new content.
+Element.prototype.scrollTo = vi.fn();
+
 afterEach(cleanup);
