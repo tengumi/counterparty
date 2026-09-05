@@ -578,9 +578,21 @@ J влит. Что дал каждый срез и его известная д�
      и checkpoint-ключ по server-verified треду, не по значению из запроса.
    - Проверки: agent 68 (2 новых: runner передаёт scope в загрузчики; RPC
      резолвит доверенный scope из проекта и отвергает чужой тред).
-4. **OPS-01 до конца** — реально поднять стек, чинить что сломается на живом
-   старте, подтвердить healthchecks, один ручной проход. Нужен Docker в окружении
-   (в прошлых сессиях его не было).
+4. **OPS-01 до конца** — ✅ сделано 06.09.2026. Docker в окружении есть (28.1.1).
+   - `docker compose build` (все 5 образов) + `up -d`: `migrate` накатил `0006`,
+     `roles`/`import`/`checkpoints` отработали как one-shot, все 6
+     долгоживущих сервисов `healthy` (postgres, ui_api, agent, mcp, web,
+     proxy). Компоуз-файл не менялся — поднялся as-is.
+   - Ручной проход через proxy (`localhost:5173`): auth → создание проекта →
+     новые `GET /decisions|/artifacts|/threads/{t}/conversation` (200, пусто) →
+     `POST /decisions` (201) → `POST /agent/rpc/agent/chat` (harness+MCP путь)
+     завершился `completed`, строка в `workspace.agent_runs` осела
+     (`status=completed`, `last_public_revision=2`), checkpoint записался под
+     ключом `uuid5(tenant:project:thread)` — item 3 подтверждён на живом
+     стеке. Нерезолвимый тред → `404`. Смоук-проект вычищен.
+   - Известное: `GET /rpc/agent/runs/{id}` для ещё живущего в памяти run
+     отдаёт `finished_at:null`/`revision:0` (in-memory `_run_info` копирует
+     только статус) — pre-existing, durable строка корректна.
 5. **Сквозная приёмка** — один сценарий компании А: web → agent → mcp →
    grounded-ответ с evidence → запись решения через UI API. + короткий demo
    runbook и точный список ограничений (урезанный REL-01).

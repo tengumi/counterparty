@@ -186,7 +186,7 @@ AG-04 и AG-06. Пользователь решил закончить оста�
 
 | ID | Результат | Depends on | Статус |
 |---|---|---|---|
-| OPS-01 | Общий `compose.yaml`, reverse proxy, PostgreSQL volume и service healthchecks | F0-03A…F0-03C, F0-04, волна 2 | todo |
+| OPS-01 | Общий `compose.yaml`, reverse proxy, PostgreSQL volume и service healthchecks | F0-03A…F0-03C, F0-04, волна 2 | done (06.09.2026: полный `up -d`, миграция 0006, 6 сервисов healthy, ручной проход через proxy) |
 | REFACTOR-01 | Развести плоскую раскладку `services/ui_api` на подпакеты; только перемещение файлов и правка импортов, поведение и тесты без изменений | WEB-09, WEB-11 | todo |
 | QA-01 | Contract tests REST/RPC/MCP и generated/checked TS types | C-01…C-04 | todo |
 | QA-02 | Интеграция importer + PostgreSQL + API + MCP | IMP-03, MCP-03 | todo |
