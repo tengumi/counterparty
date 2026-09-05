@@ -12,6 +12,7 @@ import type { ReactNode } from 'react';
 import { Button } from '@alfalab/core-components/button';
 import type { DiscussionContext } from '../../api/reportContracts';
 import { AgentChat } from '../../chat/AgentChat';
+import { ProjectChat } from '../../chat/ProjectChat';
 import {
   ConversationFeed,
   EmptyConversation,
@@ -101,7 +102,7 @@ export function ChatSurface({
   const history = (
     <>
       <ConversationFeed actions={actions} blocks={blocks} />
-      {blocks.length === 0 && !isLive ? fixtureMode ? <EmptyConversation /> : <div className={styles.detail}><p>История разговора пока недоступна.</p><p className={styles.muted}>Откройте материалы, чтобы посмотреть сведения компаний или сравнить отчёты.</p></div> : null}
+      {blocks.length === 0 && !isLive && fixtureMode ? <EmptyConversation /> : null}
     </>
   );
 
@@ -135,6 +136,22 @@ export function ChatSurface({
       </div>
     </div>
   );
+
+  // Fixture chats keep the demo transport; a real project restores its stored
+  // conversation over REST before it subscribes (06 §3).
+  if (!fixtureMode) {
+    return (
+      <ProjectChat
+        draft={draft}
+        history={history}
+        inputRef={inputRef}
+        layout={layout}
+        onDraftChange={setDraft}
+        projectId={project.id}
+        threadId={chat.id}
+      />
+    );
+  }
 
   if (isLive) {
     return (

@@ -7,6 +7,37 @@ import { apiProjects } from '../test/setup';
 
 const demo = apiProjects[0];
 
+/**
+ * Route the mutation answer, but not the chat restore.
+ *
+ * S2 now also reads the stored conversation of the open thread; that endpoint
+ * is not implemented yet, and answering it with a project body would be a lie
+ * the screen would then have to render.
+ */
+function stubApi(answer: () => Response) {
+  const mock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(String(input), 'http://localhost');
+    if (url.pathname.endsWith('/conversation')) {
+      return Promise.resolve(
+        Response.json(
+          { code: 'not_found', message: 'not implemented', retryable: false, request_id: 'test', details: null },
+          { status: 404 },
+        ),
+      );
+    }
+    void init;
+    return Promise.resolve(answer());
+  });
+  vi.stubGlobal('fetch', mock);
+  return mock;
+}
+
+/** Body of the first request that changed something. */
+function mutationBody(mock: ReturnType<typeof stubApi>): unknown {
+  const call = mock.mock.calls.find(([, init]) => init?.method !== undefined && init.method !== 'GET');
+  return JSON.parse(String(call?.[1]?.body));
+}
+
 function openDemo() {
   return render(
     <MemoryRouter initialEntries={['/checks/demo-project/chats/demo-thread']}>
@@ -18,7 +49,7 @@ function openDemo() {
 describe('live workspace mutations', () => {
   it('renames the project only after the server confirms it', async () => {
     const user = userEvent.setup();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ ...demo, title: 'Новый заголовок' })));
+    const mock = stubApi(() => Response.json({ ...demo, title: 'Новый заголовок' }));
     openDemo();
 
     await user.click(screen.getByRole('button', { name: 'Переименовать проверку' }));
@@ -27,19 +58,19 @@ describe('live workspace mutations', () => {
     await user.type(input, 'Новый заголовок{Enter}');
 
     expect(await screen.findByTitle('Новый заголовок')).toBeVisible();
-    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0]?.[1]?.body))).toEqual({ title: 'Новый заголовок' });
+    expect(mutationBody(mock)).toEqual({ title: 'Новый заголовок' });
   });
 
   it('shows added and unavailable rows from one partial batch', async () => {
     const user = userEvent.setup();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({
+    stubApi(() => Response.json({
       schema_version: '0.1', project_id: demo.id, context_version: 1,
       companies: [...demo.companies, { ...demo.companies[0], company_id: 'company-b', report_id: 'report-b', inn: '7702070139', short_name: 'Компания Б' }],
       results: [
         { requested: { inn: '7702070139' }, outcome: 'added', company_id: 'company-b', report_id: 'report-b', error_code: null, message: null },
         { requested: { inn: '0000000000' }, outcome: 'not_found', company_id: null, report_id: null, error_code: 'not_found', message: 'not held' },
       ],
-    })));
+    }));
     openDemo();
     await user.click(screen.getByRole('button', { name: 'Материалы' }));
     const panel = screen.getByRole('complementary', { name: 'Материалы проверки' });
@@ -54,10 +85,10 @@ describe('live workspace mutations', () => {
 
   it('keeps the current composition visible after an atomic company-limit refusal', async () => {
     const user = userEvent.setup();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({
+    stubApi(() => Response.json({
       code: 'limit_exceeded', message: 'too many', retryable: false, request_id: 'request',
       details: { limit: 20, in_project: 19, requested_new: 2 },
-    }, { status: 409 })));
+    }, { status: 409 }));
     openDemo();
     await user.click(screen.getByRole('button', { name: 'Материалы' }));
     const panel = screen.getByRole('complementary', { name: 'Материалы проверки' });
@@ -71,14 +102,14 @@ describe('live workspace mutations', () => {
 
   it('removes a company using the context version that was loaded', async () => {
     const user = userEvent.setup();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({
+    const mock = stubApi(() => Response.json({
       schema_version: '0.1', project_id: demo.id, companies: [], context_version: 1,
-    })));
+    }));
     openDemo();
     await user.click(screen.getByRole('button', { name: 'Материалы' }));
     await user.click(screen.getByRole('button', { name: 'Удалить' }));
 
     expect(await screen.findByText('Компании не добавлены')).toBeVisible();
-    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0]?.[1]?.body))).toEqual({ expected_context_version: 0 });
+    expect(mutationBody(mock)).toEqual({ expected_context_version: 0 });
   });
 });
