@@ -87,8 +87,8 @@ services:
       - sh
       - -c
       - >-
-        uv sync --frozen --reinstall-package counterparty-storage
-        && uv run --frozen alembic upgrade head
+        uv sync --frozen --no-dev --reinstall-package counterparty-storage
+        && uv run --frozen --no-dev alembic upgrade head
     depends_on:
       postgres:
         condition: service_healthy
@@ -147,11 +147,11 @@ services:
       - sh
       - -c
       - >-
-        uv sync --frozen
+        uv sync --frozen --no-dev
         --reinstall-package counterparty-contracts
         --reinstall-package counterparty-domain
         --reinstall-package counterparty-storage
-        && uv run --frozen python -m import_reports import
+        && uv run --frozen --no-dev python -m import_reports import
         /workspace/artifacts/contractors_audit.snapshot.json
     depends_on:
       roles:
