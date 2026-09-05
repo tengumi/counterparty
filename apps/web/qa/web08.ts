@@ -57,7 +57,7 @@ async function scenario(browser: Browser, viewport: 'desktop' | 'mobile') {
   const page = await context.newPage();
   page.setDefaultTimeout(12000);
   page.on('pageerror', (error) => manifest.consoleErrors.push(`${viewport}: ${error.message}`));
-  page.on('console', (message) => { if (message.type() === 'error') manifest.consoleErrors.push(`${viewport}: ${message.text()}`); });
+  page.on('console', (message) => { if (message.type() === 'error') manifest.consoleErrors.push(`${viewport}: ${message.text()} (${message.location().url || "unknown location"})`); });
   page.on('response', (response) => {
     const url = new URL(response.url());
     if (url.pathname.startsWith('/api/')) manifest.requests.push({ method: response.request().method(), path: url.pathname, status: response.status() });
