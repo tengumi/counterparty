@@ -8,7 +8,7 @@ from counterparty_contracts import ContractWarning, WarningCode
 from counterparty_domain.report_reads import ReportReadData
 from sqlalchemy import inspect
 
-from .dependencies import TenantWork
+from ..dependencies import TenantWork
 
 
 def _columns(row: Any) -> dict[str, Any]:

@@ -18,9 +18,9 @@ from counterparty_domain.report_reads import (
 )
 from fastapi import APIRouter, Path
 
-from .dependencies import ScopedProject, TenantWork
-from .errors import ApiError
-from .report_loader import load_report_data
+from ..dependencies import ScopedProject, TenantWork
+from ..errors import ApiError
+from ..loaders.reports import load_report_data
 
 __all__ = ["report_evidence_id", "resolve_report_evidence_id", "router"]
 router = APIRouter(prefix="/api/v1", tags=["reports"])

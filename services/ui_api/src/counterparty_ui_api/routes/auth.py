@@ -16,10 +16,10 @@ from counterparty_contracts import ErrorCode, TenantId, UserId
 from fastapi import APIRouter, Depends, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 
-from .config import Settings
-from .dependencies import CurrentSession, get_session_store, get_settings
-from .errors import ApiError
-from .sessions import Session, SessionStore, utc_now
+from ..config import Settings
+from ..dependencies import CurrentSession, get_session_store, get_settings
+from ..errors import ApiError
+from ..sessions import Session, SessionStore, utc_now
 
 __all__ = ["DemoSignInRequest", "SessionResponse", "router"]
 

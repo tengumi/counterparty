@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
-from counterparty_ui_api.reports import resolve_report_evidence_id
+from counterparty_ui_api.routes.reports import resolve_report_evidence_id
 
 
 def _project(client: TestClient) -> dict[str, object]:

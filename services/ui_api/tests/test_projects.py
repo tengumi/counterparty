@@ -19,7 +19,7 @@ from sqlalchemy import Engine, update
 from sqlalchemy.orm import Session
 
 from counterparty_ui_api.idempotency import fingerprint_of
-from counterparty_ui_api.projects import CREATE_SCOPE
+from counterparty_ui_api.routes.projects import CREATE_SCOPE
 
 
 def _create(client: TestClient, **payload: object) -> dict[str, object]:

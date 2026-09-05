@@ -25,9 +25,9 @@ from counterparty_contracts import (
 from counterparty_storage.workspace.enums import DecisionOutcome as StorageDecisionOutcome
 from fastapi import APIRouter, Query, status
 
-from .dependencies import CurrentSession, ScopedProject, TenantWork
-from .errors import ApiError
-from .views import as_analysis_artifact, as_user_decision
+from ..dependencies import CurrentSession, ScopedProject, TenantWork
+from ..errors import ApiError
+from ..reads import as_analysis_artifact, as_user_decision
 
 __all__ = ["router"]
 

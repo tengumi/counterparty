@@ -19,9 +19,9 @@ from counterparty_domain.report_sections import build_report_section
 from fastapi import APIRouter, Path, Query
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from .dependencies import ScopedProject, TenantWork
-from .errors import ApiError
-from .report_loader import load_report_data
+from ..dependencies import ScopedProject, TenantWork
+from ..errors import ApiError
+from ..loaders.reports import load_report_data
 
 router = APIRouter(prefix="/api/v1", tags=["reports"])
 

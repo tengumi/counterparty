@@ -30,12 +30,11 @@ from counterparty_contracts import (
 from counterparty_storage import AsyncUnitOfWork
 from fastapi import APIRouter, Query, Response, status
 
-from .cursors import decode_cursor, encode_cursor
-from .dependencies import CurrentSession, ScopedProject, TenantWork
-from .errors import ApiError
-from .idempotency import fingerprint_of, release_reservation, reserve_or_answer
-from .reads import load_project_details
-from .views import as_page, as_project
+from ..cursors import decode_cursor, encode_cursor
+from ..dependencies import CurrentSession, ScopedProject, TenantWork
+from ..errors import ApiError
+from ..idempotency import fingerprint_of, release_reservation, reserve_or_answer
+from ..reads import as_page, as_project, load_project_details
 
 __all__ = ["router"]
 

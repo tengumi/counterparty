@@ -38,7 +38,7 @@ from counterparty_storage.workspace.models import AnalysisArtifact as AnalysisAr
 from counterparty_storage.workspace.models import Project as ProjectRow
 from counterparty_storage.workspace.models import UserDecision as UserDecisionRow
 
-from .reads import ProjectDetails
+from .models import ProjectDetails
 
 __all__ = [
     "as_analysis_artifact",

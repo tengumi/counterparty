@@ -19,19 +19,21 @@ from fastapi import FastAPI, Request
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import Response
 
-from .auth import router as auth_router
-from .companies import directory_router as company_directory_router
-from .companies import router as project_companies_router
 from .config import Settings
-from .conversation import router as conversation_router
 from .database import SessionFactory, open_database
-from .decisions import router as decisions_router
 from .errors import install_error_handlers
-from .health import router as health_router
-from .projects import router as projects_router
 from .provisioning import ensure_demo_identities
-from .report_details import router as report_details_router
-from .reports import router as reports_router
+from .routes import (
+    auth_router,
+    company_directory_router,
+    conversation_router,
+    decisions_router,
+    health_router,
+    project_companies_router,
+    projects_router,
+    report_details_router,
+    reports_router,
+)
 from .sessions import InMemorySessionStore, SessionStore
 from .workspace import ProjectDirectory
 

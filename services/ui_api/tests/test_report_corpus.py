@@ -18,7 +18,7 @@ from counterparty_storage.reports.models import ReportSnapshot
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from counterparty_ui_api.report_loader import load_report_data
+from counterparty_ui_api.loaders.reports import load_report_data
 
 
 async def test_imported_corpus_has_typed_sections_and_existing_evidence() -> None:

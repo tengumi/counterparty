@@ -13,9 +13,9 @@ from uuid import UUID
 from counterparty_contracts import ErrorCode, ThreadConversationState, ThreadId
 from fastapi import APIRouter
 
-from .dependencies import ScopedThread, TenantWork
-from .errors import ApiError
-from .views import as_thread_conversation
+from ..dependencies import ScopedThread, TenantWork
+from ..errors import ApiError
+from ..reads import as_thread_conversation
 
 __all__ = ["router"]
 

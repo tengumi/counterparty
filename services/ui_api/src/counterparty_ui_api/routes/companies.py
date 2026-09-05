@@ -42,11 +42,10 @@ from counterparty_contracts import (
 from counterparty_storage import AsyncUnitOfWork, ContextVersionConflictError
 from fastapi import APIRouter, Path, Query
 
-from .cursors import decode_cursor, encode_cursor
-from .dependencies import ScopedProject, TenantWork
-from .errors import ApiError
-from .reads import load_company_page, load_project_details
-from .views import as_page
+from ..cursors import decode_cursor, encode_cursor
+from ..dependencies import ScopedProject, TenantWork
+from ..errors import ApiError
+from ..reads import as_page, load_company_page, load_project_details
 
 __all__ = ["directory_router", "router"]
 
