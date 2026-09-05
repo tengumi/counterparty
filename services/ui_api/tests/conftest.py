@@ -52,6 +52,14 @@ PARTNER = DemoUser.model_validate(
     }
 )
 
+COLLEAGUE = DemoUser.model_validate(
+    {
+        "tenant_id": str(ANALYST.tenant_id),
+        "user_id": "00000000-0000-4000-8000-0000000000a3",
+        "display_name": "Демо-коллега",
+    }
+)
+
 
 def _async_url(url: str) -> str:
     """Point the URL at the async driver without changing its target."""
@@ -100,9 +108,9 @@ def clean(schema: Engine) -> Iterator[Engine]:
 
 @pytest.fixture
 def settings(database_url: str) -> Settings:
-    """Server-side settings with two demo identities in two tenants."""
+    """Server-side settings with distinct owners inside and across tenants."""
     return Settings(
-        demo_users={"demo-analyst": ANALYST, "demo-partner": PARTNER},
+        demo_users={"demo-analyst": ANALYST, "demo-partner": PARTNER, "demo-colleague": COLLEAGUE},
         session_cookie_secure=False,
         database_url=database_url,
     )

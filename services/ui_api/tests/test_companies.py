@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from conftest import SignIn, add_company, add_reported_company, add_snapshot
+from counterparty_storage.reports.models import Company
 from counterparty_storage.workspace.models import ProjectCompany
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, select
@@ -78,11 +79,14 @@ def test_adding_a_counterparty_pins_the_snapshot_it_is_judged_on(
         clean,
         company_id=company_id,
         reported_at=datetime(2027, 1, 1, tzinfo=UTC),
-        short_name="Ромашка",
+        short_name="Новое имя",
     )
     reopened = client.get(f"/api/v1/projects/{project['id']}").json()
 
     assert reopened["companies"][0]["report_id"] == str(pinned)
+    listed = client.get("/api/v1/projects").json()["items"][0]
+    assert listed["companies"] == reopened["companies"]
+    assert listed["companies"][0]["short_name"] == "Ромашка"
     assert str(newer) != str(pinned)
     assert client.get("/api/v1/companies", params={"inn": "7449088645"}).json()["items"][0][
         "latest_report_id"
@@ -305,3 +309,54 @@ def test_the_composition_survives_a_reopen(
         }
     ]
     assert isinstance(UUID(reopened["companies"][0]["company_id"]), UUID)
+
+
+def test_company_search_pages_literal_latest_names_and_keeps_missing_reports(
+    client: TestClient, clean: Engine, sign_in: SignIn
+) -> None:
+    """Latest names, literal wildcards and absent snapshots remain distinct."""
+    sign_in()
+    first_id, _ = add_reported_company(clean, inn="7700000001", short_name="Trade_100%")
+    second_id = add_company(clean, inn="7700000002")
+    add_reported_company(clean, inn="7700000003", short_name="TradeX1000")
+    newest = add_snapshot(
+        clean,
+        company_id=first_id,
+        reported_at=datetime(2027, 1, 1, tzinfo=UTC),
+        short_name="Latest_100%",
+    )
+    # Importing an older snapshot later must not replace the latest identity.
+    add_snapshot(
+        clean,
+        company_id=first_id,
+        reported_at=datetime(2025, 1, 1, tzinfo=UTC),
+        short_name="Historical",
+    )
+    with Session(clean) as session:
+        company = session.get(Company, second_id)
+        assert company is not None
+        company.ogrn = "1234567890123"
+        session.commit()
+
+    literal = client.get("/api/v1/companies", params={"query": "_100%"}).json()
+    assert [item["company_id"] for item in literal["items"]] == [str(first_id)]
+    assert literal["items"][0]["latest_report_id"] == str(newest)
+    assert client.get("/api/v1/companies", params={"query": "historical"}).json()["items"] == []
+    ogrn = client.get("/api/v1/companies", params={"query": "1234567890123"}).json()
+    assert [item["company_id"] for item in ogrn["items"]] == [str(second_id)]
+    assert ogrn["items"][0]["latest_report_id"] is None
+    assert ogrn["items"][0]["latest_report_at"] is None
+    assert ogrn["items"][0]["short_name"] == "7700000002"
+
+    first = client.get("/api/v1/companies", params={"query": "770000", "limit": 1}).json()
+    second = client.get(
+        "/api/v1/companies",
+        params={"query": "770000", "limit": 2, "cursor": first["page"]["next_cursor"]},
+    ).json()
+    assert [item["inn"] for item in first["items"] + second["items"]] == [
+        "7700000001",
+        "7700000002",
+        "7700000003",
+    ]
+    assert first["page"]["has_more"] is True
+    assert second["page"]["has_more"] is False

@@ -6,13 +6,16 @@ so a test that mocked the store would prove nothing about it.
 """
 
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
+import pytest
 from conftest import ANALYST, SignIn
+from counterparty_storage import AsyncUnitOfWork
 from counterparty_storage.workspace.enums import IdempotencyState
-from counterparty_storage.workspace.models import IdempotencyKey
+from counterparty_storage.workspace.models import IdempotencyKey, Project
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine
+from sqlalchemy import Engine, update
 from sqlalchemy.orm import Session
 
 from counterparty_ui_api.idempotency import fingerprint_of
@@ -93,10 +96,11 @@ def test_a_request_id_reused_for_another_payload_is_refused(
     assert len(client.get("/api/v1/projects").json()["items"]) == 1
 
 
+@pytest.mark.parametrize("age", [timedelta(0), timedelta(days=7)])
 def test_a_request_arriving_while_the_first_one_runs_is_told_so(
-    client: TestClient, clean: Engine, sign_in: SignIn
+    client: TestClient, clean: Engine, sign_in: SignIn, age: timedelta
 ) -> None:
-    """An in-flight reservation answers "still running", not "here is a copy"."""
+    """Age alone cannot prove the first writer stopped; both copies get 409."""
     sign_in()
     request_id = uuid4()
     body = {"title": "Проверка", "client_request_id": str(request_id)}
@@ -115,6 +119,7 @@ def test_a_request_arriving_while_the_first_one_runs_is_told_so(
                 ),
                 state=IdempotencyState.IN_FLIGHT,
                 resource_kind="project",
+                created_at=datetime.now(UTC) - age,
             )
         )
         session.commit()
@@ -143,8 +148,7 @@ def test_two_simultaneous_copies_create_exactly_one_project(
         ]
 
     statuses = sorted(response.status_code for response in responses)
-    assert statuses[0] == 201, [response.text for response in responses]
-    assert statuses[1] in {200, 409}
+    assert statuses in ([200, 201], [201, 409]), [response.text for response in responses]
     assert len(client.get("/api/v1/projects").json()["items"]) == 1
 
 
@@ -213,3 +217,75 @@ def test_creating_a_check_requires_a_session(client: TestClient) -> None:
     )
 
     assert response.status_code == 401
+
+
+@pytest.mark.parametrize("committed", [False, True])
+def test_failed_create_releases_only_unfinished_work(
+    client: TestClient, sign_in: SignIn, monkeypatch: pytest.MonkeyPatch, committed: bool
+) -> None:
+    """Rollback permits retry; an ambiguous successful commit still replays."""
+    sign_in()
+    body = {"title": "Повтор после ошибки", "client_request_id": str(uuid4())}
+    commit = AsyncUnitOfWork.commit
+    calls = 0
+
+    async def fail_work_commit(uow: AsyncUnitOfWork) -> None:
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            if committed:
+                await commit(uow)
+            raise RuntimeError("simulated commit failure")
+        await commit(uow)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(AsyncUnitOfWork, "commit", fail_work_commit)
+        with pytest.raises(RuntimeError, match="simulated commit failure"):
+            client.post("/api/v1/projects", json=body)
+
+    assert len(client.get("/api/v1/projects").json()["items"]) == int(committed)
+    retry = client.post("/api/v1/projects", json=body)
+    assert retry.status_code == (200 if committed else 201), retry.text
+    assert retry.headers.get("idempotent-replay") == ("true" if committed else None)
+    assert len(client.get("/api/v1/projects").json()["items"]) == 1
+
+
+def test_project_search_keeps_literal_filter_and_tied_cursor_order(
+    client: TestClient, clean: Engine, sign_in: SignIn
+) -> None:
+    """Filtering precedes pagination, and equal activity times lose no rows."""
+    sign_in()
+    titles = ["Audit_100% first", "AUDIT_100% second", "AuditX1000 distractor"]
+    created = [str(_create(client, title=title)["id"]) for title in titles]
+    with Session(clean) as session:
+        session.execute(update(Project).values(updated_at=datetime(2026, 9, 5, tzinfo=UTC)))
+        session.commit()
+
+    expected = sorted(created[:2], reverse=True)
+    first = client.get("/api/v1/projects", params={"query": "audit_100%", "limit": 1}).json()
+    assert [item["id"] for item in first["items"]] == expected[:1]
+    assert first["page"]["has_more"] is True
+    second = client.get(
+        "/api/v1/projects",
+        params={"query": "audit_100%", "limit": 1, "cursor": first["page"]["next_cursor"]},
+    ).json()
+    assert [item["id"] for item in second["items"]] == expected[1:]
+    assert second["page"]["has_more"] is False
+    assert client.get("/api/v1/projects", params={"query": "absent"}).json()["items"] == []
+
+
+def test_another_owners_project_is_hidden_inside_the_same_tenant(
+    client: TestClient, sign_in: SignIn
+) -> None:
+    """A matching title and a shared tenant grant no access to another owner."""
+    sign_in()
+    theirs = _create(client, title="Shared keyword")["id"]
+    client.delete("/api/v1/auth/session")
+    sign_in("demo-colleague")
+    own = _create(client, title="Shared keyword mine")["id"]
+
+    for params in ({}, {"query": "shared", "limit": 1}):
+        listed = client.get("/api/v1/projects", params=params).json()
+        assert [item["id"] for item in listed["items"]] == [own]
+        assert listed["page"]["has_more"] is False
+    assert client.get(f"/api/v1/projects/{theirs}").status_code == 404
