@@ -1,8 +1,9 @@
 # Next steps: запуск разработки через субагентов
 
-**Текущая цель:** WEB-07 — выравнивание S1/S2 с принятым HTML, итоговая
-браузерная проверка 390/1024/1440 и завершение gate волны 1. Волна G принята
-пользователем через поручение продолжать по плану.
+**Текущая цель:** пользовательский review WEB-07. S1/S2 выровнены с принятым
+HTML, итоговая браузерная проверка 390/1024/1440 завершена; технический gate
+волны 1 пройден. Волна G принята; WEB-07 будет отмечен done в WORK_PLAN после
+принятия среза H пользователем.
 
 **Источник полного backlog:** [`docs/WORK_PLAN.md`](docs/WORK_PLAN.md).
 
@@ -13,7 +14,7 @@
 - Gate F0 и волны D/E приняты. Волна F принята пользователем 05.09.2026 и
   интегрирована в `dev` через merge-коммиты F1/F2/F3.
 - G1–G4 интегрированы в `dev`; независимая проверка G5 и web/HTTP-проверка G6
-  пройдены. Срез G принят 05.09.2026; запущен WEB-07 (H1–H3).
+  пройдены. Срез G принят 05.09.2026; WEB-07 (H1–H3) готов к review.
 - `packages/`, `migrations/`, `scripts/import_reports`, `apps/web` и три
   Python-сервиса в `services/` созданы; выполнены базовый storage/import,
   project/company API и web-отчёт по typed mocks.
@@ -365,9 +366,9 @@ G4 намеренно не перехватывает in-flight по возра�
 
 | Task | Статус | Ownership / результат |
 |---|---|---|
-| H1 / WEB-07 UI alignment | in progress | `apps/web/src` runtime views/CSS и локальные component tests; без API/transport/mocks/test setup |
-| H2 / WEB-07 browser harness | in progress | `apps/web/qa`, package/config для QA, `artifacts/qa/WEB-07`; существующие typed fixtures, без production mock fallback |
-| H3 / independent WEB-07 review | in progress | статическая приёмочная матрица и независимый review итоговых screenshots; код read-only |
+| H1 / WEB-07 UI alignment | ready for review | S1/S2, адаптивные материалы/report/evidence, draft/scroll/focus; исправления итоговой проверки интегрированы |
+| H2 / WEB-07 browser harness | ready for review | Chrome/CDP harness, 34 PNG с provenance, fixtures и отдельный live CRUD; точечные повторы прошли |
+| H3 / independent WEB-07 review | done | независимый source/PNG/manifest review: pass with limitations, открытых WEB-07 blockers нет |
 
 H1 и H2 реализуются параллельно от одного baseline; финальный браузерный прогон
 Chrome DevTools/CDP выполняется после объединения. H3 сверяет итог с Specs/HTML.
@@ -375,6 +376,33 @@ Chrome DevTools/CDP выполняется после объединения. H3
 скриншотов. Найденные при финальной проверке дефекты исправляются с точечным
 повтором затронутых сценариев. После H — пользовательский checkpoint; WEB-08
 или агентная волна автоматически не запускаются.
+
+Итог H от 05.09.2026:
+
+- Интегрированный код: `6942d5a`; lint/typecheck/qa:check/build прошли,
+  77 component/unit tests прошли. После последних CSS-правок повторены
+  lint/qa:check/build и затронутые браузерные сценарии.
+- Первый итоговый capture `b13cc17`: 27 PNG и 94 checks (90 pass / 4 fail),
+  live CRUD прошёл, consoleErrors пуст. Найденный tablet overlay шириной 1 px
+  исправлен; два ложных source-state failures исправлены scoped selectors.
+  Независимый review также нашёл и исправил desktop Enter hint на mobile.
+- Точечные captures `6942d5a`: tablet S2/panel/report/evidence — 26/26;
+  mobile/desktop availability и mobile hint — 13/13, ещё 7 PNG.
+  Оба процесса завершились успешно, consoleErrors пуст. Исходные captures
+  сохранены с прежним SHA; новые находятся в `follow-up/`.
+- Результат и снимки: `artifacts/qa/WEB-07/README.md`; воспроизведение:
+  `apps/web/qa/README.md`, live API/UI — корневой README. Task-checkpoints H1–H3
+  содержат реализацию и независимую проверку. Branches/worktrees сохранены.
+- Ограничения: 200% — эмуляция размера текста на S1, native zoom/экранная
+  клавиатура не проверялись. Полные отчёт/разговор/материалы показаны на typed
+  fixtures, live CRUD — через PostgreSQL/REST. WEB-08/09, документы и полноценный
+  агентный сценарий не входят в этот gate. Docker в окружении отсутствует;
+  Dockerfile в H не менялись. Известное предупреждение о размере bundle остаётся.
+
+После пользовательского review H: отметить WEB-07 done в WORK_PLAN и
+сформировать следующий срез из WEB-08 (оставшиеся overview/materials/comparison
+через REST), MCP-01/02 (read-only tools) и F0-07 (persistent checkpoint/restart).
+AG-01/02 следуют после закрытия зависимости F0-07. Новую волну ещё не запускать.
 
 ## Волна C — интеграционные риски и первый data/domain слой
 
