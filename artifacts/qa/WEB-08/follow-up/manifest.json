@@ -1,0 +1,63 @@
+{
+  "sourceSHA": "0c20738893a667aba693309376ee2c88f09bee17",
+  "originalSourceSHA": "2dce68498b4a914b150f722db70539250456d06e",
+  "scope": "Mobile draft targets + favicon only; no full flow repeat",
+  "projectId": "84ca20f6-b1c3-4389-a991-1f11c96ddce8",
+  "browser": "150.0.7871.115",
+  "consoleErrors": [],
+  "pageErrors": [],
+  "targets": [
+    {
+      "name": "Открыть",
+      "width": 59.3125,
+      "height": 44,
+      "minHeight": "44px",
+      "parentClass": "_draftContext_l73w9_186",
+      "className": "button__component_2d9c1 button__text_2d9c1 button__size-32_2d9c1 button__hug_2d9c1 button__size-32_1gmew button__component_1aq70 button__text_1aq70 button__component_1bs8v button__text_1bs8v",
+      "rules": [
+        ".button__size-32_2d9c1: min-width: 80px; min-height: var(--size-xxs-height); padding: var(--gap-0) 15px; font-size: 14px; line-height: 20px; font-weight: 500; font-family: var(--font-family-system);",
+        ".button__text_2d9c1.button__text_2d9c1: min-width: 0px; min-height: 0px; padding: var(--gap-0); border-width: medium; border-style: none; border-color: currentcolor; border-image: none; appearance: none;",
+        "._draftContexts_l73w9_186 ._draftContext_l73w9_186 button: min-width: 44px; min-height: 44px; flex-shrink: 0;"
+      ]
+    },
+    {
+      "name": "Убрать материал: Выручка · ООО \"ТЕХПРОФ\" · 2023",
+      "width": 48.296875,
+      "height": 44,
+      "minHeight": "44px",
+      "parentClass": "_draftContext_l73w9_186",
+      "className": "button__component_2d9c1 button__text_2d9c1 button__size-32_2d9c1 button__hug_2d9c1 button__size-32_1gmew button__component_1aq70 button__text_1aq70 button__component_1bs8v button__text_1bs8v",
+      "rules": [
+        ".button__size-32_2d9c1: min-width: 80px; min-height: var(--size-xxs-height); padding: var(--gap-0) 15px; font-size: 14px; line-height: 20px; font-weight: 500; font-family: var(--font-family-system);",
+        ".button__text_2d9c1.button__text_2d9c1: min-width: 0px; min-height: 0px; padding: var(--gap-0); border-width: medium; border-style: none; border-color: currentcolor; border-image: none; appearance: none;",
+        "._draftContexts_l73w9_186 ._draftContext_l73w9_186 button: min-width: 44px; min-height: 44px; flex-shrink: 0;"
+      ]
+    },
+    {
+      "name": "Убрать материал: Сравнение 2 компаний",
+      "width": 48.296875,
+      "height": 44,
+      "minHeight": "44px",
+      "parentClass": "_draftContext_l73w9_186",
+      "className": "button__component_2d9c1 button__text_2d9c1 button__size-32_2d9c1 button__hug_2d9c1 button__size-32_1gmew button__component_1aq70 button__text_1aq70 button__component_1bs8v button__text_1bs8v",
+      "rules": [
+        ".button__size-32_2d9c1: min-width: 80px; min-height: var(--size-xxs-height); padding: var(--gap-0) 15px; font-size: 14px; line-height: 20px; font-weight: 500; font-family: var(--font-family-system);",
+        ".button__text_2d9c1.button__text_2d9c1: min-width: 0px; min-height: 0px; padding: var(--gap-0); border-width: medium; border-style: none; border-color: currentcolor; border-image: none; appearance: none;",
+        "._draftContexts_l73w9_186 ._draftContext_l73w9_186 button: min-width: 44px; min-height: 44px; flex-shrink: 0;"
+      ]
+    }
+  ],
+  "favicon": {
+    "path": "/favicon.svg",
+    "status": 200
+  },
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "innerWidth": 390,
+  "overflow": 0,
+  "composerVisible": true,
+  "screenshot": "mobile-draft.png",
+  "verdict": "pass"
+}
