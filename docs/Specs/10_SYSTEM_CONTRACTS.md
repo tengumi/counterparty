@@ -110,9 +110,11 @@ UserDecision: `{id,outcome,company_ids[],rationale,conditions[],based_on_artifac
 
 Префикс `/api/v1`. Все проектные операции проверяют tenant scope. GET без мутаций; списки — cursor pagination, default limit 20, max 100. Объём сравнения ограничен 20 компаниями независимо от пагинации списка проектов.
 
+Повтор запроса с уже использованным `client_request_id` и тем же payload отвечает `200` с заголовком `idempotent-replay: true` и телом первого созданного ресурса, а не `201`: клиент должен различать «создано» и «это уже было». Запрос, пришедший, пока первый ещё исполняется, получает `409 conflict` с `details.reason=request_in_flight` и `retryable=true`; тот же id с другим payload — `409 conflict` с `details.reason=request_id_reused` (решение пользователя, волна F).
+
 | Метод и путь | Вход | Ответ / эффект |
 |---|---|---|
-| POST /projects | title?, initial_question?, client_request_id | 201 Project; создаёт project+первый thread mapping, но не запускает LLM |
+| POST /projects | title?, initial_question?, client_request_id | 201 Project (повтор — 200, см. выше); создаёт project+первый thread mapping, но не запускает LLM |
 | GET /projects | cursor?, limit?, query? | Page<Project> |
 | GET /projects/{p} | — | Project |
 | PATCH /projects/{p} | title | Project; rename не меняет context_version |

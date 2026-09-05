@@ -31,6 +31,18 @@
   `extra_jsonb` и `ordinal` приняты сверх исходных Specs §3 и внесены в
   `docs/Specs/02_DATA_AND_STORAGE.md`.
 - Дизайнерский HTML принят как UI baseline и не должен редактироваться.
+- Решение пользователя (волна F): повтор идемпотентного запроса отвечает `200`
+  с заголовком `idempotent-replay: true`, а не `201`; клиент обязан различать
+  «создано» и «это уже было». Внесено в `docs/Specs/10_SYSTEM_CONTRACTS.md` §5.
+- Решение пользователя (волна F): предложения F2 по `packages/storage`
+  принимаются и выносятся отдельной задачей волны G — фильтр владельца и
+  `title_contains` в `ProjectRepository.list_recent`, `IdempotencyRepository.release`
+  и политика зависших in-flight ключей, батч-чтение состава проверки вместо N+1,
+  `CompanyReadRepository.search` по локальному индексу (нужен также MCP и агенту).
+- Локальные пакеты ставятся в venv сервисов НЕ editable: сразу после merge
+  изменений в `packages/**` тесты сервиса падают на устаревшей копии. Шаг
+  интеграции — `uv sync --reinstall-package counterparty-contracts` (и storage,
+  domain) в каждом затронутом сервисе.
 - Mock JSON утверждён и используется напрямую из
   `artifacts/contractors_audit.snapshot.json`.
 - Dockerfile нужен каждому из `web`, `ui_api`, `agent`, `mcp`; Compose — только
