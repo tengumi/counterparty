@@ -80,3 +80,6 @@ compose.override.yaml
 docker-compose.override.yml
 .tools/
 /.worktrees/
+
+# Local verification screenshots
+/.screenshots/

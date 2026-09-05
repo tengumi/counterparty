@@ -226,9 +226,14 @@ DTO зависят 12 из 21 задачи, а редактировать пак
 
 | Task | Статус | Исполнитель/результат |
 |---|---|---|
-| D1 / C-01, C-02 | in progress | `agent/d1-report-rest-contracts` |
-| D2 / WEB-02, WEB-03 | in progress | `agent/d2-web-screens` |
-| D3 / D-03 | in progress | `agent/d3-domain-calculations` |
+| D1 / C-01, C-02 | review | integrated; 100 tests; зависимые пакеты не сломаны |
+| D2 / WEB-02, WEB-03 | review | integrated; 27 web tests; скриншоты 1440/390 сняты |
+| D3 / D-03 | review | integrated; 107 tests; расчёты grounded в evidence |
+
+Открытый стык после подхода D: composer разговора на S2 — это ещё spike-компонент
+из C1 с двумя красными кнопками подряд, что нарушает правило одного primary CTA.
+Владельца у стыка не было: C1 делал транспорт, D2 — рамку вокруг. Закрывается в
+WEB-04, отдельная правка сейчас не нужна.
 
 Порядок дальнейших подходов волны 1 (уточняется после каждого review):
 
