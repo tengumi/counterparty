@@ -4,6 +4,7 @@ import asyncio
 import json
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -15,7 +16,9 @@ from httpx import AsyncClient
 
 from counterparty_agent.app import create_app
 from counterparty_agent.config import AgentSettings
+from counterparty_agent.transport.fixtures import FIXTURE_PROMPTS, render
 
+FIXTURE_DIR = Path(__file__).resolve().parents[3] / "apps/web/src/chat/__fixtures__"
 PROJECT_ID = ProjectId(uuid4())
 THREAD_ID = ThreadId(uuid4())
 
@@ -243,3 +246,14 @@ def test_unknown_run_is_reported_as_not_found(client: TestClient) -> None:
     """Lifecycle endpoints do not invent runs."""
     assert client.get(f"/rpc/agent/runs/{uuid4()}").status_code == 404
     assert client.post(f"/rpc/agent/runs/{uuid4()}/cancel").status_code == 404
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("name", sorted(FIXTURE_PROMPTS))
+async def test_web_fixture_matches_the_current_encoder(name: str) -> None:
+    """The committed wire fixtures stay the bytes this encoder produces."""
+    committed = FIXTURE_DIR / f"{name}.sse"
+
+    assert committed.read_text(encoding="utf-8") == await render(name), (
+        f"{committed} is stale; run scripts/generate_transport_fixtures.py"
+    )
