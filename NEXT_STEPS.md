@@ -1,8 +1,8 @@
 # Next steps: запуск разработки через субагентов
 
-**Текущая цель:** пользовательский review проверенной волны G. Интеграция
-storage → UI API завершена; следующий срез после review — WEB-07 и завершение
-волны 1.
+**Текущая цель:** WEB-07 — выравнивание S1/S2 с принятым HTML, итоговая
+браузерная проверка 390/1024/1440 и завершение gate волны 1. Волна G принята
+пользователем через поручение продолжать по плану.
 
 **Источник полного backlog:** [`docs/WORK_PLAN.md`](docs/WORK_PLAN.md).
 
@@ -13,7 +13,7 @@ storage → UI API завершена; следующий срез после re
 - Gate F0 и волны D/E приняты. Волна F принята пользователем 05.09.2026 и
   интегрирована в `dev` через merge-коммиты F1/F2/F3.
 - G1–G4 интегрированы в `dev`; независимая проверка G5 и web/HTTP-проверка G6
-  пройдены. Срез G готов к пользовательскому review, WEB-07 ещё не начат.
+  пройдены. Срез G принят 05.09.2026; запущен WEB-07 (H1–H3).
 - `packages/`, `migrations/`, `scripts/import_reports`, `apps/web` и три
   Python-сервиса в `services/` созданы; выполнены базовый storage/import,
   project/company API и web-отчёт по typed mocks.
@@ -310,12 +310,12 @@ WEB-04, отдельная правка сейчас не нужна.
    Compose появляется, как только есть что поднимать целиком — PostgreSQL,
    миграции, импорт и сервисы.
 4. **G:** API-04 + API-05 + D-04 · живой project/company CRUD в web ·
-   storage wiring и безопасный downgrade — интегрировано и проверено, review.
+   storage wiring и безопасный downgrade — принято.
 5. **Завершение волны 1:** WEB-07 вместе с выравниванием UI по референсному
    макету — отдельной задачей, тогда же единственный браузерный прогон и
    скриншоты 390/1024/1440.
 
-### Волна G — готова к review
+### Волна G — принята
 
 G1/G2/G3 влиты до текущего подхода; G4 завершил wiring, G5 независимо проверил
 данные и API, G6 проверил web и живой HTTP flow. Полный WEB-08 не объявляется
@@ -324,12 +324,12 @@ G1/G2/G3 влиты до текущего подхода; G4 завершил wi
 
 | Task | Статус | Область и результат |
 |---|---|---|
-| G1 / D-04, API-04, API-05 | review | merged `f100723`; overview/comparison подтверждены PostgreSQL tests и HTTP smoke |
-| G2 / live API slice | review | merged `1a9edf1`; живой CRUD проектов/компаний проверен, overview/materials/comparison остаются typed mocks; не полный WEB-08 |
-| G3 / storage + migration debt | review | merged `8df63b9`; 80 storage + 18 migration tests, wiring завершён в G4 |
-| G4 / API storage integration | review | implementation `37e1b25`, final `0bb8aaa`; repositories подключены, 50 API tests и независимый повтор прошли |
-| G5 / data integration verification | review | независимый pass: 436 Python tests, 0 skipped; все локальные ruff/format/mypy checks прошли |
-| G6 / web verification | review | 74 web tests, lint/typecheck/build; 17 HTTP checks и auth/projects через Vite proxy прошли; README и WEB-07 handoff готовы |
+| G1 / D-04, API-04, API-05 | done | merged `f100723`; overview/comparison подтверждены PostgreSQL tests и HTTP smoke |
+| G2 / live API slice | done | merged `1a9edf1`; живой CRUD проектов/компаний проверен, overview/materials/comparison остаются typed mocks; не полный WEB-08 |
+| G3 / storage + migration debt | done | merged `8df63b9`; 80 storage + 18 migration tests, wiring завершён в G4 |
+| G4 / API storage integration | done | implementation `37e1b25`, final `0bb8aaa`; repositories подключены, 50 API tests и независимый повтор прошли |
+| G5 / data integration verification | done | независимый pass: 436 Python tests, 0 skipped; все локальные ruff/format/mypy checks прошли |
+| G6 / web verification | done | 74 web tests, lint/typecheck/build; 17 HTTP checks и auth/projects через Vite proxy прошли; README и WEB-07 handoff готовы |
 
 Всего в матрице G: 510 tests (contracts 135, domain 110, storage 80,
 migrations 18, importer 43, ui_api 50, web 74). UI API отдельно перепроверен
@@ -350,7 +350,7 @@ G4 намеренно не перехватывает in-flight по возра�
 такой takeover способен создать дубликат. Completed idempotency key сохраняется
 даже при ошибке после успешно выполненного commit.
 
-### Следующий срез после review: WEB-07
+### Текущий срез H: WEB-07
 
 - Выравнивание S1/S2 с неизменяемым дизайнерским HTML; один браузерный прогон и
   screenshots 390/1024/1440, включая материалы/report/evidence и состояния ошибок.
@@ -360,8 +360,21 @@ G4 намеренно не перехватывает in-flight по возра�
   или искусственные report IDs в БД ради скриншотов.
 - Ownership: `apps/web/**` и отдельный task-checkpoint. Подробный handoff — G6.
   WEB-08/09 и полноценный агентный сценарий в этот визуальный срез не включать.
-- После принятия G пользователем отметить D-04/API-04/API-05 в WORK_PLAN как
-  done, зафиксировать замечания и создать task-worktree для WEB-07.
+- 05.09.2026 пользователь поручил продолжить по плану после checkpoint G;
+  D-04/API-04/API-05 отмечены done в WORK_PLAN. Замечаний к G не добавлено.
+
+| Task | Статус | Ownership / результат |
+|---|---|---|
+| H1 / WEB-07 UI alignment | in progress | `apps/web/src` runtime views/CSS и локальные component tests; без API/transport/mocks/test setup |
+| H2 / WEB-07 browser harness | in progress | `apps/web/qa`, package/config для QA, `artifacts/qa/WEB-07`; существующие typed fixtures, без production mock fallback |
+| H3 / independent WEB-07 review | in progress | статическая приёмочная матрица и независимый review итоговых screenshots; код read-only |
+
+H1 и H2 реализуются параллельно от одного baseline; финальный браузерный прогон
+Chrome DevTools/CDP выполняется после объединения. H3 сверяет итог с Specs/HTML.
+До финального прогона — lint/typecheck/component tests/build без промежуточных
+скриншотов. Найденные при финальной проверке дефекты исправляются с точечным
+повтором затронутых сценариев. После H — пользовательский checkpoint; WEB-08
+или агентная волна автоматически не запускаются.
 
 ## Волна C — интеграционные риски и первый data/domain слой
 

@@ -1,6 +1,6 @@
 # План параллельной разработки MVP
 
-**Статус:** готов к старту
+**Статус:** F0 пройден; волна 1 завершается задачей WEB-07, срез G принят
 
 **Основание:** Specs 1.1 и принятый дизайнерский HTML
 
@@ -78,7 +78,7 @@ Gate F0:
 | D-01 | ИНН/ОГРН validation, Decimal/date helpers и missing/zero semantics | C-01 | done |
 | D-02 | Evidence ledger и проверка разрешимости refs | C-01 | done |
 | D-03 | Детерминированные summary, finance/proceeding calculations | D-01, D-02 | done |
-| D-04 | Сравнение 2–20 компаний без общего score/winner | D-03 | todo |
+| D-04 | Сравнение 2–20 компаний без общего score/winner | D-03 | done |
 
 ### Data
 
@@ -99,8 +99,8 @@ Gate F0:
 | API-01 | Demo auth/session и project ownership dependency | F0-03A, C-02 | done |
 | API-02 | Create/list/open/rename project и первый thread, идемпотентность request ID | API-01, DB-03, DB-04 | done |
 | API-03 | Add/remove 1–20 companies с закреплением report_id | API-02, IMP-02 | done |
-| API-04 | Deterministic company overview с evidence refs | API-03, D-03 | todo |
-| API-05 | Comparison endpoint и неполные данные | API-04, D-04 | todo |
+| API-04 | Deterministic company overview с evidence refs | API-03, D-03 | done |
+| API-05 | Comparison endpoint и неполные данные | API-04, D-04 | done |
 
 ### Web — визуальный каркас без ожидания backend
 
