@@ -73,9 +73,15 @@ async function mainFixtures(run: Run, viewport: Viewport) {
       await composer.press('End');
       await composer.press('Shift+Enter');
       check(run, viewport, 'typed-fixtures', 'Shift+Enter inserts newline', (await composer.inputValue()).includes('\n'));
+      if (viewport.name === 'mobile') {
+        const before = await composer.inputValue();
+        await composer.press('Enter');
+        check(run, viewport, 'typed-fixtures', 'Mobile Enter inserts newline without posting', await composer.inputValue() === `${before}\n` && fixtures.requests.every((request) => !request.startsWith('POST')));
+      }
       const draft = await composer.inputValue();
       fixtures.state.submitFails = true;
-      await composer.press('Enter');
+      if (viewport.name === 'mobile') await page.getByRole('button', { name: 'Отправить', exact: true }).click();
+      else await composer.press('Enter');
       await page.getByRole('alert').waitFor();
       check(run, viewport, 'typed-fixtures', 'Submit failure retains draft', (await composer.inputValue()) === draft && fixtures.requests.filter((request) => request === 'POST /api/v1/projects').length === 1);
     });
