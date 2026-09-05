@@ -1,6 +1,6 @@
 # План параллельной разработки MVP
 
-**Статус:** F0 пройден; волна 1 завершается задачей WEB-07, срез G принят
+**Статус:** F0 и волна 1 приняты; начат первый срез волны 2 (REST/MCP/persistence)
 
 **Основание:** Specs 1.1 и принятый дизайнерский HTML
 
@@ -101,6 +101,7 @@ Gate F0:
 | API-03 | Add/remove 1–20 companies с закреплением report_id | API-02, IMP-02 | done |
 | API-04 | Deterministic company overview с evidence refs | API-03, D-03 | done |
 | API-05 | Comparison endpoint и неполные данные | API-04, D-04 | done |
+| API-06 | Чтение разделов отчёта и project-scoped evidence по REST; фильтры, cursor и границы доступа | API-04, C-01, DB-04 | todo |
 
 ### Web — визуальный каркас без ожидания backend
 
@@ -112,7 +113,7 @@ Gate F0:
 | WEB-04 | Conversation blocks, activity/progress и composer states на typed mocks | WEB-03, F0-05 | done |
 | WEB-05 | Materials panel navigation и локальное сохранение drawer/draft/scroll | WEB-03 | done |
 | WEB-06 | Company report и evidence detail по typed mocks | WEB-05, C-01 | done |
-| WEB-07 | Visual regression/screenshots 390, 1024, 1440 px против HTML reference | WEB-02…WEB-06 | todo |
+| WEB-07 | Visual regression/screenshots 390, 1024, 1440 px против HTML reference | WEB-02…WEB-06 | done |
 
 Gate волны 1: mock JSON импортируется в PostgreSQL; API возвращает одну реальную
 по mock-данным карточку с разрешимыми refs; React реализует S1/S2 и материалы с
@@ -133,7 +134,7 @@ typed mocks; скриншоты подтверждают сохранение п
 | DOC-01 | Upload/storage metadata и project-scoped access | API-02 | UI API/Data | todo |
 | DOC-02 | SkillExecutor, MarkItDown/PDF adapters, fragments и locators | DOC-01, AG-02 | Agent | todo |
 | DOC-03 | XLSX/DOCX/PDF parsing policies, cache и trace | DOC-02 | Agent/QA | todo |
-| WEB-08 | REST integration: projects, overview, materials, comparison | API-04, API-05, WEB-07 | Web | todo |
+| WEB-08 | REST integration: projects, overview, materials, comparison | API-04, API-05, API-06, WEB-07 | Web | todo |
 | WEB-09 | Agent transport: stream, reconnect, cancel и errors | AG-04, WEB-04 | Web | todo |
 | WEB-10 | Follow-up queued/applied и document attachments | AG-05, DOC-02, WEB-09 | Web | todo |
 | WEB-11 | Decision flow, outdated analysis и returning-user state | WEB-08, WEB-09 | Web | todo |

@@ -1,9 +1,8 @@
 # Next steps: запуск разработки через субагентов
 
-**Текущая цель:** пользовательский review WEB-07. S1/S2 выровнены с принятым
-HTML, итоговая браузерная проверка 390/1024/1440 завершена; технический gate
-волны 1 пройден. Волна G принята; WEB-07 будет отмечен done в WORK_PLAN после
-принятия среза H пользователем.
+**Текущая цель:** срез I — живые разделы отчёта/evidence и сравнение в UI,
+read-only MCP и PostgreSQL checkpoint/restart. Пользователь поручил продолжить
+после результата WEB-07; H и gate волны 1 приняты, WEB-07 отмечен done.
 
 **Источник полного backlog:** [`docs/WORK_PLAN.md`](docs/WORK_PLAN.md).
 
@@ -14,7 +13,7 @@ HTML, итоговая браузерная проверка 390/1024/1440 за�
 - Gate F0 и волны D/E приняты. Волна F принята пользователем 05.09.2026 и
   интегрирована в `dev` через merge-коммиты F1/F2/F3.
 - G1–G4 интегрированы в `dev`; независимая проверка G5 и web/HTTP-проверка G6
-  пройдены. Срез G принят 05.09.2026; WEB-07 (H1–H3) готов к review.
+  пройдены. Срезы G и H приняты 05.09.2026; начат I, первый срез волны 2.
 - `packages/`, `migrations/`, `scripts/import_reports`, `apps/web` и три
   Python-сервиса в `services/` созданы; выполнены базовый storage/import,
   project/company API и web-отчёт по typed mocks.
@@ -351,7 +350,7 @@ G4 намеренно не перехватывает in-flight по возра�
 такой takeover способен создать дубликат. Completed idempotency key сохраняется
 даже при ошибке после успешно выполненного commit.
 
-### Текущий срез H: WEB-07
+### Срез H: WEB-07 — принят
 
 - Выравнивание S1/S2 с неизменяемым дизайнерским HTML; один браузерный прогон и
   screenshots 390/1024/1440, включая материалы/report/evidence и состояния ошибок.
@@ -366,8 +365,8 @@ G4 намеренно не перехватывает in-flight по возра�
 
 | Task | Статус | Ownership / результат |
 |---|---|---|
-| H1 / WEB-07 UI alignment | ready for review | S1/S2, адаптивные материалы/report/evidence, draft/scroll/focus; исправления итоговой проверки интегрированы |
-| H2 / WEB-07 browser harness | ready for review | Chrome/CDP harness, 34 PNG с provenance, fixtures и отдельный live CRUD; точечные повторы прошли |
+| H1 / WEB-07 UI alignment | done | S1/S2, адаптивные материалы/report/evidence, draft/scroll/focus; исправления итоговой проверки интегрированы |
+| H2 / WEB-07 browser harness | done | Chrome/CDP harness, 34 PNG с provenance, fixtures и отдельный live CRUD; точечные повторы прошли |
 | H3 / independent WEB-07 review | done | независимый source/PNG/manifest review: pass with limitations, открытых WEB-07 blockers нет |
 
 H1 и H2 реализуются параллельно от одного baseline; финальный браузерный прогон
@@ -399,10 +398,34 @@ Chrome DevTools/CDP выполняется после объединения. H3
   агентный сценарий не входят в этот gate. Docker в окружении отсутствует;
   Dockerfile в H не менялись. Известное предупреждение о размере bundle остаётся.
 
-После пользовательского review H: отметить WEB-07 done в WORK_PLAN и
-сформировать следующий срез из WEB-08 (оставшиеся overview/materials/comparison
-через REST), MCP-01/02 (read-only tools) и F0-07 (persistent checkpoint/restart).
-AG-01/02 следуют после закрытия зависимости F0-07. Новую волну ещё не запускать.
+Пользователь принял H поручением «Продолжай по плану»; замечаний к H не добавлено.
+
+### Текущий срез I: REST/MCP/persistence
+
+Демонстрируемый результат: открыть импортированный отчёт и основание в живом
+REST UI, сравнить закреплённые отчёты; получить те же исходные факты через
+стандартный MCP; независимо доказать PostgreSQL checkpoint/restart. Полный
+grounded агентный разговор, upload и сохранение решения остаются последующими
+задачами AG/DOC/WEB-09/11.
+
+Обнаруженная зависимость: Specs 10 §5 содержит report sections и project
+evidence REST, но в API-01…05 они не входили и ещё не реализованы. В WORK_PLAN
+добавлен API-06 как prerequisite WEB-08; Specs и границы сервисов не меняются.
+
+| Task | Статус | Ownership / результат |
+|---|---|---|
+| I1 / API-06 | queued | `services/ui_api/**`, при необходимости чистые read projections в `packages/domain/**`; sections и project-scoped evidence |
+| I2 / MCP-01/02 | queued | `services/mcp/**`; authenticated read-only tools с pinned report, фильтрами и cursor |
+| I3 / F0-07 | queued | `services/agent/**`, checkpoint deploy/migration в `migrations/**`; штатный saver, scope и restart/interrupted proof |
+| I4 / WEB-08 | waiting I1 | `apps/web/**`; REST overview/report/evidence/materials/comparison, без mock fallback |
+| I5 / independent verification | waiting integration | независимые HTTP/MCP/restart проверки и один финальный browser flow |
+
+I1–I3 стартуют параллельно от одного baseline. Contracts и storage остаются
+read-only до конкретного запроса на расширение ownership; domain имеет только
+writer I1, migrations — только I3. I4 стартует после API-06, с отдельной веткой и
+worktree; I5 проверяет общий срез независимо. UI baseline H сохраняется; новое
+визуальное выравнивание не требуется. Browser/screenshots — только в конце I.
+Root обновляет статусы здесь; WORK_PLAN done — после пользовательского review I.
 
 ## Волна C — интеграционные риски и первый data/domain слой
 
