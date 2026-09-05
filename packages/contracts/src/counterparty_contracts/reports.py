@@ -19,7 +19,7 @@ from types import MappingProxyType
 from typing import Annotated, Literal, Self
 from uuid import UUID
 
-from pydantic import Field, model_validator
+from pydantic import Field, JsonValue, model_validator
 
 from .base import ContractModel, NonEmptyString, SchemaVersion, UtcDatetime
 from .diagnostics import ContractWarning
@@ -29,12 +29,14 @@ from .enums import (
     ComparisonCriterion,
     ComparisonRowStatus,
     DisplayLevel,
+    EvidenceKind,
     PartyRole,
     ReportSectionName,
     RiskSignalPolarity,
     ValueType,
     YearPolicy,
 )
+from .evidence import EvidenceRef
 from .facts import FactValue
 from .identifiers import CompanyId, EvidenceRefId, ProjectId, ReportId
 from .pagination import PageInfo
@@ -63,6 +65,7 @@ __all__ = [
     "ProfileRecord",
     "ProjectComparison",
     "RelatedEntity",
+    "ReportEvidence",
     "ReportIdentity",
     "ReportRecord",
     "ReportSection",
@@ -672,4 +675,29 @@ class ProjectComparison(Comparison):
     def validate_proposal_facts(self) -> Self:
         """Forbid duplicate proposal keys."""
         _require_unique(fact.key for fact in self.proposal_facts)
+        return self
+
+
+class ReportEvidence(ContractModel):
+    """An authorized original source fragment addressed by an issued reference."""
+
+    schema_version: SchemaVersion = "0.1"
+    evidence: EvidenceRef
+    report: ReportIdentity
+    availability: Availability
+    value: JsonValue = None
+    warnings: list[ContractWarning] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_report_locator(self) -> Self:
+        """Accept only a report-field reference to this exact snapshot."""
+        if self.evidence.kind is not EvidenceKind.REPORT_FIELD:
+            raise ValueError("report evidence requires a report_field reference")
+        if self.evidence.report_id != self.report.id:
+            raise ValueError("evidence and report must identify the same snapshot")
+        if (
+            self.availability in {Availability.MISSING, Availability.RESTRICTED}
+            and self.value is not None
+        ):
+            raise ValueError("missing or restricted evidence must not carry a source value")
         return self
