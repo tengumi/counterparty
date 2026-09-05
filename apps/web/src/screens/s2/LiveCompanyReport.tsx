@@ -110,15 +110,9 @@ function Signal({
   value: Assessment;
   onEvidence: (ref: string) => void;
 }) {
-  const tone =
-    value.display_level === 'positive'
-      ? 'positive'
-      : value.display_level === 'attention' || value.display_level === 'negative'
-        ? 'attention'
-        : 'neutral';
   return (
     <div className={styles.signal}>
-      <span className={`${styles.signalDot} ${styles[`tone_${tone}`]}`} />
+      <span className={`${styles.signalDot} ${styles[`tone_${value.display_level}`]}`} />
       <span className={styles.signalBody}>
         <span className={styles.signalValue}>
           {label} —{' '}
@@ -306,6 +300,20 @@ export function LiveCompanyReport({
         <Signal label="Риск по оценке банка" value={report.bank_risk} onEvidence={onEvidence} />
         <Signal label="ЗСК" value={report.zsk} onEvidence={onEvidence} />
       </div>
+      <ReportFactRow
+        row={factRow({
+          key: 'status',
+          label: 'Статус источника',
+          value: report.status.raw_value,
+          value_type: 'enum',
+          availability: report.status.availability,
+          evidence_refs: report.status.evidence_refs,
+          warnings: [],
+        })}
+        companyName={report.company.short_name}
+        onEvidence={onEvidence}
+        onDiscuss={onDiscuss}
+      />
       <Warnings warnings={report.warnings} />
       <div className={styles.panelGroups}>
         {groups.map((group) => {
