@@ -21,15 +21,15 @@ function AppShell() {
   );
 }
 
-export function App({ initialProjects }: { initialProjects?: readonly ApiProject[] }) {
+export function App({ initialProjects, fixtureMode = false }: { initialProjects?: readonly ApiProject[]; fixtureMode?: boolean }) {
   return (
     <WorkspaceQueryProvider initialProjects={initialProjects}>
       <Routes>
         <Route element={<AppShell />}>
           <Route path="/" element={<Navigate to="/checks" replace />} />
           <Route path="/checks" element={<ChecksPage />} />
-          <Route path="/checks/:projectId" element={<CheckPage />} />
-          <Route path="/checks/:projectId/chats/:threadId" element={<CheckPage />} />
+          <Route path="/checks/:projectId" element={<CheckPage fixtureMode={fixtureMode} />} />
+          <Route path="/checks/:projectId/chats/:threadId" element={<CheckPage fixtureMode={fixtureMode} />} />
           <Route path="*" element={
             <section className={styles.content}>
               <h1>Страница не найдена</h1>

@@ -9,6 +9,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { Button } from '@alfalab/core-components/button';
+import type { DiscussionContext } from '../../api/reportContracts';
 import { AgentChat } from '../../chat/AgentChat';
 import {
   ConversationFeed,
@@ -29,16 +31,17 @@ type MaterialActions = Pick<
 
 interface Props {
   readonly project: ProjectDetail;
+  readonly fixtureMode?: boolean;
   readonly chat: ChatSummary;
   /** Task text carried from S1; it is a draft, not a sent message. */
   readonly handoffDraft: string | null;
   readonly materialActions: MaterialActions;
   /** Lets the panel put a context chip into this chat's composer. */
-  readonly onInsertDraftReady?: (insert: (text: string) => void) => void;
+  readonly onInsertDraftReady?: (insert: (text: string | DiscussionContext) => void) => void;
 }
 
 const UNAVAILABLE =
-  'Помощник отвечает только в учебном примере: сервер этой проверки не подключён. Черновик сохраняется.';
+  'Помощник пока недоступен. Черновик сохраняется; сведения компаний и сравнение доступны в материалах.';
 
 export function ChatSurface({
   project,
@@ -46,6 +49,7 @@ export function ChatSurface({
   handoffDraft,
   materialActions,
   onInsertDraftReady,
+  fixtureMode = false,
 }: Props) {
   const draftKey = `draft:${project.id}:${chat.id}`;
   const scrollKey = `scroll:${project.id}:${chat.id}`;
@@ -58,19 +62,30 @@ export function ChatSurface({
   const saveScroll = useRestoredScroll(scrollKey, feedRef);
   const trackScroll = useAutoScroll(feedRef, contentRef, !hasSavedScroll);
 
-  const blocks = getConversation(chat.id);
-  const isLive = project.isDemo && chat.id === project.lastThreadId;
+  const blocks = fixtureMode ? getConversation(chat.id) : [];
+  const isLive = fixtureMode && project.isDemo && chat.id === project.lastThreadId;
   const showsHandoff = handoffDraft !== null && draft === handoffDraft;
 
+  const [contexts, setContexts] = usePersistentState<readonly DiscussionContext[]>(
+    `contexts:${project.id}:${chat.id}`, [], (value) => Array.isArray(value) && value.every((item) =>
+      item && typeof item === 'object' && typeof item.label === 'string' &&
+      ((item.kind === 'evidence' && typeof item.evidence_ref === 'string') ||
+       (item.kind === 'comparison' && item.selection && Array.isArray(item.selection.report_ids)))) ? value as DiscussionContext[] : null,
+  );
   const insertDraft = useCallback(
-    (text: string) => {
+    (text: string | DiscussionContext) => {
+      if (typeof text !== 'string') {
+        setContexts((current) => [...current.filter((item) => JSON.stringify(item) !== JSON.stringify(text)), text]);
+        inputRef.current?.focus();
+        return;
+      }
       setDraft((previous) => {
         const current = previous.trim();
         return current.length === 0 ? text : `${current} ${text}`;
       });
       inputRef.current?.focus();
     },
-    [setDraft],
+    [setDraft, setContexts],
   );
 
   useEffect(() => {
@@ -86,7 +101,7 @@ export function ChatSurface({
   const history = (
     <>
       <ConversationFeed actions={actions} blocks={blocks} />
-      {blocks.length === 0 && !isLive ? <EmptyConversation /> : null}
+      {blocks.length === 0 && !isLive ? fixtureMode ? <EmptyConversation /> : <div className={styles.detail}><p>История разговора пока недоступна.</p><p className={styles.muted}>Откройте материалы, чтобы посмотреть сведения компаний или сравнить отчёты.</p></div> : null}
     </>
   );
 
@@ -109,6 +124,11 @@ export function ChatSurface({
               Текст перенесён из «Проверки». Он ещё не отправлен и не сохранён.
             </p>
           ) : null}
+          {contexts.length ? <div className={styles.draftContexts} aria-label="Материалы в черновике">{contexts.map((context, index) => <span className={styles.draftContext} key={index}>
+            <span>{context.label}</span>
+            {context.kind === 'evidence' ? <Button size={32} view="text" onClick={() => materialActions.onOpenEvidence(context.evidence_ref)}>Открыть</Button> : null}
+            <Button aria-label={`Убрать материал: ${context.label}`} size={32} view="text" onClick={() => setContexts((current) => current.filter((_, itemIndex) => itemIndex !== index))}>Убрать</Button>
+          </span>)}</div> : null}
           {composer}
           <AssistantBoundary />
         </div>

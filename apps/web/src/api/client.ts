@@ -39,7 +39,7 @@ async function request(path: string, init?: RequestInit): Promise<Response> {
   }
 }
 
-async function json<T>(path: string, init?: RequestInit): Promise<{ data: T; response: Response }> {
+export async function requestJson<T>(path: string, init?: RequestInit): Promise<{ data: T; response: Response }> {
   const response = await request(path, init);
   let body: unknown;
   try {
@@ -67,19 +67,19 @@ async function json<T>(path: string, init?: RequestInit): Promise<{ data: T; res
 }
 
 export async function listProjects(): Promise<readonly ApiProject[]> {
-  const { data } = await json<Page<ApiProject>>('/projects?limit=100');
+  const { data } = await requestJson<Page<ApiProject>>('/projects?limit=100');
   return data.items;
 }
 
 export async function getProject(projectId: string): Promise<ApiProject> {
-  return (await json<ApiProject>(`/projects/${encodeURIComponent(projectId)}`)).data;
+  return (await requestJson<ApiProject>(`/projects/${encodeURIComponent(projectId)}`)).data;
 }
 
 export async function createProject(
   initialQuestion: string,
   clientRequestId: string,
 ): Promise<CreateProjectResult> {
-  const { data, response } = await json<ApiProject>('/projects', {
+  const { data, response } = await requestJson<ApiProject>('/projects', {
     method: 'POST',
     body: JSON.stringify({ initial_question: initialQuestion, client_request_id: clientRequestId }),
   });
@@ -88,7 +88,7 @@ export async function createProject(
 
 export async function renameProject(projectId: string, title: string): Promise<ApiProject> {
   return (
-    await json<ApiProject>(`/projects/${encodeURIComponent(projectId)}`, {
+    await requestJson<ApiProject>(`/projects/${encodeURIComponent(projectId)}`, {
       method: 'PATCH',
       body: JSON.stringify({ title }),
     })
@@ -101,7 +101,7 @@ export async function addCompanies(
   expectedContextVersion: number,
 ): Promise<AddCompaniesResponse> {
   return (
-    await json<AddCompaniesResponse>(`/projects/${encodeURIComponent(projectId)}/companies`, {
+    await requestJson<AddCompaniesResponse>(`/projects/${encodeURIComponent(projectId)}/companies`, {
       method: 'POST',
       body: JSON.stringify({
         items: inns.map((inn) => ({ inn })),
@@ -117,7 +117,7 @@ export async function removeCompany(
   expectedContextVersion: number,
 ): Promise<ProjectCompaniesResponse> {
   return (
-    await json<ProjectCompaniesResponse>(
+    await requestJson<ProjectCompaniesResponse>(
       `/projects/${encodeURIComponent(projectId)}/companies/${encodeURIComponent(companyId)}`,
       { method: 'DELETE', body: JSON.stringify({ expected_context_version: expectedContextVersion }) },
     )

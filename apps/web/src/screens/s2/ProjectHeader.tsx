@@ -22,7 +22,7 @@ interface Props {
   readonly chats: readonly ChatSummary[];
   readonly activeChatId: string | undefined;
   readonly onSelectChat: (chatId: string) => void;
-  readonly onCreateChat: () => void;
+  readonly onCreateChat?: () => void;
   readonly materialsOpen: boolean;
   readonly onToggleMaterials: () => void;
 }

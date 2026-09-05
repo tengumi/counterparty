@@ -16,8 +16,8 @@ function openChat(path: string) {
     <MemoryRouter initialEntries={[path]}>
       <WorkspaceQueryProvider initialProjects={apiProjects}>
         <Routes>
-          <Route element={<CheckPage />} path="/checks/:projectId" />
-          <Route element={<CheckPage />} path="/checks/:projectId/chats/:threadId" />
+          <Route element={<CheckPage fixtureMode />} path="/checks/:projectId" />
+          <Route element={<CheckPage fixtureMode />} path="/checks/:projectId/chats/:threadId" />
         </Routes>
       </WorkspaceQueryProvider>
     </MemoryRouter>,
@@ -33,7 +33,7 @@ describe('S2 conversation', () => {
 
     expect(screen.getByText('Сообщений пока нет.')).toBeVisible();
     expect(screen.getByLabelText('Сообщение помощнику')).toBeVisible();
-    expect(screen.getByText(/сервер этой проверки не подключён/)).toBeVisible();
+    expect(screen.getByText(/Помощник пока недоступен/)).toBeVisible();
     expect(screen.getByRole('button', { name: 'Отправить' })).toBeDisabled();
   });
 

@@ -6,7 +6,7 @@ import { App } from './App';
 import { apiProjects } from './test/setup';
 
 function openRoute(path: string) {
-  return render(<MemoryRouter initialEntries={[path]}><App initialProjects={apiProjects} /></MemoryRouter>);
+  return render(<MemoryRouter initialEntries={[path]}><App fixtureMode initialProjects={apiProjects} /></MemoryRouter>);
 }
 
 describe('check routes', () => {

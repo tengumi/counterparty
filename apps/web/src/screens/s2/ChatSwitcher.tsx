@@ -15,7 +15,7 @@ interface Props {
   readonly chats: readonly ChatSummary[];
   readonly activeChatId: string | undefined;
   readonly onSelect: (chatId: string) => void;
-  readonly onCreate: () => void;
+  readonly onCreate?: () => void;
 }
 
 export function ChatSwitcher({ chats, activeChatId, onSelect, onCreate }: Props) {
@@ -107,14 +107,16 @@ export function ChatSwitcher({ chats, activeChatId, onSelect, onCreate }: Props)
           </ul>
           <button
             className={styles.newChat}
+            disabled={!onCreate}
             onClick={() => {
-              onCreate();
+              onCreate?.();
               close();
             }}
             type="button"
           >
             Новый чат
           </button>
+          {!onCreate ? <p className={styles.muted}>Создание новых чатов пока недоступно.</p> : null}
           <Button block={true} onClick={close} size={40} view="secondary">
             Закрыть
           </Button>
