@@ -79,6 +79,7 @@
 .evidence { position: relative; }
 .evidence::after { content: ''; position: absolute; width: 44px; height: 44px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
 @media (max-width: 640px) {
+  .composer[data-status='idle'] .composerHint { display: none; }
   .user { max-width: 92%; }
   .file { flex-wrap: wrap; }
   .chip { max-width: 100%; overflow-wrap: anywhere; }
