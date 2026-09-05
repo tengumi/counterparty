@@ -108,6 +108,9 @@ def create_harness_runner(
         try:
             context = await context_loader(state.project_id, state.thread_id)
             config = await config_factory(state.project_id, state.thread_id)
+            # Specs 04 §3 caps tool calls per run; one model step per call plus
+            # the final answer is the graph-level equivalent of that budget.
+            config["recursion_limit"] = settings.max_tool_calls * 2 + 1
             ledger = RunEvidenceLedger()
             async with reports_toolset(settings) as tools:
                 graph = create_harness(

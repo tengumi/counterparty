@@ -31,6 +31,7 @@ from .filesystem import scoped_permissions, thread_workspace_root
 from .graph import CompiledHarness, TurnResult, create_harness, final_text, run_turn
 from .middleware import EvidenceLedgerMiddleware
 from .models import create_chat_model
+from .runner import create_harness_runner
 from .tools import reports_connection, reports_toolset
 
 __all__ = [
@@ -53,6 +54,7 @@ __all__ = [
     "build_context",
     "create_chat_model",
     "create_harness",
+    "create_harness_runner",
     "final_text",
     "repair_answer",
     "reports_connection",
