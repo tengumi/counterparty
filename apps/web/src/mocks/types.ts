@@ -75,3 +75,152 @@ export const chatStatusLabels: Readonly<Record<ChatStatus, string>> = {
   needs_input: 'Нужны сведения',
   ready: 'Готов',
 };
+
+/* ------------------------------------------------------------------ *
+ * Conversation (WEB-04)
+ * ------------------------------------------------------------------ */
+
+/**
+ * One numbered basis behind a statement (07 P1-03).
+ *
+ * `id` is the future `evidence_ref`: the panel resolves the reference, the
+ * answer only carries it, so nothing is restated as a free-text fact.
+ */
+export interface EvidenceRecord {
+  readonly id: string;
+  /** Number shown next to the sentence in the answer. */
+  readonly number: number;
+  readonly title: string;
+  readonly value: string;
+  readonly companyName: string;
+  readonly period: string;
+  /** Where the value came from, e.g. «Предоставленный отчёт». */
+  readonly source: string;
+  /** Snapshot date of the source; never the current date. */
+  readonly asOf: string;
+}
+
+/** One completed or running step under «Что проверено» (07 S2-05). */
+export interface ActivityStep {
+  readonly id: string;
+  readonly label: string;
+  /** Typed kind of the action (`PublicActivity.kind`), or `null` for mocks. */
+  readonly kind: string | null;
+  /** Human source of the step; no MCP arguments, no raw graph state. */
+  readonly source: string;
+  readonly status: 'running' | 'completed' | 'failed';
+}
+
+/** A sentence of an answer, optionally backed by one numbered basis. */
+export interface AnswerPoint {
+  readonly id: string;
+  readonly text: string;
+  readonly evidenceId: string | null;
+}
+
+/** Short reply option offered by a clarifying question (07 S2-04). */
+export interface AnswerOption {
+  readonly id: string;
+  readonly label: string;
+  /** Text put into the composer; choosing never sends by itself. */
+  readonly text: string;
+}
+
+/**
+ * Saved conversation blocks of one chat.
+ *
+ * The union is the contract between the data source and the renderers: the
+ * live agent projection is mapped onto the same blocks, so WEB-08/WEB-09 swap
+ * the source without touching a component.
+ */
+export type ConversationBlock =
+  | { readonly kind: 'resume'; readonly id: string; readonly text: string }
+  | {
+      readonly kind: 'user';
+      readonly id: string;
+      readonly text: string;
+      /** Removable context chip carried with the message (07 S2-08). */
+      readonly context: string | null;
+      readonly file: { readonly name: string; readonly state: string } | null;
+    }
+  | {
+      readonly kind: 'notice';
+      readonly id: string;
+      readonly text: string;
+      readonly action: { readonly label: string; readonly documentId: string } | null;
+    }
+  | {
+      readonly kind: 'activity';
+      readonly id: string;
+      readonly label: string;
+      readonly status: 'running' | 'completed' | 'failed';
+      readonly steps: readonly ActivityStep[];
+    }
+  | {
+      readonly kind: 'answer';
+      readonly id: string;
+      readonly text: string;
+      readonly points: readonly AnswerPoint[];
+      readonly followUp: string | null;
+      readonly options: readonly AnswerOption[];
+    }
+  | {
+      readonly kind: 'conclusion';
+      readonly id: string;
+      readonly text: string;
+      readonly points: readonly AnswerPoint[];
+      /** What is still not confirmed; missing is not the same as absent risk. */
+      readonly unconfirmed: string | null;
+      /** True after the terms changed under an existing conclusion. */
+      readonly stale: boolean;
+    }
+  | {
+      readonly kind: 'confirmation';
+      readonly id: string;
+      readonly text: string;
+      readonly attachLabel: string;
+      readonly declineLabel: string;
+    };
+
+/* ------------------------------------------------------------------ *
+ * Materials panel (WEB-05)
+ * ------------------------------------------------------------------ */
+
+/** Editable term of the deal (07 P1-04). «Не указано» is not zero. */
+export interface TermRow {
+  readonly id: string;
+  readonly label: string;
+  /** `null` renders «Не указано», which never means 0. */
+  readonly value: string | null;
+  readonly source: string;
+}
+
+/** Uploaded file of the project (07 P1-05). */
+export interface DocumentRow {
+  readonly id: string;
+  readonly name: string;
+  readonly meta: string;
+  readonly state: 'uploading' | 'reading' | 'ready' | 'failed';
+}
+
+/** Last agent proposal or the decision the user recorded (07 P1-07). */
+export interface MaterialsSummary {
+  /** Short line shown next to the group title. */
+  readonly short: string;
+  readonly line: string;
+  /** A user record is visually different from a proposal. */
+  readonly recorded: boolean;
+}
+
+export interface ProjectMaterials {
+  readonly terms: readonly TermRow[];
+  readonly documents: readonly DocumentRow[];
+  readonly summary: MaterialsSummary;
+}
+
+export const documentStateLabels: Readonly<Record<DocumentRow['state'], string>> = {
+  uploading: 'Загружается',
+  reading: 'Читаю документ',
+  ready: 'Готово',
+  failed: 'Не удалось прочитать',
+};

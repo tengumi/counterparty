@@ -1,19 +1,22 @@
 /**
  * S2 — the conversation surface of one check.
  *
- * D2 delivers the frame: header, chat switcher, company strip and the
- * responsive layout with the materials panel. The conversation itself is the
- * existing agent-transport demo; other chats stay honestly empty.
+ * The screen holds what is shared between the conversation and the panel: the
+ * chats of the project, the state of the materials panel and the way a basis
+ * opens it. Nothing here is persisted on a server yet; the local state is a
+ * per-viewer convenience only.
  */
 
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { AgentChat } from '../chat/AgentChat';
+import { ChatSurface } from '../screens/s2/ChatSurface';
 import { CompanyContextStrip } from '../screens/s2/CompanyContextStrip';
 import { MaterialsPanel } from '../screens/s2/MaterialsPanel';
-import type { MaterialsSection } from '../screens/s2/MaterialsPanel';
 import { ProjectHeader } from '../screens/s2/ProjectHeader';
 import { readTaskHandoff } from '../screens/s2/taskHandoff';
+import { parseMaterialsState, initialMaterials } from '../screens/s2/materialsView';
+import type { MaterialsState, MaterialsView } from '../screens/s2/materialsView';
+import { usePersistentState } from '../screens/s2/persisted';
 import type { ChatSummary, ProjectDetail } from '../mocks/types';
 import { findProject, newChat } from '../mocks/workspace';
 import styles from '../screens/s2/S2.module.css';
@@ -28,48 +31,14 @@ function ProjectNotFound() {
   );
 }
 
-function Conversation({
-  project,
-  chat,
-  draft,
-}: {
-  project: ProjectDetail;
-  chat: ChatSummary | undefined;
-  draft: string | null;
-}) {
-  if (!chat) {
-    return (
-      <div className={styles.card}>
+function ChatNotFound() {
+  return (
+    <div className={styles.conversation}>
+      <div className={styles.conversationInner}>
         <h2>Чат не найден</h2>
         <p className={styles.muted}>Выберите чат этой проверки в переключателе «Чат».</p>
       </div>
-    );
-  }
-
-  const isDemoConversation = project.isDemo && chat.id === project.lastThreadId;
-
-  return (
-    <>
-      {draft ? (
-        <div className={styles.card}>
-          <h2>Черновик задачи</h2>
-          <p className={styles.draft}>{draft}</p>
-          <p className={styles.muted}>
-            Текст перенесён из «Проверки». Он ещё не отправлен и не сохранён.
-          </p>
-        </div>
-      ) : null}
-      <div className={styles.card}>
-        <h2>{chat.title}</h2>
-        {isDemoConversation ? (
-          <AgentChat projectId={project.id} threadId={chat.id} />
-        ) : (
-          <p className={styles.muted}>
-            Разговор этого чата пока недоступен: сведения проверки не загружены.
-          </p>
-        )}
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -77,11 +46,36 @@ function ProjectScreen({ project, threadId }: { project: ProjectDetail; threadId
   const navigate = useNavigate();
   const location = useLocation();
   const [chats, setChats] = useState<readonly ChatSummary[]>(project.chats);
-  const [materials, setMaterials] = useState<MaterialsSection | null>(null);
+  const [materials, setMaterials] = usePersistentState<MaterialsState>(
+    `materials:${project.id}`,
+    initialMaterials,
+    parseMaterialsState,
+  );
   const handoff = readTaskHandoff(location.state);
+  // Set by the active chat so the panel can put a context chip in its composer.
+  const insertDraft = useRef<((text: string) => void) | null>(null);
+  const registerInsert = useCallback((insert: (text: string) => void) => {
+    insertDraft.current = insert;
+  }, []);
+  const opener = useRef<HTMLElement | null>(null);
 
   const activeChatId = threadId ?? project.lastThreadId;
   const activeChat = chats.find((chat) => chat.id === activeChatId);
+
+  const openMaterials = (view: MaterialsView) => {
+    // Focus returns to whatever opened the panel (07 §12).
+    if (!materials.open) opener.current = document.activeElement as HTMLElement | null;
+    setMaterials({
+      ...materials,
+      open: true,
+      stack: view.kind === 'list' ? [{ kind: 'list' }] : [{ kind: 'list' }, view],
+    });
+  };
+
+  const closeMaterials = () => {
+    setMaterials({ ...materials, open: false });
+    opener.current?.focus();
+  };
 
   const openChat = (chatId: string) => {
     navigate(`/checks/${project.id}/chats/${chatId}`);
@@ -98,29 +92,48 @@ function ProjectScreen({ project, threadId }: { project: ProjectDetail; threadId
       <ProjectHeader
         activeChatId={activeChat?.id}
         chats={chats}
-        materialsOpen={materials !== null}
+        materialsOpen={materials.open}
         onCreateChat={createChat}
         onSelectChat={openChat}
-        onToggleMaterials={() => setMaterials((open) => (open === null ? 'companies' : null))}
+        onToggleMaterials={() =>
+          materials.open ? closeMaterials() : openMaterials({ kind: 'list' })
+        }
         saveState={project.saveState}
         title={project.title}
       />
       <CompanyContextStrip
         companies={project.companies}
         isDemo={project.isDemo}
-        onAddCompany={() => setMaterials('companies')}
-        onCompare={() => setMaterials('companies')}
-        onOpenCompany={() => setMaterials('companies')}
+        onAddCompany={() => openMaterials({ kind: 'list' })}
+        onCompare={() => openMaterials({ kind: 'list' })}
+        onOpenCompany={(companyId) => openMaterials({ kind: 'company', companyId })}
         status={project.status}
       />
       <div className={styles.body}>
-        <div className={styles.conversation}>
-          <div className={styles.conversationInner}>
-            <Conversation chat={activeChat} draft={handoff?.draft ?? null} project={project} />
-          </div>
-        </div>
-        {materials !== null ? (
-          <MaterialsPanel onClose={() => setMaterials(null)} section={materials} />
+        {activeChat === undefined ? (
+          <ChatNotFound />
+        ) : (
+          <ChatSurface
+            chat={activeChat}
+            handoffDraft={handoff?.draft ?? null}
+            key={activeChat.id}
+            materialActions={{
+              onOpenEvidence: (evidenceId) => openMaterials({ kind: 'evidence', evidenceId }),
+              onOpenDocument: (documentId) => openMaterials({ kind: 'document', documentId }),
+              onOpenSummary: () => openMaterials({ kind: 'summary' }),
+            }}
+            onInsertDraftReady={registerInsert}
+            project={project}
+          />
+        )}
+        {materials.open ? (
+          <MaterialsPanel
+            onChange={setMaterials}
+            onClose={closeMaterials}
+            onDiscuss={(text) => insertDraft.current?.(text)}
+            project={project}
+            state={materials}
+          />
         ) : null}
       </div>
     </div>

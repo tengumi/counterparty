@@ -72,3 +72,34 @@
   .conversationInner { padding: 20px 16px 24px; }
   .panel { position: fixed; inset: 0; width: 100%; z-index: 6; }
 }
+
+/* WEB-04 conversation column: the feed scrolls, the composer stays put */
+.feedScroll { flex: 1; min-height: 0; overflow: auto; }
+.dock { flex: none; padding: 8px 24px 18px; }
+.dockInner { max-width: 760px; margin: 0 auto; }
+.handoff { margin: 0 0 8px; font-size: 13px; line-height: 18px; color: rgba(4, 4, 19, .55); }
+
+/* WEB-05 materials panel */
+.panelGroups { display: flex; flex-direction: column; }
+.group { border-bottom: 1px solid #e7e8eb; padding: 12px 0; }
+.group:last-child { border-bottom: 0; }
+.groupHeader { width: 100%; display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 6px 0; cursor: pointer; text-align: left; color: inherit; font: inherit; }
+.groupTitle { flex: 1; font-size: 14px; line-height: 20px; font-weight: 500; }
+.groupCount { flex: none; color: rgba(5, 8, 29, .38); font-size: 13px; line-height: 18px; }
+.groupBody { display: flex; flex-direction: column; margin-top: 6px; }
+.row { display: flex; gap: 10px; align-items: baseline; padding: 8px 0; border-top: 1px solid #f1f2f4; text-align: left; }
+.rowButton { width: 100%; border: 0; background: none; cursor: pointer; color: inherit; font: inherit; }
+.rowMain { flex: 1; min-width: 0; }
+.rowName { display: block; line-height: 20px; }
+.rowMeta { display: block; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); }
+.rowSide { flex: none; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); }
+.termLabel { width: 96px; flex: none; font-size: 13px; line-height: 18px; color: rgba(4, 4, 19, .55); }
+.unknown { color: rgba(5, 8, 29, .38); }
+.detail { display: flex; flex-direction: column; gap: 12px; }
+.detailValue { margin: 0; font-size: 18px; line-height: 26px; }
+.detailList { margin: 0; display: grid; grid-template-columns: 96px 1fr; gap: 6px 12px; font-size: 13px; line-height: 18px; }
+.detailList dt { color: rgba(4, 4, 19, .55); }
+.detailList dd { margin: 0; }
+.panelBack { flex: none; }
+.recorded { font-size: 13px; line-height: 18px; color: #1f8c4d; }
+.proposal { font-size: 13px; line-height: 18px; color: rgba(5, 8, 29, .38); }

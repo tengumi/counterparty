@@ -28,4 +28,8 @@ globalThis.ResizeObserver = ResizeObserverStub;
 // jsdom implements no scrolling; the thread viewport auto-scrolls on new content.
 Element.prototype.scrollTo = vi.fn();
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  // The S2 conveniences (drawer, draft, scroll) are per viewer, not per test.
+  localStorage.clear();
+});
