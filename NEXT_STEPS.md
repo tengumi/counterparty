@@ -12,8 +12,14 @@
 - Подготовительная канва должна находиться в текущем baseline commit. Перед
   первой волной главный агент проверяет clean worktree и создаёт все task-ветки
   от этого HEAD.
-- Целевые `apps/`, `services/`, `packages/`, `migrations/` и `scripts/` ещё не
-  созданы.
+- `packages/` (contracts, domain, storage), `apps/web` и три Python-сервиса в
+  `services/` созданы и проходят свои проверки. `migrations/` и `scripts/` ещё
+  не созданы.
+- Docker build context для Python-сервисов — корень монорепы (`docker build -f
+  services/<svc>/Dockerfile .`), иначе локальную зависимость
+  `packages/contracts` собрать нельзя. Dockerfile остаются внутри сервисов.
+- Каждый сервисный venv собирается сразу по финальному пути `/app/.venv`:
+  перенос готового venv между путями ломает console scripts.
 - Дизайнерский HTML принят как UI baseline и не должен редактироваться.
 - Mock JSON утверждён и используется напрямую из
   `artifacts/contractors_audit.snapshot.json`.
@@ -197,9 +203,9 @@ docs/Specs/10_SYSTEM_CONTRACTS.md. Не подключай workspace и не п�
 
 | Task | Статус | Исполнитель/результат |
 |---|---|---|
-| B1 / F0-03A | review | integrated through `51b3931`; 2 tests, lint/type/build/container health pass |
-| B2 / F0-03B, V04 spike | review | integrated through `bc752bf`; 4 tests, migration proposal в `docs/checkpoints/tasks/B2.md` |
-| B3 / F0-03C, V05 spike | review | integrated through `072777d`; 5 tests, stateless FastMCP HTTP подтверждён |
+| B1 / F0-03A | done | accepted; integrated through `51b3931`; 2 tests, lint/type/build/container health pass |
+| B2 / F0-03B, V04 spike | done | accepted; integrated through `bc752bf`; 4 tests; V04 частичный, migration proposal в `docs/checkpoints/tasks/B2.md` |
+| B3 / F0-03C, V05 spike | done | accepted; integrated through `072777d`; 5 tests, stateless FastMCP HTTP подтверждён |
 
 ## Волна C — интеграционные риски и первый data/domain слой
 
@@ -239,9 +245,9 @@ docs/Specs/10_SYSTEM_CONTRACTS.md. Верни покрытые edge cases и ass
 
 | Task | Статус | Исполнитель/результат |
 |---|---|---|
-| C1 / F0-06, V01 | todo | — |
-| C2 / DB-01, DB-02, IMP-01 | todo | — |
-| C3 / D-01, D-02 | todo | — |
+| C1 / F0-06, V01 | in progress | `agent/c1-assistant-transport` · `.worktrees/c1-assistant-transport` |
+| C2 / DB-01, DB-02, IMP-01 | in progress | `agent/c2-storage-import` · `.worktrees/c2-storage-import` |
+| C3 / D-01, D-02 | in progress | `agent/c3-domain-evidence` · `.worktrees/c3-domain-evidence` |
 
 Пользовательский срез C: показать минимальный живой stream между Agent и Web,
 применение/откат первой миграции, чтение реального mock JSON и unit-проверку
@@ -258,6 +264,11 @@ evidence refs. Это первый интегрированный техниче
 - V01, V04, V05 подтверждены тестами либо имеют локализованные ограничения;
 - mock JSON читается напрямую из artifacts;
 - root не содержит Python/Node runtime-конфигурации и Compose.
+
+Состояние на момент принятия волны B: пункты выполнены, кроме V01 (задача C1) и
+полного V04. V04 подтверждён частично — проверена граница lifecycle
+checkpointer'а; restart-поведение run зависит от схемы БД и модели run lifecycle
+и переносится в задачу после DB-01. V05 подтверждён тестами `services/mcp`.
 
 Если gate пройден, следующий набор формируется из волны 1
 [`docs/WORK_PLAN.md`](docs/WORK_PLAN.md#4-волна-1--данные-базовый-продукт-и-ui-параллельно):

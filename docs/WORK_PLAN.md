@@ -47,14 +47,14 @@ storage. Изменения contract v0 согласуются до паралл
 |---|---|---|---|---|
 | F0-01 | Соглашения Python 3.13 и шаблон самостоятельного uv-проекта без Python-конфига в корне | — | docs/tooling | done |
 | F0-02 | Пустые устанавливаемые `contracts`, `domain`, `storage` с import smoke tests | F0-01 | `packages/` | done |
-| F0-03A | `ui_api`: отдельные pyproject/lockfile, health endpoint, собственный Dockerfile и smoke test образа | F0-01, F0-02 | `services/ui_api` | todo |
-| F0-03B | `agent`: отдельные pyproject/lockfile, health endpoint, собственный Dockerfile и smoke test образа | F0-01, F0-02 | `services/agent` | todo |
-| F0-03C | `mcp`: отдельные pyproject/lockfile, health endpoint, собственный Dockerfile и smoke test образа | F0-01, F0-02 | `services/mcp` | todo |
+| F0-03A | `ui_api`: отдельные pyproject/lockfile, health endpoint, собственный Dockerfile и smoke test образа | F0-01, F0-02 | `services/ui_api` | done |
+| F0-03B | `agent`: отдельные pyproject/lockfile, health endpoint, собственный Dockerfile и smoke test образа | F0-01, F0-02 | `services/agent` | done |
+| F0-03C | `mcp`: отдельные pyproject/lockfile, health endpoint, собственный Dockerfile и smoke test образа | F0-01, F0-02 | `services/mcp` | done |
 | F0-04 | React/Vite/TypeScript strict, Core DS foundation, собственный Dockerfile и статический smoke screen | — | `apps/web` | done |
 | F0-05 | Contract v0: IDs, source/evidence refs, availability/outcome, project/thread/run envelopes | F0-02 | `packages/contracts` | done |
 | F0-06 | Spike V01: assistant-stream ↔ assistant-ui передаёт текст, typed activity, terminal error и cancel | F0-03B, F0-04, F0-05 | `agent`, `web`, contract test | todo |
 | F0-07 | Spike V04: LangGraph PostgreSQL checkpoint в схеме `workspace`, restart помечает run interrupted | F0-03B | `agent`, `migrations` | todo |
-| F0-08 | Spike V05: FastMCP Streamable HTTP, один typed read-only tool и корректный async cleanup | F0-03C, F0-05 | `mcp`, integration test | todo |
+| F0-08 | Spike V05: FastMCP Streamable HTTP, один typed read-only tool и корректный async cleanup | F0-03C, F0-05 | `mcp`, integration test | done |
 
 Gate F0:
 
