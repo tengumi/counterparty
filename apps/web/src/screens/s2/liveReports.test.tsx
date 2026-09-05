@@ -59,6 +59,7 @@ function sourceFetch(input: RequestInfo | URL): Promise<Response> {
         url.searchParams.has('cursor')
           ? {
               ...financeSection,
+              records: [],
               facts: [
                 {
                   ...zeroFact,
@@ -105,6 +106,15 @@ describe('live report material binding', () => {
     expect(factText(zeroFact)).toBe('0 ₽');
     expect(factText({ ...zeroFact, availability: 'missing', value: null })).toBe(
       'В отчёте нет этих сведений',
+    );
+    expect(factText({ ...zeroFact, availability: 'present_empty', value: null })).toBe(
+      'Источник содержит пустое значение',
+    );
+    expect(factText({ ...zeroFact, availability: 'invalid', value: null })).toBe(
+      'Сведения не удалось прочитать',
+    );
+    expect(factText({ ...zeroFact, availability: 'restricted', value: null })).toBe(
+      'Эти сведения недоступны',
     );
     expect(factText({ ...zeroFact, evidence_refs: [] })).toContain('основание недоступно');
     expect(fragmentRows({ issueDate: { $date: '2026-01-01T21:00:00Z' } }, 'Лицензия')).toEqual([
@@ -263,5 +273,38 @@ describe('live report material binding', () => {
     expect(screen.getByText(/В отчёте нет этих сведений/)).toBeVisible();
     expect(screen.queryByText('Пустое значение в источнике')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Исходный фрагмент')).toBeEmptyDOMElement();
+  });
+  it('prefers the period supplied by the evidence resolver over overview metadata', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) =>
+        String(input).includes('/evidence/')
+          ? Promise.resolve(
+              Response.json({
+                schema_version: '0.1',
+                evidence: {
+                  id: REF,
+                  kind: 'report_field',
+                  report_id: REPORT_ID,
+                  company_id: overview.company.id,
+                  source_path: '/finReports/0/common/proceeds',
+                  period: 2021,
+                },
+                report: overview.report,
+                availability: 'available',
+                value: 0,
+                warnings: [],
+              }),
+            )
+          : sourceFetch(input),
+      ),
+    );
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <LiveEvidence projectId={PROJECT_ID} evidenceRef={REF} onDiscuss={vi.fn()} />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText('2021')).toBeVisible();
+    expect(screen.queryByText('2025')).not.toBeInTheDocument();
   });
 });

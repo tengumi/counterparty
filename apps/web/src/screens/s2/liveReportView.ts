@@ -44,6 +44,26 @@ export const fieldLabels: Readonly<Record<string, string>> = {
   receivables: 'Дебиторская задолженность',
   accounts_payable: 'Кредиторская задолженность',
   accountsPayable: 'Кредиторская задолженность',
+  current_assets: 'Оборотные активы',
+  stocks: 'Запасы',
+  noncurrent_assets: 'Внеоборотные активы',
+  fixed_assets: 'Основные средства',
+  fixedAssets: 'Основные средства',
+  balance_total_liabilities_side: 'Баланс пассивов',
+  totalLiabilities: 'Баланс пассивов',
+  long_term_total: 'Долгосрочные обязательства',
+  long_term_other: 'Прочие долгосрочные обязательства',
+  short_term_total: 'Краткосрочные обязательства',
+  short_term_borrowed: 'Заёмные средства',
+  borrowedFunds: 'Заёмные средства',
+  assets: 'Активы',
+  liabilities: 'Пассивы',
+  currentAssets: 'Оборотные активы',
+  uncurrentAssets: 'Внеоборотные активы',
+  longTermDuties: 'Долгосрочные обязательства',
+  shortTermLiabilities: 'Краткосрочные обязательства',
+  total: 'Всего',
+  common: 'Основные сведения',
   year: 'Год',
   amount: 'Сумма',
   active: 'Действующее',
@@ -307,6 +327,8 @@ export function recordRows(record: ReportRecord): {
 export function evidenceTitle(path: string): string {
   const tokens = path.split('/').slice(1);
   const section = sourceSections[tokens[0] ?? ''];
+  if (tokens.at(-1) === 'total') return fieldLabels[tokens.at(-2) ?? ''] ?? 'Сумма источника';
+  if (path.endsWith('/longTermDuties/others')) return 'Прочие долгосрочные обязательства';
   return (
     fieldLabels[tokens.at(-1) ?? ''] ??
     (section ? sectionTitles[section] : 'Сведение предоставленного отчёта')

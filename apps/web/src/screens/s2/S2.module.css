@@ -104,6 +104,7 @@
 .tone_positive { background: #1f8c4d; }
 .tone_attention { background: #b2670a; }
 .tone_neutral { background: rgba(5, 8, 29, .38); }
+.tone_negative { background: #d6242a; }
 .sectionHeading { margin: 0; font: inherit; }
 .factLabel { flex: 1; min-width: 0; font-size: 13px; line-height: 18px; color: rgba(4, 4, 19, .55); }
 .factRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 2px 12px; padding: 10px 0; border-top: 1px solid #f1f2f4; }
