@@ -414,12 +414,12 @@ evidence REST, но в API-01…05 они не входили и ещё не р�
 
 | Task | Статус | Ownership / результат |
 |---|---|---|
-| I1 / API-06 | in progress | `services/ui_api/**`, чистые общие read projections в `packages/domain/**`, ReportEvidence DTO в contracts, storage report-read bundle; sections и project-scoped evidence |
-| I2 / MCP-01/02 | in progress | `services/mcp/**`; authenticated read-only tools с pinned report, фильтрами и cursor |
-| I3 / F0-07 | in progress | `services/agent/**`, `migrations/**`, минимальный AgentRun model/repo в storage workspace; штатный saver, scope и restart/interrupted proof |
-| I4 / WEB-08 | waiting I1 | `apps/web/src/**`; REST overview/report/evidence/materials/comparison, без mock fallback |
-| I5 / API-agent verification | waiting integration | независимые HTTP и checkpoint/restart проверки; исполнитель I2 после сдачи MCP |
-| I6 / MCP-web verification | waiting integration | независимый MCP review и финальный live browser flow; исполнитель I3 после сдачи F0-07, QA harness/artifacts |
+| I1 / API-06 | integrated, verifying | shared projection/ReportEvidence и storage bundle, REST sections/evidence; contracts140/domain119/API60 и полный corpus100×17 прошли у исполнителя |
+| I2 / MCP-01/02 | integrated, verifying | authenticated read-only tools,31 tests,5 imported snapshots×17sections через HTTP/5555 refs; Docker build не проверен |
+| I3 / F0-07 | integrated, verifying | native saver в workspace,AgentRun+fenced owner,restart proof; agent20/storage81/migrations19 у исполнителя; Docker build не проверен |
+| I4 / WEB-08 | in progress | `apps/web/src/**`; живые report/evidence/companies/comparison; оставшиеся DOC/terms/analysis явно unavailable |
+| I5 / API-agent verification | in progress | независимые HTTP и checkpoint/restart проверки на интегрированном4dee1b2; бывший исполнитель I2 |
+| I6 / MCP-web verification | in progress | независимый MCP review; подготовка финального browser flow, ожидание I4; бывший исполнитель I3 |
 
 I1–I3 стартуют параллельно от baseline `1173476`. Contracts/domain и storage
 `repositories/reports.py` имеют только writer I1; storage workspace/migrations —
@@ -445,6 +445,12 @@ Root обновляет статусы здесь; WORK_PLAN done — после
   сервисы собирают domain input из загруженного bundle; I3 добавляет scoped
   historical-report membership method для evidence. Сервисные SQL queries не
   подменяют слой repositories. При этом storage не зависит от domain.
+- I1–I3 сведены в `4dee1b2`; независимая проверка выполняется в отдельных I5/I6
+  worktrees. I4 использует API pins и серверные DTO. Comparison без persisted id
+  остаётся локально открытым результатом, не объявляется сохранённым artifact.
+- Реальные проекты не получают mock terms/documents/analysis/decisions:
+  соответствующие будущие API/DOC/AG возможности показываются как unavailable.
+  В I проверяется живая отчётная часть материалов; это не полный gate волны 2.
 
 ## Волна C — интеграционные риски и первый data/domain слой
 
