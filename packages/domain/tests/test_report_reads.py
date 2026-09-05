@@ -191,3 +191,16 @@ def test_empty_status_aggregate_is_not_missing_or_zero() -> None:
     assert record.amount.value is None
     assert record.count.evidence_refs == record.evidence_refs
     assert result.warnings[0].code.value == "partial_data"
+
+
+def test_rest_empty_filters_and_mcp_omitted_filters_share_cursor() -> None:
+    """Equivalent REST and MCP requests yield the exact same continuation token."""
+    data = report_data({"licenses": [{"number": "one"}, {"number": "two"}]})
+    request = GetReportSectionInput(
+        report_id=ReportId(data.report_id), section=ReportSectionName.LICENSES, limit=1
+    )
+    mcp = build_report_section(data, request)
+    rest = build_report_section(
+        data, request.model_copy(update={"filters": ReportSectionFilters()})
+    )
+    assert mcp == rest
