@@ -144,9 +144,9 @@ contract v0 и внешний фундамент UI до создания сер
 
 | Task | Статус | Исполнитель/результат |
 |---|---|---|
-| A1 / F0-01, F0-02, F0-05 | todo | — |
-| A2 / F0-04, WEB-01 | todo | — |
-| A3 / IMP-01 audit | todo | — |
+| A1 / F0-01, F0-02, F0-05 | review | integrated through `1c6ffd7`; 23 contract tests, package quality/build checks pass |
+| A2 / F0-04, WEB-01 | review | integrated through `624f4d2`; GPT-6 medium; 5 tests, lint/type/build/Docker smoke pass |
+| A3 / IMP-01 audit | review | mock contract audit complete; Extended JSON/source-path controls confirmed |
 
 ## Волна B — три Python-сервиса
 
