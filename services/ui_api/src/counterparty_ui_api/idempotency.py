@@ -18,8 +18,10 @@ answers means to an HTTP caller:
 
 The reservation is committed before the work starts. That is what makes the
 in-flight answer possible at all, and it is why a failed attempt releases its
-reservation explicitly: a crashed process would otherwise leave a request id
-that can never be used again.
+reservation explicitly after rolling back. A process crash leaves an in-flight
+key until worker state can be reconciled: age alone cannot prove that the
+original writer stopped. Automatic takeover needs fencing or reconciliation
+before it can safely prevent duplicate projects.
 """
 
 import hashlib
@@ -31,8 +33,6 @@ from uuid import UUID
 from counterparty_contracts import ErrorCode
 from counterparty_storage import AsyncUnitOfWork
 from counterparty_storage.repositories import Reservation, ReservationOutcome
-from counterparty_storage.workspace.models import IdempotencyKey
-from sqlalchemy import delete
 
 from .errors import ApiError
 
@@ -83,6 +83,7 @@ async def reserve_or_answer(
         client_request_id=client_request_id,
         request_fingerprint=fingerprint,
         resource_kind=resource_kind,
+        stale_after=None,  # A slow writer must retain exclusive ownership of its request id.
     )
     if reservation.outcome is ReservationOutcome.IN_FLIGHT:
         await uow.rollback()
@@ -102,13 +103,8 @@ async def release_reservation(uow: AsyncUnitOfWork, *, scope: str, client_reques
 
     Without this a failed attempt would hold its id forever and the caller's
     retry — the very thing an idempotent create exists for — would be refused.
+    A completed key survives cleanup, including an ambiguous commit result.
     """
     await uow.rollback()
-    await uow.session.execute(
-        delete(IdempotencyKey).where(
-            IdempotencyKey.tenant_id == uow.scope.tenant_id,
-            IdempotencyKey.scope == scope,
-            IdempotencyKey.client_request_id == client_request_id,
-        )
-    )
+    await uow.idempotency.release(scope=scope, client_request_id=client_request_id)
     await uow.commit()
