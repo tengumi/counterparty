@@ -131,6 +131,7 @@ typed mocks; скриншоты подтверждают сохранение п
 | AG-03 | Подключение MCP tools штатным механизмом Deep Agents, evidence-grounded answer и прикладной validator/repair | AG-02, MCP-02, D-02 | Agent | todo |
 | AG-04 | Persistent run registry, reconnect, cancel и public projection | AG-03, C-03 | Agent | todo |
 | AG-05 | Persistent follow-up inbox и safe-boundary apply | AG-04 | Agent | todo |
+| AG-06 | Справочник знаний агента по Specs 04 §6: version, источник, тестовые примеры и внутренний lookup без vector search | AG-03 | Agent/Domain | todo |
 | DOC-01 | Upload/storage metadata и project-scoped access | API-02 | UI API/Data | todo |
 | DOC-02 | SkillExecutor, MarkItDown/PDF adapters, fragments и locators | DOC-01, AG-02 | Agent | todo |
 | DOC-03 | XLSX/DOCX/PDF parsing policies, cache и trace | DOC-02 | Agent/QA | todo |
@@ -164,6 +165,19 @@ Gate волны 2 в сокращённом виде: основной сцен�
 назначаются только на AG-03 и AG-04; остальные задачи закрываются тестами
 исполнителя и обзором главного агента.
 
+Уточнение 05.09.2026 после вопроса пользователя о качестве агента: сокращение
+объёма неявно вынесло из плана и качество поведения. QA-04 зависела от AG-05 и
+DOC-03 и ушла вместе с ними, а справочник знаний из Specs 04 §6 вообще не был
+задачей плана. Обе позиции возвращены: заведена AG-06, QA-04 переподчинена
+AG-04 и AG-06. Пользователь решил закончить остальное и добавить их следом,
+поэтому обе идут после волны J и не входят в её объём. Без AG-06 агент даёт
+корректные ссылки при неверных выводах: банковский светофор смешивается с
+финансовой состоятельностью, агрегат по арбитражу читается как предмет спора,
+годовая отчётность — как текущий остаток.
+
+Модель и провайдер подключает пользователь самостоятельно. Значение по умолчанию
+остаётся детерминированным адаптером, model ID не хардкодится (Specs 09).
+
 ## 6. Волна 3 — сборка системы и приёмка
 
 | ID | Результат | Depends on | Статус |
@@ -172,7 +186,7 @@ Gate волны 2 в сокращённом виде: основной сцен�
 | QA-01 | Contract tests REST/RPC/MCP и generated/checked TS types | C-01…C-04 | todo |
 | QA-02 | Интеграция importer + PostgreSQL + API + MCP | IMP-03, MCP-03 | todo |
 | QA-03 | Browser flow: reconnect, cancel, document, evidence, decision | WEB-11, OPS-01 | todo |
-| QA-04 | Agent evals из Specs, deterministic mocks и малый набор real-model runs | AG-05, DOC-03 | todo |
+| QA-04 | Agent evals из Specs 08 §52, deterministic mocks и малый набор real-model runs; шесть из восьми сценариев не требуют документов и выполнимы без DOC | AG-04, AG-06 | todo |
 | QA-05 | Security/ownership, PII-safe logs, limits и failure states | OPS-01 | todo |
 | REL-01 | Все V01–V13 и F01–F21, остаточные ограничения и demo runbook | QA-01…QA-05 | todo |
 
