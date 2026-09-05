@@ -7,6 +7,9 @@ from uuid import UUID
 
 from counterparty_contracts import (
     CompanyOverviewEnvelope,
+    CompareCompaniesInput,
+    ComparisonCriterion,
+    ComparisonEnvelope,
     ErrorCode,
     GetCompanyOverviewInput,
     GetReportSectionInput,
@@ -16,6 +19,7 @@ from counterparty_contracts import (
     ReportSectionFilters,
     ReportSectionName,
     ToolError,
+    YearPolicy,
 )
 from fastapi import FastAPI
 from fastmcp import FastMCP
@@ -128,6 +132,63 @@ def create_app(settings: Settings | None = None, *, reader: ReportReader | None 
                 rule_version="mcp-read-v1",
             )
         return await resources.section(request)
+
+    @server.tool(annotations=_ANNOTATIONS)
+    async def compare_companies(
+        report_ids: Annotated[list[UUID], Field(min_length=2, max_length=20)],
+        criteria: Annotated[list[ComparisonCriterion], Field(min_length=1)],
+        year_policy: YearPolicy = YearPolicy.LATEST_AVAILABLE,
+        year: Annotated[int | None, Field(ge=1990, le=2100)] = None,
+    ) -> ComparisonEnvelope:
+        """Place two to twenty pinned reports side by side on chosen criteria.
+
+        Use it instead of merging numbers from separate calls: one row per
+        company, the same deterministic values the product UI shows. Report ids
+        come from get_company_overview and must be distinct; INN is not accepted
+        here. Criteria are a closed list — bank_risk, status, financials,
+        proceedings, arbitration, activities, licenses, procurement,
+        completeness — and each may be requested once.
+
+        year_policy chooses the financial period: common_latest uses the newest
+        year all companies report (and warns when there is none),
+        latest_available uses each company's own newest year (and warns that the
+        periods differ), explicit requires year and no other policy accepts it.
+        Money is RUB decimal strings and every cell keeps its own sources.
+
+        This tool does not rank, score or pick a winner, and it never sees your
+        deal terms — combining a comparison with a proposal is the caller's job.
+        An unknown cell is unavailable, not zero and not "no risk": a row says
+        partial or unavailable, and a report that could not be read has no row
+        at all. Errors: validation_error for a bad selection, unavailable or
+        timeout for a store failure.
+
+        Examples: {"report_ids":["de305d54-75b4-431b-adb2-eb6b9e546014",
+        "9f1c2c86-1f8c-4f4f-9f0a-7a6f6b8c1d20"],"criteria":["status",
+        "financials"]}; the same reports with "criteria":["financials"],
+        "year_policy":"explicit","year":2023.
+        """
+        try:
+            request = CompareCompaniesInput(
+                report_ids=[ReportId(report_id) for report_id in report_ids],
+                criteria=criteria,
+                year_policy=year_policy,
+                year=year,
+            )
+        except ValidationError:
+            return ComparisonEnvelope(
+                status=McpStatus.UNAVAILABLE,
+                errors=[
+                    ToolError(
+                        code=ErrorCode.VALIDATION_ERROR,
+                        message=(
+                            "Request distinct reports and criteria; name a year only with "
+                            "the explicit year policy."
+                        ),
+                    )
+                ],
+                rule_version="mcp-read-v1",
+            )
+        return await resources.comparison(request)
 
     @asynccontextmanager
     async def service_lifespan(_app: FastAPI) -> AsyncIterator[None]:

@@ -14,8 +14,9 @@ mock-отчётов. UI API предоставляет проекты, сост�
 основания сохраняются в браузере. Разговор, документы и запись решения пока
 недоступны; полноценного агентного сценария ещё нет.
 
-Внутренний MCP читает overview и разделы из PostgreSQL с сервисной
-аутентификацией. Agent Service получил PostgreSQL checkpoints штатного LangGraph
+Внутренний MCP читает overview, разделы и сравнение компаний из PostgreSQL с
+сервисной аутентификацией; его значения совпадают с серверным сравнением UI API
+и проверяются parity-тестом на живом контуре. Agent Service получил PostgreSQL checkpoints штатного LangGraph
 и сохраняемые статусы runs. Это persistence-срез: текущий RPC-разговор всё ещё
 использует демонстрационный runtime в памяти; подключение durable runs к нему
 относится к AG-04. Удаление проекта через REST пока не реализовано.
@@ -54,10 +55,11 @@ backlog и зависимости находятся в [плане разраб
 └── artifacts/
 ```
 
-У `web`, `ui_api`, `agent` и `mcp` есть собственные `Dockerfile`. Текущий
-`compose.yaml` поднимает только PostgreSQL и выполняет миграции, настройку роли
-импортёра и разовый импорт. Общий контур сервисов относится к OPS-01.
-Импортёр остаётся скриптом, а не постоянно работающим сервисом.
+У `web`, `ui_api`, `agent` и `mcp` есть собственные `Dockerfile`; их build
+context — корень репозитория, потому что сервисы зависят от `packages/` по пути.
+`compose.yaml` поднимает весь контур: PostgreSQL с volume, миграции, роли,
+разовый импорт, четыре сервиса и reverse proxy перед ними. Импортёр и создание
+checkpoint-таблиц остаются одноразовыми job, а не постоянными сервисами.
 
 ## Принятые технические границы
 
@@ -99,60 +101,36 @@ HTML остаётся неизменяемым исходным артефакт
 
 ## Локальный запуск
 
-Нужны Docker с Compose, uv с Python 3.13 и Node.js >=22.13 с npm. Корень
-репозитория не является Python-проектом. Команды ниже используют локальные
-демо-настройки из `compose.yaml`; при переопределении порта, БД или пользователя
-нужно соответственно изменить команды. HTTP-запуск API и Vite proxy проверен
-на native PostgreSQL 17.6 под сервисной ролью; Docker-запуск в окружении G6
-не проверен: Docker отсутствует.
-
-Для уже подготовленного native окружения без Docker используйте проверенные
-[команды G6](docs/checkpoints/tasks/G6.md#native-запуск-из-dev);
-подготовка БД описана в [G5](docs/checkpoints/tasks/G5.md).
-
-Из корня подготовьте БД и импорт:
+Нужен Docker с Compose. Весь контур поднимается из корня одной командой; uv и
+Node.js нужны только для запуска проверок и для работы без Docker.
 
 ```sh
-docker compose up -d postgres
-docker compose run --rm import
+docker compose up -d --wait
+docker compose ps
 ```
 
-Миграции и роль импортёра выполняются как зависимости import. Повторный импорт
-того же snapshot не изменяет данные. Для UI API создайте отдельный локальный
-login с правами сервисной роли (Compose пока создаёт login только импортёру):
+Compose поднимает PostgreSQL с durable volume, применяет Alembic, создаёт четыре
+служебных login-роли, один раз импортирует mock-снимок и запускает `ui_api`,
+`agent`, `mcp`, статический `web` и reverse proxy перед ними. `--wait` возвращает
+управление только когда healthcheck каждого сервиса прошёл; повторный `up`
+ничего не переимпортирует (`changed_nothing: true`).
 
-```sh
-docker compose exec -T postgres psql -U counterparty -d counterparty -v ON_ERROR_STOP=1 <<'SQL'
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'counterparty_web_dev') THEN
-    CREATE ROLE counterparty_web_dev LOGIN PASSWORD 'counterparty_web_dev';
-  END IF;
-END $$;
-GRANT counterparty_ui_api TO counterparty_web_dev;
-GRANT CONNECT ON DATABASE counterparty TO counterparty_web_dev;
-SQL
-```
+Открывайте **http://localhost:5173** — это единственный origin, который нужен
+браузеру: proxy отдаёт SPA, проксирует `/api/v1` в `ui_api` и `/agent/` в
+`agent`, поэтому session cookie остаётся first-party, а SPA собирается без
+API base URL. Прямые порты сервисов опубликованы для отладки:
 
-В отдельном терминале запустите API; приведённый пароль — локальный демо-default:
+| Сервис | Внутри сети | На хосте | Health |
+|---|---|---|---|
+| proxy (вход) | `proxy:80` | `5173` | `GET /healthz` |
+| ui_api | `ui_api:8000` | `8000` | `GET /healthz` |
+| agent | `agent:8000` | `8001` | `GET /healthz` |
+| mcp | `mcp:8000` | `8002` | `GET /healthz`, инструменты на `/mcp` |
+| web (статика) | `web:8080` | — | `GET /healthz` |
+| postgres | `postgres:5432` | `55432` | `pg_isready` |
 
-```sh
-cd services/ui_api
-uv sync --frozen
-UI_API_DATABASE_URL='postgresql+psycopg://counterparty_web_dev:counterparty_web_dev@127.0.0.1:55432/counterparty' \
-UI_API_SESSION_COOKIE_SECURE=false \
-uv run --frozen uvicorn counterparty_ui_api.app:app --host 127.0.0.1 --port 8000
-```
-
-Во втором терминале из корня:
-
-```sh
-cd apps/web
-npm ci
-npm run dev -- --port 5173
-```
-
-Откройте `http://localhost:5173/checks`. Пока в UI нет формы входа: один раз
-выполните в консоли браузера на этой странице демо-вход и дождитесь перезагрузки:
+Пока в UI нет формы входа: один раз выполните демо-вход в консоли браузера на
+`http://localhost:5173/checks` и дождитесь перезагрузки:
 
 ```js
 fetch('/api/v1/auth/session', {
@@ -166,10 +144,7 @@ fetch('/api/v1/auth/session', {
 });
 ```
 
-Cookie остаётся HttpOnly; после перезапуска API демо-вход потребуется повторить.
-Vite проксирует `/api/v1` на `localhost:8000`, поэтому для этого запуска
-`VITE_UI_API_BASE_URL` задавать не нужно. Без настроенной БД доступны health и
-session, а запросы проектов возвращают `dependency_unavailable`.
+Cookie остаётся HttpOnly; после перезапуска `ui_api` демо-вход нужно повторить.
 
 Проверяемый live flow: создать проверку и в материалах добавить ИНН
 `1684017097` и `7449088645`. Открыть компанию → «Финансы» → «Основание: Выручка»,
@@ -179,6 +154,63 @@ session, а запросы проектов возвращают `dependency_una
 Данные — предоставленные mock snapshots, не актуальная проверка компании.
 Отдельное сохранение сравнения как материала, чат, документы и решение ещё недоступны.
 
+Полезные команды:
+
+```sh
+docker compose logs -f ui_api mcp agent     # логи сервисов
+docker compose run --rm import              # импорт ещё раз; повтор — no-op
+docker compose down                         # остановить, сохранив данные
+```
+
+`docker compose down -v` удаляет volume с базой вместе с импортом.
+
+### Сборка образов и локальные пакеты
+
+Каждый Python-образ собирается **из корня репозитория**, потому что сервисы
+зависят от `packages/` по пути, и контекст, суженный до каталога сервиса, эти
+зависимости не видит. Dockerfile при этом остаются внутри сервисов:
+
+```sh
+docker build -f services/ui_api/Dockerfile -t counterparty-ui-api .
+docker build -f services/mcp/Dockerfile    -t counterparty-mcp .
+docker build -f services/agent/Dockerfile  -t counterparty-agent .
+docker build apps/web -t counterparty-web
+```
+
+Два правила, без которых сборка выглядит успешной, а сервис стартует сломанным.
+
+Virtualenv собирается сразу по финальному пути `/app/.venv`: перенос готового
+окружения между путями ломает console scripts внутри него.
+
+`counterparty-contracts`, `-domain` и `-storage` остаются на версии `0.1.0` при
+любых изменениях, поэтому `uv sync --frozen` считает уже установленную копию
+актуальной и не переустанавливает её. Именно так `ui_api` падал с
+`ImportError: cannot import name 'ReportEvidence'`. Постоянное решение принято
+такое: локальные пакеты ставятся **не editable** (runtime-слой не содержит
+исходников) и каждый шаг синхронизации переустанавливает их по имени:
+
+```sh
+uv sync --frozen --no-dev --no-editable \
+  --reinstall-package counterparty-contracts \
+  --reinstall-package counterparty-domain \
+  --reinstall-package counterparty-storage
+```
+
+Это зафиксировано в Dockerfile сервисов и в uv-шагах `compose.yaml`, чьи venv
+живут в named volumes между запусками. То же правило действует и при работе на
+хосте после изменения `packages/`.
+
+### Запуск без Docker
+
+Проверенные native-команды для уже подготовленного окружения — в
+[G6](docs/checkpoints/tasks/G6.md#native-запуск-из-dev); подготовка БД описана
+в [G5](docs/checkpoints/tasks/G5.md). Vite проксирует `/api/v1` на
+`localhost:8000`, поэтому `VITE_UI_API_BASE_URL` задавать не нужно. Без
+настроенной БД доступны health и session, а запросы проектов возвращают
+`dependency_unavailable`.
+
+### Проверки
+
 В `apps/web` обязательные проверки: `npm run lint`, `npm run typecheck`,
 `npm test`, `npm run build`; browser harness дополнительно проверяется
 `npm run qa:check`. Команды воспроизведения — в [QA runbook](apps/web/qa/README.md),
@@ -187,18 +219,10 @@ session, а запросы проектов возвращают `dependency_una
 live REST сценарий. Исторические [WEB-07](artifacts/qa/WEB-07/README.md) снимки
 проверяли typed fixtures и CRUD; они не подтверждают нынешний агентный runtime.
 
+В каждом Python-проекте: `uv run ruff check .`, `uv run ruff format --check .`,
+`uv run mypy`, `uv run pytest`.
+
 ### Backend: отчёты, MCP и checkpoints
-
-После обновления кода примените Alembic из `migrations`, используя владельца
-схемы. Пример использует локальные настройки Compose; для native PostgreSQL
-подставьте свой адрес и login:
-
-```sh
-cd migrations
-uv sync --frozen
-COUNTERPARTY_DATABASE_URL='postgresql+psycopg://counterparty:counterparty_dev@127.0.0.1:55432/counterparty' \
-uv run --frozen alembic upgrade head
-```
 
 UI API читает `/api/v1/reports/{report_id}/sections/{section}` и разрешает
 `/api/v1/projects/{project_id}/evidence/{ref}` после проверки владельца проекта
@@ -207,55 +231,40 @@ UI API читает `/api/v1/reports/{report_id}/sections/{section}` и разр
 отсутствующий раздел остаётся отдельным состоянием данных. Evidence ID нужно
 кодировать через `encodeURIComponent`; произвольный JSON Pointer не разрешён.
 
-Для MCP и Agent создайте отдельные локальные login-roles. Пароли ниже —
-демонстрационные defaults, как и пароль UI API выше:
+MCP отдаёт `get_company_overview`, `get_report_section` и `compare_companies`
+штатному MCP-клиенту на `http://localhost:8002/mcp`. Роль MCP читает только
+`reports`, транзакции read-only, workspace недоступен. Сервис получает **только**
+SHA256 digest учётных данных и без digest не принимает ни одного токена; в
+`compose.yaml` по умолчанию стоит digest публичного демо-токена
+`counterparty-local-demo-agent-token`, который поэтому секретом не является.
+Своё значение задаётся так:
 
 ```sh
-docker compose exec -T postgres psql -U counterparty -d counterparty -v ON_ERROR_STOP=1 <<'SQL'
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'counterparty_mcp_dev') THEN
-    CREATE ROLE counterparty_mcp_dev LOGIN PASSWORD 'counterparty_mcp_dev';
-  END IF;
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'counterparty_agent_dev') THEN
-    CREATE ROLE counterparty_agent_dev LOGIN PASSWORD 'counterparty_agent_dev';
-  END IF;
-END $$;
-GRANT counterparty_mcp TO counterparty_mcp_dev;
-GRANT counterparty_agent TO counterparty_agent_dev;
-GRANT CONNECT ON DATABASE counterparty TO counterparty_mcp_dev, counterparty_agent_dev;
-SQL
+export AGENT_MCP_AUTH_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+export MCP_AUTH_TOKEN_SHA256="$(python3 -c 'import hashlib, os; print(hashlib.sha256(os.environ["AGENT_MCP_AUTH_TOKEN"].encode()).hexdigest())')"
+docker compose up -d mcp agent
 ```
 
-MCP запускается отдельно на `/mcp`. Случайный Bearer credential остаётся у
-backend-клиента; сервису передаётся SHA256 digest. Без digest запросы отклоняются.
-В отдельном терминале из корня:
+Agent получает исходный токен только на backend, MCP — его digest. Compose
+связывает agent с внутренними UI API/MCP URL и запускает после их healthchecks.
+`AGENT_MODEL_PROVIDER=deterministic` — воспроизводимый локальный режим; он не
+считается проверкой качества реальной LLM.
+
+`compare_companies` сравнивает 2–20 закреплённых снимков по whitelist-критериям и
+не строит ranking, score или winner. Значения приходят из той же функции
+`packages/domain`, что и серверное сравнение UI API, а совпадение проверяется на
+живом контуре:
 
 ```sh
 cd services/mcp
-uv sync --frozen
-export MCP_SERVICE_TOKEN="$(uv run python -c 'import secrets; print(secrets.token_urlsafe(32))')"
-export MCP_AUTH_TOKEN_SHA256="$(uv run python -c 'import hashlib, os; print(hashlib.sha256(os.environ["MCP_SERVICE_TOKEN"].encode()).hexdigest())')"
-env -u MCP_SERVICE_TOKEN \
-MCP_DATABASE_URL='postgresql+psycopg://counterparty_mcp_dev:counterparty_mcp_dev@127.0.0.1:55432/counterparty' \
-uv run --frozen uvicorn counterparty_mcp.app:app --host 127.0.0.1 --port 8002
+MCP_PARITY_UI_API_URL=http://127.0.0.1:5173 \
+MCP_PARITY_MCP_URL=http://127.0.0.1:8002 \
+MCP_PARITY_TOKEN=counterparty-local-demo-agent-token \
+uv run --frozen pytest tests/test_parity.py
 ```
 
-Доступны `get_company_overview` и `get_report_section`; `compare_companies`
-остаётся отдельной задачей. MCP-роль читает только `reports`, транзакции read-only.
-
-Таблицы checkpoint создаёт штатный saver отдельной deploy-командой после Alembic.
-Команда выполняется владельцем схемы; runtime login не получает DDL-права:
-
-```sh
-cd services/agent
-uv sync --frozen
-AGENT_POSTGRES_DSN='postgresql://counterparty:counterparty_dev@127.0.0.1:55432/counterparty' \
-uv run --frozen python -m counterparty_agent.deploy_checkpoints
-AGENT_POSTGRES_DSN='postgresql://counterparty_agent_dev:counterparty_agent_dev@127.0.0.1:55432/counterparty' \
-uv run --frozen uvicorn counterparty_agent.app:app --host 127.0.0.1 --port 8001 --workers 1
-```
-
-На одну БД допускается один Agent worker. Checkpoints располагаются в `workspace`;
-Alembic не управляет таблицами saver. `/healthz` сообщает liveness, а не готовность
-полного агентного сценария. Подтверждение независимой приёмки и ограничения —
-в [I5](docs/checkpoints/tasks/I5.md); Docker-сборки текущего среза не проверены.
+Таблицы LangGraph checkpoints создаёт сервис `checkpoints` владельцем схемы
+после Alembic; runtime-login агента DDL-прав не получает. На одну БД допускается
+один Agent worker. Alembic не управляет таблицами saver, `/healthz` сообщает
+liveness, а не готовность полного агентного сценария. Ограничения агентного
+среза — в [I5](docs/checkpoints/tasks/I5.md).

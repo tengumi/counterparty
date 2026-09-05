@@ -4,7 +4,7 @@ from typing import Any
 
 import httpx
 import pytest
-from conftest import REPORT_ID, TEST_TOKEN, FixtureReader
+from conftest import ABSENT_REPORT_ID, PEER_REPORT_ID, REPORT_ID, TEST_TOKEN, FixtureReader
 from fastapi import FastAPI
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
@@ -45,7 +45,11 @@ async def test_standard_http_discovery_calls_and_cleanup(
         Client(http_transport(application)) as client,
     ):
         tools = await client.list_tools()
-        assert {tool.name for tool in tools} == {"get_company_overview", "get_report_section"}
+        assert {tool.name for tool in tools} == {
+            "get_company_overview",
+            "get_report_section",
+            "compare_companies",
+        }
         for tool in tools:
             assert tool.annotations is not None
             assert tool.annotations.readOnlyHint is True
@@ -190,3 +194,104 @@ async def test_library_validation_diagnostics_do_not_log_input_values(
     assert result.is_error
     assert "Report tool argument validation failed" in caplog.text
     assert "sensitive-input-sentinel" not in caplog.text
+
+
+async def test_compare_companies_places_reports_side_by_side(
+    settings: Settings, reader: FixtureReader
+) -> None:
+    """Two pinned reports produce two rows, no score and no winner."""
+    application = create_app(settings, reader=reader)
+    async with Client(application.state.mcp) as client:
+        result = await client.call_tool(
+            "compare_companies",
+            {
+                "report_ids": [str(REPORT_ID), str(PEER_REPORT_ID)],
+                "criteria": ["status", "financials"],
+            },
+        )
+    assert result.structured_content is not None
+    payload = result.structured_content
+    assert payload["status"] == "ok"
+    data = payload["data"]
+    assert [row["company"]["inn"] for row in data["rows"]] == ["7449088645", "1684017097"]
+    assert {cell["key"] for cell in data["rows"][0]["cells"]} == {"status", "revenue"}
+    assert [cell["value"] for cell in data["rows"][1]["cells"] if cell["key"] == "revenue"] == [
+        "250"
+    ]
+    assert "score" not in data and "winner" not in data
+    assert all("score" not in row and "winner" not in row for row in data["rows"])
+    assert payload["source_report_ids"] == [str(REPORT_ID), str(PEER_REPORT_ID)]
+
+
+async def test_compare_companies_reports_incomplete_and_missing_reports(
+    settings: Settings, reader: FixtureReader
+) -> None:
+    """Incomplete data and an unknown snapshot are distinct, named gaps."""
+    reader.peer_financials_missing = True
+    application = create_app(settings, reader=reader)
+    async with Client(application.state.mcp) as client:
+        incomplete = await client.call_tool(
+            "compare_companies",
+            {
+                "report_ids": [str(REPORT_ID), str(PEER_REPORT_ID)],
+                "criteria": ["financials"],
+                "year_policy": "common_latest",
+            },
+        )
+        absent = await client.call_tool(
+            "compare_companies",
+            {
+                "report_ids": [str(REPORT_ID), str(ABSENT_REPORT_ID)],
+                "criteria": ["status"],
+            },
+        )
+    assert incomplete.structured_content is not None
+    assert incomplete.structured_content["status"] == "partial"
+    assert incomplete.structured_content["data"]["rows"][1]["status"] == "unavailable"
+    assert {warning["code"] for warning in incomplete.structured_content["warnings"]} == {
+        "not_comparable",
+        "partial_data",
+    }
+    assert absent.structured_content is not None
+    assert absent.structured_content["status"] == "partial"
+    assert len(absent.structured_content["data"]["rows"]) == 1
+    assert absent.structured_content["source_report_ids"] == [str(REPORT_ID)]
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        {"report_ids": [str(REPORT_ID)], "criteria": ["status"]},
+        {"report_ids": [str(REPORT_ID), str(PEER_REPORT_ID)], "criteria": ["revenue_growth"]},
+        {"report_ids": [str(REPORT_ID), str(PEER_REPORT_ID)], "criteria": []},
+        {
+            "report_ids": [str(REPORT_ID), str(PEER_REPORT_ID)],
+            "criteria": ["financials"],
+            "sort_by": "score",
+        },
+    ],
+)
+async def test_compare_companies_rejects_selections_outside_the_whitelist(
+    settings: Settings, reader: FixtureReader, arguments: dict[str, Any]
+) -> None:
+    """Too few reports, unknown criteria and invented ranking inputs are refused."""
+    application = create_app(settings, reader=reader)
+    async with Client(application.state.mcp) as client:
+        result = await client.call_tool("compare_companies", arguments, raise_on_error=False)
+    assert result.is_error is True
+    assert reader.calls == 0
+
+
+async def test_compare_companies_refuses_a_duplicated_report(
+    settings: Settings, reader: FixtureReader
+) -> None:
+    """Comparing a report with itself is a typed business error, not a row."""
+    application = create_app(settings, reader=reader)
+    async with Client(application.state.mcp) as client:
+        result = await client.call_tool(
+            "compare_companies",
+            {"report_ids": [str(REPORT_ID), str(REPORT_ID)], "criteria": ["status"]},
+        )
+    assert result.structured_content is not None
+    assert result.structured_content["errors"][0]["code"] == "validation_error"
+    assert reader.calls == 0

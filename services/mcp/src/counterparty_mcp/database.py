@@ -1,6 +1,6 @@
 """Read-only PostgreSQL adapter over the reports schema and shared projections."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
 from typing import Any
 from uuid import UUID
@@ -10,6 +10,7 @@ from counterparty_contracts import (
     ContractWarning,
     GetCompanyOverviewInput,
     GetReportSectionInput,
+    ReportId,
     ReportSection,
     WarningCode,
 )
@@ -19,6 +20,7 @@ from counterparty_storage import create_database_engine, create_session_factory
 from counterparty_storage.reports.models import ImportWarning, ReportsBase
 from counterparty_storage.repositories.reports import (
     CompanyReadRepository,
+    ReportReadBundle,
     ReportSnapshotReadRepository,
 )
 from sqlalchemy import text
@@ -79,32 +81,50 @@ class PostgreSQLReportReader:
             data = await self._load(session, request.report_id)
         return build_report_section(data, request) if data is not None else None
 
+    async def overviews(self, report_ids: Sequence[ReportId]) -> list[CompanyOverview]:
+        """Read one projection per existing snapshot in a single transaction.
+
+        Every requested id is read as the exact snapshot it names, including a
+        snapshot whose import ended ``invalid``: that state belongs in the
+        answer as an incomplete row, not as a silently dropped company. Unknown
+        ids are omitted, which is what makes them visible to the caller.
+        """
+        async with self.read_session() as session:
+            bundles = await ReportSnapshotReadRepository(session).get_read_bundles(
+                [UUID(str(report_id)) for report_id in report_ids]
+            )
+            return [build_company_overview(_read_data(bundle)) for bundle in bundles]
+
     async def _load(self, session: AsyncSession, report_id: UUID) -> ReportReadData | None:
         bundles = await ReportSnapshotReadRepository(session).get_read_bundles([report_id])
         if not bundles:
             return None
-        bundle = bundles[0]
-        snapshot, company = bundle.snapshot, bundle.company
-        return ReportReadData(
-            report_id=snapshot.id,
-            company_id=company.id,
-            inn=company.inn,
-            ogrn=company.ogrn,
-            source_report_at=snapshot.source_report_at,
-            ingested_at=snapshot.ingested_at,
-            raw=snapshot.raw_jsonb,
-            ingestion_status=snapshot.ingestion_status.value,
-            profile=_columns(bundle.profile),
-            status=_columns(bundle.status),
-            zsk=_columns(bundle.zsk),
-            financials=[_columns(item) for item in bundle.financials],
-            sections={item.section: _columns(item) for item in bundle.sections},
-            warnings=[_warning(item) for item in bundle.warnings],
-        )
+        return _read_data(bundles[0])
 
     async def aclose(self) -> None:
         """Release all owned database pool resources at shutdown."""
         await self.engine.dispose()
+
+
+def _read_data(bundle: ReportReadBundle) -> ReportReadData:
+    """Copy loaded columns of one bundle into the shared pure read input."""
+    snapshot, company = bundle.snapshot, bundle.company
+    return ReportReadData(
+        report_id=snapshot.id,
+        company_id=company.id,
+        inn=company.inn,
+        ogrn=company.ogrn,
+        source_report_at=snapshot.source_report_at,
+        ingested_at=snapshot.ingested_at,
+        raw=snapshot.raw_jsonb,
+        ingestion_status=snapshot.ingestion_status.value,
+        profile=_columns(bundle.profile),
+        status=_columns(bundle.status),
+        zsk=_columns(bundle.zsk),
+        financials=[_columns(item) for item in bundle.financials],
+        sections={item.section: _columns(item) for item in bundle.sections},
+        warnings=[_warning(item) for item in bundle.warnings],
+    )
 
 
 def _columns(row: ReportsBase | None) -> dict[str, Any]:
