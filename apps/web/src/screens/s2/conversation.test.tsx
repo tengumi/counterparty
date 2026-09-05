@@ -38,15 +38,17 @@ describe('S2 conversation', () => {
     openChat(DEMO);
 
     expect(screen.getByText(/Аванс 80% от 2 400 000 ₽/)).toBeVisible();
-    expect(screen.getByText(/Капитал и резервы — 1 240 000 ₽/)).toBeVisible();
+    expect(screen.getByText(/Капитал и резервы за 2025 год — −300 000 ₽/)).toBeVisible();
 
-    await user.click(screen.getByRole('button', { name: 'Основание 1: Капитал и резервы' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Основание 1: Капитал и резервы, 2025' }),
+    );
 
     const panel = screen.getByRole('complementary', { name: 'Материалы проверки' });
     expect(panel).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Основание 1' })).toBeVisible();
-    expect(screen.getByText('1 240 000 ₽')).toBeVisible();
-    expect(screen.getByText('Предоставленный отчёт')).toBeVisible();
+    expect(screen.getByText('−300 000 ₽')).toBeVisible();
+    expect(screen.getByText('Предоставленный отчёт, раздел «Финансы»')).toBeVisible();
     expect(screen.getByText('5 августа 2026')).toBeVisible();
   });
 

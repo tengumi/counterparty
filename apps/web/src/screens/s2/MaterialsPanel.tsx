@@ -3,8 +3,9 @@
  *
  * The panel never invents data: a group that has nothing says so, «Не указано»
  * is not zero, and a basis shows the value with its company, period, source
- * and snapshot date. Company report and evidence source detail grow here in
- * WEB-06; this task owns the navigation, the states and their persistence.
+ * and snapshot date. WEB-06 grew two screens on the same navigation stack: the
+ * company report (P1-02) and the basis with its first source (P1-03), which is
+ * why the stack is now three deep at most — list → element → source.
  */
 
 import { useEffect, useRef } from 'react';
@@ -12,6 +13,8 @@ import { Button } from '@alfalab/core-components/button';
 import type { CompanyRef, ProjectDetail } from '../../mocks/types';
 import { documentStateLabels } from '../../mocks/types';
 import { findEvidence, getMaterials } from '../../mocks/workspace';
+import { getCompanyReport } from '../../mocks/reports';
+import { CompanyReport } from './CompanyReport';
 import type { MaterialsGroup, MaterialsState, MaterialsView } from './materialsView';
 import { currentView, groupTitles } from './materialsView';
 import styles from './S2.module.css';
@@ -96,15 +99,25 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss }:
     view.kind === 'company'
       ? project.companies.find((item) => item.id === view.companyId)
       : undefined;
+  const report = view.kind === 'company' ? getCompanyReport(view.companyId) : undefined;
   const document =
     view.kind === 'document'
       ? materials.documents.find((item) => item.id === view.documentId)
       : undefined;
 
+  const previous = state.stack[state.stack.length - 2];
+  const backLabel =
+    previous?.kind === 'company'
+      ? 'К отчёту'
+      : previous?.kind === 'evidence'
+        ? 'К основанию'
+        : 'К материалам';
+
   const titles: Record<MaterialsView['kind'], string> = {
     list: 'Материалы',
     company: company?.name ?? 'Компания',
-    evidence: evidence ? `Основание ${evidence.number}` : 'Основание',
+    evidence:
+      evidence?.number == null ? 'Основание' : `Основание ${evidence.number}`,
     document: document?.name ?? 'Документ',
     summary: 'Итог проверки',
   };
@@ -115,7 +128,7 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss }:
         {state.stack.length > 1 ? (
           <span className={styles.panelBack}>
             <Button onClick={back} size={32} view="text">
-              К материалам
+              {backLabel}
             </Button>
           </span>
         ) : null}
@@ -222,18 +235,25 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss }:
         ) : null}
 
         {view.kind === 'company' ? (
-          <div className={styles.detail}>
-            {company === undefined ? (
+          company === undefined ? (
+            <div className={styles.detail}>
               <p className={styles.muted}>Компания удалена из проверки.</p>
-            ) : (
-              <>
-                <p className={styles.rowMeta}>ИНН {company.inn}</p>
-                <p className={styles.muted}>
-                  Сведения отчёта, оценка банка и ЗСК появятся здесь вместе с отчётом компании.
-                </p>
-              </>
-            )}
-          </div>
+            </div>
+          ) : report === undefined ? (
+            <div className={styles.detail}>
+              <p className={styles.rowMeta}>ИНН {company.inn}</p>
+              <p className={styles.muted}>
+                В демонстрационной базе нет отчёта по этой компании. Это не проверка
+                без замечаний: сведений просто нет.
+              </p>
+            </div>
+          ) : (
+            <CompanyReport
+              onDiscuss={onDiscuss}
+              onOpenEvidence={(evidenceId) => push({ kind: 'evidence', evidenceId })}
+              report={report}
+            />
+          )
         ) : null}
 
         {view.kind === 'evidence' ? (
@@ -254,7 +274,26 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss }:
                   <dt>Дата среза</dt>
                   <dd>{evidence.asOf}</dd>
                 </dl>
-                <span>
+                {evidence.context === null ? null : (
+                  <p className={styles.muted}>{evidence.context}</p>
+                )}
+                <div className={styles.detailActions}>
+                  {evidence.documentId === null ? (
+                    <p className={styles.rowMeta}>
+                      Первоисточник — предоставленный отчёт; отдельной ссылки на реестр
+                      у этого значения нет.
+                    </p>
+                  ) : (
+                    <Button
+                      onClick={() =>
+                        push({ kind: 'document', documentId: evidence.documentId as string })
+                      }
+                      size={40}
+                      view="outlined"
+                    >
+                      Открыть документ
+                    </Button>
+                  )}
                   <Button
                     onClick={() =>
                       onDiscuss(`${evidence.title} · ${evidence.companyName} · ${evidence.period}`)
@@ -264,7 +303,7 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss }:
                   >
                     Обсудить
                   </Button>
-                </span>
+                </div>
               </>
             )}
           </div>

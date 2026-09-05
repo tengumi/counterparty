@@ -88,16 +88,30 @@ export const chatStatusLabels: Readonly<Record<ChatStatus, string>> = {
  */
 export interface EvidenceRecord {
   readonly id: string;
-  /** Number shown next to the sentence in the answer. */
-  readonly number: number;
+  /**
+   * Number shown next to the sentence in the answer.
+   *
+   * Numbering belongs to an answer, not to the report: a basis opened from a
+   * report row has no number and the panel titles it «Основание».
+   */
+  readonly number: number | null;
   readonly title: string;
   readonly value: string;
   readonly companyName: string;
   readonly period: string;
-  /** Where the value came from, e.g. «Предоставленный отчёт». */
+  /** Where the value came from, e.g. «Предоставленный отчёт, раздел «Финансы»». */
   readonly source: string;
   /** Snapshot date of the source; never the current date. */
   readonly asOf: string;
+  /** Available context: what the value does not say, or a comparable period. */
+  readonly context: string | null;
+  /**
+   * File this basis was read from, when there is a real one (07 P1-03).
+   *
+   * `null` keeps the panel honest: without a first source it shows «Источник:
+   * предоставленный отчёт» and never a made-up registry link.
+   */
+  readonly documentId: string | null;
 }
 
 /** One completed or running step under «Что проверено» (07 S2-05). */
@@ -224,3 +238,91 @@ export const documentStateLabels: Readonly<Record<DocumentRow['state'], string>>
   ready: 'Готово',
   failed: 'Не удалось прочитать',
 };
+
+/* ------------------------------------------------------------------ *
+ * Company report (WEB-06)
+ * ------------------------------------------------------------------ */
+
+/**
+ * How one fact of the report is known (07 §9).
+ *
+ * The four unknown-ish states are deliberately separate: a missing block, a
+ * checked-but-empty list, a restricted block and a confirmed zero mean
+ * different things, and none of them means «no risk».
+ */
+export type FactState = 'value' | 'zero' | 'missing' | 'empty' | 'unavailable';
+
+/** Wording of a state that has no value; `value`/`zero` print the value. */
+export const factStateLabels: Readonly<
+  Record<Exclude<FactState, 'value' | 'zero'>, string>
+> = {
+  missing: 'В отчёте нет этих сведений',
+  empty: 'В отчёте события не обнаружены',
+  unavailable: 'Эти сведения недоступны',
+};
+
+/** Short explanation shown under an unknown value, so it is not read as zero. */
+export const factStateNotes: Readonly<
+  Record<Exclude<FactState, 'value' | 'zero'>, string>
+> = {
+  missing: 'Раздел не предоставлен. Это не подтверждение, что событий не было.',
+  empty: 'Раздел проверен, записей нет. Это не гарантия на будущее.',
+  unavailable: 'Доступ к разделу ограничен. Отсутствие сведений не означает отсутствие риска.',
+};
+
+/** One row of a report section. Every row resolves to an existing basis. */
+export interface ReportFact {
+  readonly id: string;
+  readonly label: string;
+  readonly state: FactState;
+  /** Formatted value for `value` and `zero`; `null` for the unknown states. */
+  readonly value: string | null;
+  /** Second line: comparable period, or what the value does not mean. */
+  readonly note: string | null;
+  /** `evidence_ref` of the row; a value is never shown without its basis. */
+  readonly evidenceId: string;
+}
+
+/** Whether the report carries this section at all (07 P1-02). */
+export type SectionAvailability = 'available' | 'missing' | 'unavailable';
+
+export interface ReportSection {
+  readonly id: string;
+  readonly title: string;
+  /** Period or scope of the section, e.g. «2024–2025». */
+  readonly hint: string | null;
+  readonly availability: SectionAvailability;
+  readonly facts: readonly ReportFact[];
+}
+
+export const sectionAvailabilityLabels: Readonly<
+  Record<SectionAvailability, string>
+> = {
+  available: 'Есть сведения',
+  missing: 'Раздела нет в отчёте',
+  unavailable: 'Раздел недоступен',
+};
+
+/**
+ * The provided report of one company.
+ *
+ * `bankRiskRaw` and `zskRaw` stay as they arrived. The bank scale is described
+ * by the source, and `zskRiskLevel` is an external signal the UI never
+ * recolours and never explains beyond what the signal itself is.
+ */
+export interface CompanyReport {
+  readonly companyId: string;
+  readonly companyName: string;
+  readonly inn: string;
+  /** Snapshot date of the report; never the date of the check. */
+  readonly asOf: string;
+  /** Prototype rule of 07 §9: «Срез старше 30 дней» is stated, not hidden. */
+  readonly asOfStale: boolean;
+  /** Every mock company is a teaching example, and says so. */
+  readonly educational: boolean;
+  readonly bankRiskRaw: string;
+  readonly bankRiskEvidenceId: string;
+  readonly zskRaw: string;
+  readonly zskEvidenceId: string;
+  readonly sections: readonly ReportSection[];
+}
