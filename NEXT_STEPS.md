@@ -420,6 +420,7 @@ evidence REST, но в API-01…05 они не входили и ещё не р�
 | I4 / WEB-08 | in progress | `apps/web/src/**`; живые report/evidence/companies/comparison; оставшиеся DOC/terms/analysis явно unavailable |
 | I5 / API-agent verification | in progress | независимые HTTP и checkpoint/restart проверки на интегрированном4dee1b2; бывший исполнитель I2 |
 | I6 / MCP-web verification | in progress | независимый MCP review; подготовка финального browser flow, ожидание I4; бывший исполнитель I3 |
+| I7 / checkpoint write fencing | in progress | `services/agent/**` и owner boundary в storage; исправляет доказанный I5 stale saver write после потери owner connection; автор I3, затем I5 replay |
 
 I1–I3 стартуют параллельно от baseline `1173476`. Contracts/domain и storage
 `repositories/reports.py` имеют только writer I1; storage workspace/migrations —
@@ -451,6 +452,12 @@ Root обновляет статусы здесь; WORK_PLAN done — после
 - Реальные проекты не получают mock terms/documents/analysis/decisions:
   соответствующие будущие API/DOC/AG возможности показываются как unavailable.
   В I проверяется живая отчётная часть материалов; это не полный gate волны 2.
+- Независимый I5 на `4dee1b2`: 441 backend tests passed, но дополнительный probe
+  `6798d00` доказал stale checkpoint write после потери owner connection. Run
+  repository отказал старому владельцу, отдельный saver сохранил value42 после
+  recovery. F0-07 пока не проходит независимый gate. I7 исправляет атомарную
+  границу checkpoint writes; I6 приостановлен на время fix, его независимый MCP
+  replay уже прошёл 31/31 и 5555 refs. UI I4 продолжает работу параллельно.
 
 ## Волна C — интеграционные риски и первый data/domain слой
 
