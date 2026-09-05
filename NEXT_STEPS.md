@@ -243,9 +243,27 @@ DTO зависят 12 из 21 задачи, а редактировать пак
 
 | Task | Статус | Исполнитель/результат |
 |---|---|---|
-| E1 / DB-03, DB-04 | in progress | `agent/e1-workspace-repositories` |
-| E2 / WEB-04, WEB-05 | in progress | `agent/e2-conversation-materials` |
-| E3 / C-03, C-04, API-01 | in progress | `agent/e3-agent-mcp-contracts-api` |
+| E1 / DB-03, DB-04 | done | integrated; 74 storage + 17 migration tests на живом PostgreSQL |
+| E2 / WEB-04, WEB-05 | done | integrated; 51 web test, lint/typecheck/build зелёные |
+| E3 / C-03, C-04, API-01 | done | integrated; 135 contract + 17 ui_api tests |
+
+Итог волны E на `dev`: 420 тестов (contracts 135, domain 107, storage 74,
+migrations 17, ui_api 17, agent 14, mcp 5, web 51). Прерывание волны на лимите
+бюджета показало, что восстановление из task-ветки и checkpoint работает: обе
+упавшие задачи подняты и доведены без пересказа истории чата.
+
+Ограничения, унаследованные волной F:
+
+- E1: привилегии на framework-owned checkpoint storage (LangGraph) не выдаются
+  миграцией — их namespace создаёт владеющая библиотека на своём шаге деплоя.
+- E1: тестам `packages/storage` и `migrations` нужны разные базы; сессионная
+  фикстура storage пересоздаёт схемы и рассогласует чужой `alembic_version`.
+- E2: `getConversation`, `getMaterials`, `findEvidence` — моки; границей замены
+  на REST служит union `ConversationBlock`. Отправка живёт только в демо-чате,
+  остальные в состоянии `unavailable`.
+- E2: состояние `cancelling` недостижимо в чатах без живого треда; S2-уровневый
+  тест terminal error/cancel опирается на end-to-end `chat/transport.test.tsx`
+  из C1.
 
 Решения по спорным именам из D1 (принято главным агентом, возражений не поступило):
 `Proceeding.started_at` остаётся; `warnings[]` переводится в типизированный
@@ -259,8 +277,8 @@ WEB-04, отдельная правка сейчас не нужна.
 Порядок дальнейших подходов волны 1 (уточняется после каждого review):
 
 1. **D:** contracts C-01/C-02 · web S1/S2 · domain D-03 — принято.
-2. **E (текущий):** DB-03 + DB-04 · WEB-04 + WEB-05 · C-03/C-04 + API-01.
-3. **F:** IMP-02 + IMP-03 · API-02 + API-03 · WEB-06. Здесь же slim `OPS-01`:
+2. **E:** DB-03 + DB-04 · WEB-04 + WEB-05 · C-03/C-04 + API-01 — сведено.
+3. **F (текущий):** IMP-02 + IMP-03 + slim OPS-01 · API-02 + API-03 · WEB-06. Здесь же slim `OPS-01`:
    Compose появляется, как только есть что поднимать целиком — PostgreSQL,
    миграции, импорт и сервисы.
 4. **G:** API-04 + API-05 · D-04 · подключение web к живым API.
