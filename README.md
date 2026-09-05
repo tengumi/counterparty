@@ -7,10 +7,17 @@
 ## Текущий статус
 
 Реализованы каркас сервисов, PostgreSQL/storage и импорт 100 разрешённых
-mock-отчётов. UI API предоставляет проекты, состав компаний, карточку отчёта с
-evidence и детерминированное сравнение. React S1/S2 читает и изменяет проекты
+mock-отчётов. UI API предоставляет проекты, состав компаний, карточку и 17 разделов
+отчёта, проектные evidence-ссылки и детерминированное сравнение. React S1/S2
+читает и изменяет проекты
 и состав компаний через REST; разговор, отчёт, материалы и решение пока
 используют typed mocks/заглушки. Полноценного агентного сценария ещё нет.
+
+Внутренний MCP читает overview и разделы из PostgreSQL с сервисной
+аутентификацией. Agent Service получил PostgreSQL checkpoints штатного LangGraph
+и сохраняемые статусы runs. Это persistence-срез: текущий RPC-разговор всё ещё
+использует демонстрационный runtime в памяти; подключение durable runs к нему
+относится к AG-04. Удаление проекта через REST пока не реализовано.
 
 Текущий срез WEB-07 готов к пользовательскому review: S1/S2 сверены с
 неизменённым дизайнерским HTML на 390/1024/1440 px, browser flow и отдельный
@@ -174,3 +181,76 @@ session, а запросы проектов возвращают `dependency_una
 скриншоты и результаты со своими source SHA — в [WEB-07](artifacts/qa/WEB-07/README.md).
 Typed-fixture визуальные состояния и live CRUD отмечены отдельно; эти проверки
 не подтверждают подключение live отчётов или агента.
+
+### Backend: отчёты, MCP и checkpoints
+
+После обновления кода примените Alembic из `migrations`, используя владельца
+схемы. Пример использует локальные настройки Compose; для native PostgreSQL
+подставьте свой адрес и login:
+
+```sh
+cd migrations
+uv sync --frozen
+COUNTERPARTY_DATABASE_URL='postgresql+psycopg://counterparty:counterparty_dev@127.0.0.1:55432/counterparty' \
+uv run --frozen alembic upgrade head
+```
+
+UI API читает `/api/v1/reports/{report_id}/sections/{section}` и разрешает
+`/api/v1/projects/{project_id}/evidence/{ref}` после проверки владельца проекта
+и исторической принадлежности снимка. Разделы принимают `limit`, `cursor` и
+разрешённые для раздела `years`, `active`, `role`, `status_raw`. Пустой или
+отсутствующий раздел остаётся отдельным состоянием данных. Evidence ID нужно
+кодировать через `encodeURIComponent`; произвольный JSON Pointer не разрешён.
+
+Для MCP и Agent создайте отдельные локальные login-roles. Пароли ниже —
+демонстрационные defaults, как и пароль UI API выше:
+
+```sh
+docker compose exec -T postgres psql -U counterparty -d counterparty -v ON_ERROR_STOP=1 <<'SQL'
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'counterparty_mcp_dev') THEN
+    CREATE ROLE counterparty_mcp_dev LOGIN PASSWORD 'counterparty_mcp_dev';
+  END IF;
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'counterparty_agent_dev') THEN
+    CREATE ROLE counterparty_agent_dev LOGIN PASSWORD 'counterparty_agent_dev';
+  END IF;
+END $$;
+GRANT counterparty_mcp TO counterparty_mcp_dev;
+GRANT counterparty_agent TO counterparty_agent_dev;
+GRANT CONNECT ON DATABASE counterparty TO counterparty_mcp_dev, counterparty_agent_dev;
+SQL
+```
+
+MCP запускается отдельно на `/mcp`. Случайный Bearer credential остаётся у
+backend-клиента; сервису передаётся SHA256 digest. Без digest запросы отклоняются.
+В отдельном терминале из корня:
+
+```sh
+cd services/mcp
+uv sync --frozen
+export MCP_SERVICE_TOKEN="$(uv run python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+export MCP_AUTH_TOKEN_SHA256="$(uv run python -c 'import hashlib, os; print(hashlib.sha256(os.environ["MCP_SERVICE_TOKEN"].encode()).hexdigest())')"
+env -u MCP_SERVICE_TOKEN \
+MCP_DATABASE_URL='postgresql+psycopg://counterparty_mcp_dev:counterparty_mcp_dev@127.0.0.1:55432/counterparty' \
+uv run --frozen uvicorn counterparty_mcp.app:app --host 127.0.0.1 --port 8002
+```
+
+Доступны `get_company_overview` и `get_report_section`; `compare_companies`
+остаётся отдельной задачей. MCP-роль читает только `reports`, транзакции read-only.
+
+Таблицы checkpoint создаёт штатный saver отдельной deploy-командой после Alembic.
+Команда выполняется владельцем схемы; runtime login не получает DDL-права:
+
+```sh
+cd services/agent
+uv sync --frozen
+AGENT_POSTGRES_DSN='postgresql://counterparty:counterparty_dev@127.0.0.1:55432/counterparty' \
+uv run --frozen python -m counterparty_agent.deploy_checkpoints
+AGENT_POSTGRES_DSN='postgresql://counterparty_agent_dev:counterparty_agent_dev@127.0.0.1:55432/counterparty' \
+uv run --frozen uvicorn counterparty_agent.app:app --host 127.0.0.1 --port 8001 --workers 1
+```
+
+На одну БД допускается один Agent worker. Checkpoints располагаются в `workspace`;
+Alembic не управляет таблицами saver. `/healthz` сообщает liveness, а не готовность
+полного агентного сценария. Подтверждение независимой приёмки и ограничения —
+в [I5](docs/checkpoints/tasks/I5.md); Docker-сборки текущего среза не проверены.
