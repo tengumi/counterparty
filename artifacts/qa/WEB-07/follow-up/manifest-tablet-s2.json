@@ -1,0 +1,236 @@
+{
+  "scope": "WEB-07",
+  "target": "tablet-s2",
+  "sourceSHA": "6942d5a001c8a345fe92d21aebdf5441a775fa65",
+  "sourceDirty": false,
+  "createdAt": "2026-09-05T18:24:55.522Z",
+  "browser": "150.0.7871.115",
+  "transport": "Playwright connectOverCDP",
+  "baseURL": "http://127.0.0.1:5173",
+  "reference": {
+    "file": "artifacts/Design TZ для экранов/Проверка контрагентов v2.dc.html",
+    "sha256": "43549cff7ab6e87d44105363c93a67c5699010d4f8275f289e111d7e987e551b",
+    "supportSHA256": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe"
+  },
+  "checks": [
+    {
+      "name": "S2: no horizontal overflow",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"viewport\":1024,\"content\":1024}"
+    },
+    {
+      "name": "Feed bounded and independently scrollable",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"client\":418,\"scroll\":792}"
+    },
+    {
+      "name": "Composer visible in viewport",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"x\":147,\"y\":597,\"width\":732,\"height\":48}"
+    },
+    {
+      "name": "Evidence expanded targets >=44px and do not overlap",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"overlaps\":[]}"
+    },
+    {
+      "name": "P1: no horizontal overflow",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"viewport\":1024,\"content\":1024}"
+    },
+    {
+      "name": "P1 width follows breakpoint",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"x\":624,\"y\":56,\"width\":400,\"height\":712}"
+    },
+    {
+      "name": "Panel heading receives keyboard focus",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Финансы: source state remains distinct",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Взыскания: source state remains distinct",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Деятельность и разрешения: source state remains distinct",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Другие сведения: source state remains distinct",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Evidence includes company/period/source/as-of",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Closing panel restores opener focus",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Closing panel retains draft",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Panel round-trip preserves earlier scroll",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "140 -> 140"
+    },
+    {
+      "name": "Switcher Escape returns focus",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Keyboard focus visibly styled",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"visible\":true,\"style\":\"solid\",\"width\":\"2px\"}"
+    },
+    {
+      "name": "Chat switch restores draft",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Chat switch restores earlier scroll",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Reload restores draft",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Reload and initial resize preserve earlier scroll",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "140 -> 140"
+    },
+    {
+      "name": "Evidence 1 center resolves correct source",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "expected=ev-capital; actual=ev-capital"
+    },
+    {
+      "name": "Evidence 2 center resolves correct source",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "expected=ev-executions; actual=ev-executions"
+    },
+    {
+      "name": "Evidence 3 center resolves correct source",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "expected=ev-age; actual=ev-age"
+    },
+    {
+      "name": "Evidence 4 center resolves correct source",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "expected=ev-offer; actual=ev-offer"
+    },
+    {
+      "name": "Document source opens honest unavailable preview",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    }
+  ],
+  "captures": [
+    {
+      "name": "s2-conversation",
+      "file": "typed-fixtures/tablet/s2-conversation.png",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks/demo-project/chats/demo-thread"
+    },
+    {
+      "name": "materials",
+      "file": "typed-fixtures/tablet/materials.png",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks/demo-project/chats/demo-thread"
+    },
+    {
+      "name": "report",
+      "file": "typed-fixtures/tablet/report.png",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks/demo-project/chats/demo-thread"
+    },
+    {
+      "name": "evidence",
+      "file": "typed-fixtures/tablet/evidence.png",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks/demo-project/chats/demo-thread"
+    }
+  ],
+  "consoleErrors": [],
+  "limitations": [
+    "Typed fixture screenshots verify WEB-07 presentation only; report/materials/conversation data remains mock and does not close WEB-08/09.",
+    "Text zoom check doubles computed font sizes to emulate 200% text-only zoom; OS virtual keyboard and native Chrome zoom are not emulated.",
+    "Design reference is the unchanged HTML with its own support.js and pinned unpkg CDN dependencies; its narrow-screen shell differs from Specs 07 responsive requirements.",
+    "Document source screen is the existing honest preview placeholder, not document reading acceptance.",
+    "Live CRUD uses real REST and server-generated UUIDs in a disposable demo database; it does not validate live report/agent screens."
+  ]
+}

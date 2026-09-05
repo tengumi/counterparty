@@ -1,0 +1,903 @@
+{
+  "scope": "WEB-07",
+  "sourceSHA": "b13cc175eee3766df271b6485d34542ba0987347",
+  "sourceDirty": false,
+  "createdAt": "2026-09-05T18:21:26.373Z",
+  "browser": "150.0.7871.115",
+  "transport": "Playwright connectOverCDP",
+  "baseURL": "http://127.0.0.1:5173",
+  "reference": {
+    "file": "artifacts/Design TZ для экранов/Проверка контрагентов v2.dc.html",
+    "sha256": "43549cff7ab6e87d44105363c93a67c5699010d4f8275f289e111d7e987e551b",
+    "supportSHA256": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe"
+  },
+  "checks": [
+    {
+      "name": "Unchanged reference captured",
+      "viewport": "mobile",
+      "source": "design-reference",
+      "verdict": "pass"
+    },
+    {
+      "name": "Unchanged reference captured",
+      "viewport": "tablet",
+      "source": "design-reference",
+      "verdict": "pass"
+    },
+    {
+      "name": "Unchanged reference captured",
+      "viewport": "desktop",
+      "source": "design-reference",
+      "verdict": "pass"
+    },
+    {
+      "name": "S1: no horizontal overflow",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"viewport\":390,\"content\":390}"
+    },
+    {
+      "name": "S1 empty send disabled",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Example only inserts editable text",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Shift+Enter inserts newline",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Mobile Enter inserts newline without posting",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Submit failure retains draft",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "S2: no horizontal overflow",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"viewport\":390,\"content\":390}"
+    },
+    {
+      "name": "Материалы: mobile target >=44px",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"x\":255,\"y\":152,\"width\":119,\"height\":44}"
+    },
+    {
+      "name": "Чат: Поставка: mobile target >=44px",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"x\":16,\"y\":152,\"width\":129.40625,\"height\":44}"
+    },
+    {
+      "name": "Feed bounded and independently scrollable",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"client\":308,\"scroll\":1114}"
+    },
+    {
+      "name": "Composer visible in viewport",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"x\":31,\"y\":639,\"width\":330,\"height\":48}"
+    },
+    {
+      "name": "Evidence expanded targets >=44px and do not overlap",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"overlaps\":[]}"
+    },
+    {
+      "name": "P1: no horizontal overflow",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"viewport\":390,\"content\":390}"
+    },
+    {
+      "name": "P1 width follows breakpoint",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"x\":0,\"y\":0,\"width\":390,\"height\":844}"
+    },
+    {
+      "name": "Panel heading receives keyboard focus",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Mobile close accessible name includes visible label",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Report confirmed zero is explicit",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Взыскания: source state remains distinct",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Деятельность и разрешения: source state remains distinct",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "fail"
+    },
+    {
+      "name": "Другие сведения: source state remains distinct",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Evidence includes company/period/source/as-of",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Closing panel restores opener focus",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Closing panel retains draft",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Panel round-trip preserves earlier scroll",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "140 -> 140"
+    },
+    {
+      "name": "Switcher Escape returns focus",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Keyboard focus visibly styled",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"visible\":true,\"style\":\"solid\",\"width\":\"2px\"}"
+    },
+    {
+      "name": "Chat switch restores draft",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Chat switch restores earlier scroll",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Reload restores draft",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Reload and initial resize preserve earlier scroll",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "140 -> 140"
+    },
+    {
+      "name": "Evidence 1 center resolves correct source",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "expected=ev-capital; actual=ev-capital"
+    },
+    {
+      "name": "Evidence 2 center resolves correct source",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "expected=ev-executions; actual=ev-executions"
+    },
+    {
+      "name": "Evidence 3 center resolves correct source",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "expected=ev-age; actual=ev-age"
+    },
+    {
+      "name": "Evidence 4 center resolves correct source",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "expected=ev-offer; actual=ev-offer"
+    },
+    {
+      "name": "Document source opens honest unavailable preview",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Long-name P1: no horizontal overflow",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"viewport\":390,\"content\":390}"
+    },
+    {
+      "name": "200% text zoom S1: no horizontal overflow",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"viewport\":390,\"content\":390}"
+    },
+    {
+      "name": "200% text zoom retains send control",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "S1: no horizontal overflow",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"viewport\":1024,\"content\":1024}"
+    },
+    {
+      "name": "S1 empty send disabled",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Example only inserts editable text",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Shift+Enter inserts newline",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Submit failure retains draft",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "S2: no horizontal overflow",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"viewport\":1024,\"content\":1024}"
+    },
+    {
+      "name": "Feed bounded and independently scrollable",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"client\":418,\"scroll\":792}"
+    },
+    {
+      "name": "Composer visible in viewport",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"x\":147,\"y\":597,\"width\":732,\"height\":48}"
+    },
+    {
+      "name": "Evidence expanded targets >=44px and do not overlap",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"overlaps\":[]}"
+    },
+    {
+      "name": "P1: no horizontal overflow",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"viewport\":1024,\"content\":1024}"
+    },
+    {
+      "name": "P1 width follows breakpoint",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "fail",
+      "details": "{\"x\":1023,\"y\":56,\"width\":1,\"height\":712}"
+    },
+    {
+      "name": "Panel heading receives keyboard focus",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "S2/panels/draft/scroll/focus",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "fail",
+      "details": "locator.click: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('complementary', { name: 'Материалы проверки' }).getByRole('button', { name: /Компания А.*ИНН/ })\u001b[22m\n\u001b[2m    - locator resolved to <button type=\"button\" class=\"_row_fcmvq_73 _rowButton_fcmvq_74\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not visible\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not visible\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    14 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is not visible\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n"
+    },
+    {
+      "name": "200% text zoom S1: no horizontal overflow",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"viewport\":1024,\"content\":1024}"
+    },
+    {
+      "name": "200% text zoom retains send control",
+      "viewport": "tablet",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "S1: no horizontal overflow",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"viewport\":1440,\"content\":1440}"
+    },
+    {
+      "name": "S1 empty send disabled",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Example only inserts editable text",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Shift+Enter inserts newline",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Submit failure retains draft",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "S2: no horizontal overflow",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"viewport\":1440,\"content\":1440}"
+    },
+    {
+      "name": "Feed bounded and independently scrollable",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"client\":606,\"scroll\":792}"
+    },
+    {
+      "name": "Composer visible in viewport",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"x\":467,\"y\":729,\"width\":732,\"height\":48}"
+    },
+    {
+      "name": "Evidence expanded targets >=44px and do not overlap",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"overlaps\":[]}"
+    },
+    {
+      "name": "P1: no horizontal overflow",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"viewport\":1440,\"content\":1440}"
+    },
+    {
+      "name": "P1 width follows breakpoint",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"x\":1040,\"y\":0,\"width\":400,\"height\":900}"
+    },
+    {
+      "name": "Panel heading receives keyboard focus",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Report confirmed zero is explicit",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Взыскания: source state remains distinct",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Деятельность и разрешения: source state remains distinct",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "fail"
+    },
+    {
+      "name": "Другие сведения: source state remains distinct",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Evidence includes company/period/source/as-of",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Closing panel restores opener focus",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Closing panel retains draft",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Panel round-trip preserves earlier scroll",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "93 -> 93"
+    },
+    {
+      "name": "Switcher Escape returns focus",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Keyboard focus visibly styled",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"visible\":true,\"style\":\"solid\",\"width\":\"2px\"}"
+    },
+    {
+      "name": "Chat switch restores draft",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Chat switch restores earlier scroll",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Reload restores draft",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Reload and initial resize preserve earlier scroll",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "93 -> 93"
+    },
+    {
+      "name": "Evidence 1 center resolves correct source",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "expected=ev-capital; actual=ev-capital"
+    },
+    {
+      "name": "Evidence 2 center resolves correct source",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "expected=ev-executions; actual=ev-executions"
+    },
+    {
+      "name": "Evidence 3 center resolves correct source",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "expected=ev-age; actual=ev-age"
+    },
+    {
+      "name": "Evidence 4 center resolves correct source",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "expected=ev-offer; actual=ev-offer"
+    },
+    {
+      "name": "Document source opens honest unavailable preview",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "200% text zoom S1: no horizontal overflow",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"viewport\":1440,\"content\":1440}"
+    },
+    {
+      "name": "200% text zoom retains send control",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "S1 empty distinct from empty",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "S1 loading distinct from empty",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "S1 error distinct from empty",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "List error retry recovers",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Create/rename/add two/partial not_found/remove/reload",
+      "viewport": "desktop",
+      "source": "live-rest",
+      "verdict": "pass",
+      "details": "project_id=c2dd7f25-0269-4d52-80c8-d4360a63da2b; no fixture interception"
+    }
+  ],
+  "captures": [
+    {
+      "name": "s1-populated",
+      "file": "design-reference/mobile/s1-populated.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "source": "design-reference",
+      "url": "file:///Users/razi/Documents/ChatGPT/hack/.worktrees/h2-web-browser-harness/artifacts/Design%20TZ%20%D0%B4%D0%BB%D1%8F%20%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%BE%D0%B2/%D0%9F%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%BA%D0%B0%20%D0%BA%D0%BE%D0%BD%D1%82%D1%80%D0%B0%D0%B3%D0%B5%D0%BD%D1%82%D0%BE%D0%B2%20v2.dc.html"
+    },
+    {
+      "name": "s2-conversation",
+      "file": "design-reference/mobile/s2-conversation.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "source": "design-reference",
+      "url": "file:///Users/razi/Documents/ChatGPT/hack/.worktrees/h2-web-browser-harness/artifacts/Design%20TZ%20%D0%B4%D0%BB%D1%8F%20%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%BE%D0%B2/%D0%9F%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%BA%D0%B0%20%D0%BA%D0%BE%D0%BD%D1%82%D1%80%D0%B0%D0%B3%D0%B5%D0%BD%D1%82%D0%BE%D0%B2%20v2.dc.html"
+    },
+    {
+      "name": "materials",
+      "file": "design-reference/mobile/materials.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "source": "design-reference",
+      "url": "file:///Users/razi/Documents/ChatGPT/hack/.worktrees/h2-web-browser-harness/artifacts/Design%20TZ%20%D0%B4%D0%BB%D1%8F%20%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%BE%D0%B2/%D0%9F%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%BA%D0%B0%20%D0%BA%D0%BE%D0%BD%D1%82%D1%80%D0%B0%D0%B3%D0%B5%D0%BD%D1%82%D0%BE%D0%B2%20v2.dc.html"
+    },
+    {
+      "name": "s1-populated",
+      "file": "design-reference/tablet/s1-populated.png",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "source": "design-reference",
+      "url": "file:///Users/razi/Documents/ChatGPT/hack/.worktrees/h2-web-browser-harness/artifacts/Design%20TZ%20%D0%B4%D0%BB%D1%8F%20%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%BE%D0%B2/%D0%9F%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%BA%D0%B0%20%D0%BA%D0%BE%D0%BD%D1%82%D1%80%D0%B0%D0%B3%D0%B5%D0%BD%D1%82%D0%BE%D0%B2%20v2.dc.html"
+    },
+    {
+      "name": "s2-conversation",
+      "file": "design-reference/tablet/s2-conversation.png",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "source": "design-reference",
+      "url": "file:///Users/razi/Documents/ChatGPT/hack/.worktrees/h2-web-browser-harness/artifacts/Design%20TZ%20%D0%B4%D0%BB%D1%8F%20%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%BE%D0%B2/%D0%9F%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%BA%D0%B0%20%D0%BA%D0%BE%D0%BD%D1%82%D1%80%D0%B0%D0%B3%D0%B5%D0%BD%D1%82%D0%BE%D0%B2%20v2.dc.html"
+    },
+    {
+      "name": "s1-populated",
+      "file": "design-reference/desktop/s1-populated.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "source": "design-reference",
+      "url": "file:///Users/razi/Documents/ChatGPT/hack/.worktrees/h2-web-browser-harness/artifacts/Design%20TZ%20%D0%B4%D0%BB%D1%8F%20%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%BE%D0%B2/%D0%9F%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%BA%D0%B0%20%D0%BA%D0%BE%D0%BD%D1%82%D1%80%D0%B0%D0%B3%D0%B5%D0%BD%D1%82%D0%BE%D0%B2%20v2.dc.html"
+    },
+    {
+      "name": "s2-conversation",
+      "file": "design-reference/desktop/s2-conversation.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "source": "design-reference",
+      "url": "file:///Users/razi/Documents/ChatGPT/hack/.worktrees/h2-web-browser-harness/artifacts/Design%20TZ%20%D0%B4%D0%BB%D1%8F%20%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%BE%D0%B2/%D0%9F%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%BA%D0%B0%20%D0%BA%D0%BE%D0%BD%D1%82%D1%80%D0%B0%D0%B3%D0%B5%D0%BD%D1%82%D0%BE%D0%B2%20v2.dc.html"
+    },
+    {
+      "name": "materials",
+      "file": "design-reference/desktop/materials.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "source": "design-reference",
+      "url": "file:///Users/razi/Documents/ChatGPT/hack/.worktrees/h2-web-browser-harness/artifacts/Design%20TZ%20%D0%B4%D0%BB%D1%8F%20%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%BE%D0%B2/%D0%9F%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%BA%D0%B0%20%D0%BA%D0%BE%D0%BD%D1%82%D1%80%D0%B0%D0%B3%D0%B5%D0%BD%D1%82%D0%BE%D0%B2%20v2.dc.html"
+    },
+    {
+      "name": "s1-populated",
+      "file": "typed-fixtures/mobile/s1-populated.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks"
+    },
+    {
+      "name": "s2-conversation",
+      "file": "typed-fixtures/mobile/s2-conversation.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks/demo-project/chats/demo-thread"
+    },
+    {
+      "name": "materials",
+      "file": "typed-fixtures/mobile/materials.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks/demo-project/chats/demo-thread"
+    },
+    {
+      "name": "report",
+      "file": "typed-fixtures/mobile/report.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks/demo-project/chats/demo-thread"
+    },
+    {
+      "name": "evidence",
+      "file": "typed-fixtures/mobile/evidence.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks/demo-project/chats/demo-thread"
+    },
+    {
+      "name": "chat-switcher",
+      "file": "typed-fixtures/mobile/chat-switcher.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks/demo-project/chats/demo-thread"
+    },
+    {
+      "name": "long-name",
+      "file": "typed-fixtures/mobile/long-name.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks/logistics-project/chats/logistics-thread"
+    },
+    {
+      "name": "s1-populated",
+      "file": "typed-fixtures/tablet/s1-populated.png",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks"
+    },
+    {
+      "name": "s2-conversation",
+      "file": "typed-fixtures/tablet/s2-conversation.png",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks/demo-project/chats/demo-thread"
+    },
+    {
+      "name": "materials",
+      "file": "typed-fixtures/tablet/materials.png",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks/demo-project/chats/demo-thread"
+    },
+    {
+      "name": "s1-populated",
+      "file": "typed-fixtures/desktop/s1-populated.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks"
+    },
+    {
+      "name": "s2-conversation",
+      "file": "typed-fixtures/desktop/s2-conversation.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks/demo-project/chats/demo-thread"
+    },
+    {
+      "name": "materials",
+      "file": "typed-fixtures/desktop/materials.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks/demo-project/chats/demo-thread"
+    },
+    {
+      "name": "report",
+      "file": "typed-fixtures/desktop/report.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks/demo-project/chats/demo-thread"
+    },
+    {
+      "name": "evidence",
+      "file": "typed-fixtures/desktop/evidence.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks/demo-project/chats/demo-thread"
+    },
+    {
+      "name": "s1-empty",
+      "file": "typed-fixtures/desktop/s1-empty.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks"
+    },
+    {
+      "name": "s1-loading",
+      "file": "typed-fixtures/desktop/s1-loading.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks"
+    },
+    {
+      "name": "s1-error",
+      "file": "typed-fixtures/desktop/s1-error.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks"
+    },
+    {
+      "name": "crud-reloaded",
+      "file": "live-rest/desktop/crud-reloaded.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "source": "live-rest",
+      "url": "http://127.0.0.1:5173/checks/c2dd7f25-0269-4d52-80c8-d4360a63da2b/chats/ae13ebe9-5360-4092-83eb-9845d0b34102"
+    }
+  ],
+  "consoleErrors": [],
+  "limitations": [
+    "Typed fixture screenshots verify WEB-07 presentation only; report/materials/conversation data remains mock and does not close WEB-08/09.",
+    "Text zoom check doubles computed font sizes to emulate 200% text-only zoom; OS virtual keyboard and native Chrome zoom are not emulated.",
+    "Design reference is the unchanged HTML with its own support.js and pinned unpkg CDN dependencies; its narrow-screen shell differs from Specs 07 responsive requirements.",
+    "Document source screen is the existing honest preview placeholder, not document reading acceptance.",
+    "Live CRUD uses real REST and server-generated UUIDs in a disposable demo database; it does not validate live report/agent screens."
+  ]
+}

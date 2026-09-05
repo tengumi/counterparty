@@ -1,5 +1,7 @@
 # WEB-07 browser QA
 
+Verified toolchain: **Node 24.19.0**, Chrome **150.0.7871.115**, Playwright Core **1.63.0**. `qa/run.ts` uses Node 24 native TypeScript execution; run QA with Node 24 even though the application itself permits Node >=22.13. Chrome must be installed separately (`playwright-core` does not download a browser).
+
 Standard Playwright drives an installed Chrome through CDP. Each invocation creates and removes its own temporary Chrome profile; existing browser tabs and user profiles are untouched.
 
 ```sh
