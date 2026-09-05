@@ -193,3 +193,13 @@
   /* Beat Core Button's .text.text reset only inside draft context chips. */
   .draftContexts .draftContext button { min-width: 44px; min-height: 44px; flex-shrink: 0; }
 }
+
+/* D1 decision screen */
+.decision { display: flex; flex-direction: column; gap: 20px; }
+.decision h3 { margin: 0 0 8px; }
+.decisionList { margin: 4px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.decisionItem { display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1px solid #ebeced; }
+.decisionItem p { margin: 0; }
+.decisionOutcomes { border: 0; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.decisionOutcome { display: flex; align-items: center; min-height: 44px; }
+.decisionStale { color: #d97706; }

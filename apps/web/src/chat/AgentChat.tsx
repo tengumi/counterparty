@@ -1,13 +1,24 @@
 /**
  * The live conversation of one chat, on the Agent Service transport.
  *
- * The transport itself is C1's and is not touched here: this module only turns
- * the published projection into the S2 blocks (07 §5) and drives the composer
- * through the library's composer methods, so «Отправить» and «Остановить» stay
- * the runtime's own send and cancel commands.
+ * The transport itself is the library's and is not re-implemented here: this
+ * module turns the published projection into the S2 blocks (07 §5) and drives
+ * the composer through the library's composer methods, so «Отправить» and
+ * «Остановить» stay the runtime's own send and cancel commands.
+ *
+ * Three outcomes are kept apart on purpose (06 §3/§5): the agent finished or
+ * was cancelled, the connection to it broke while it kept working, and the
+ * service never accepted the message at all. Only the last one means the text
+ * was not delivered, and none of them is ever rendered as an answer.
+ *
+ * Layout: `AgentRuntimeHost` owns the runtime and must not re-render, because
+ * `useAssistantTransportRuntime` reloads its thread list from a new adapter on
+ * every render of its caller and drops the live thread with it. Everything that
+ * changes while the user works — draft, saved blocks, layout — reaches the
+ * subtree through `ChatViewContext` instead of through the host's props.
  */
 
-import { useMemo, useRef, useState } from 'react';
+import { createContext, memo, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@alfalab/core-components/button';
 import type { ReactNode, RefObject } from 'react';
 import {
@@ -17,8 +28,10 @@ import {
   useAui,
   useAuiState,
 } from '@assistant-ui/react';
-import { useAgentRuntime } from './useAgentRuntime';
-import type { AgentRuntimeOptions } from './useAgentRuntime';
+import { useAgentTransport } from './useAgentTransport';
+import type { AgentConnection, AgentRuntimeOptions } from './useAgentTransport';
+import { useStoreValue } from './connectionStore';
+import type { ValueStore } from './connectionStore';
 import type { PublicActivity, PublicAgentState, RunStatus } from './publicAgentState';
 import { emptyAgentState } from './publicAgentState';
 import { useAgentProjection } from './useAgentProjection';
@@ -49,6 +62,20 @@ const activitySources: Readonly<Record<string, string>> = {
   updating_analysis: 'Обновление вывода',
   skill_invocation: 'Навык помощника',
 };
+
+interface ChatView {
+  readonly history?: ReactNode;
+  readonly emptyState?: ReactNode;
+  readonly draft: string;
+  readonly onDraftChange: (value: string) => void;
+  readonly inputRef?: RefObject<HTMLTextAreaElement | null>;
+  readonly layout?: (feed: ReactNode, composer: ReactNode) => ReactNode;
+}
+
+const ChatViewContext = createContext<ChatView>({
+  draft: '',
+  onDraftChange: () => undefined,
+});
 
 function toStep(activity: PublicActivity): ActivityStep {
   return {
@@ -95,25 +122,73 @@ function LiveMessages() {
 }
 
 /**
+ * A broken connection, told apart from a finished run.
+ *
+ * Re-attaching replays the run the server already owns; it never repeats the
+ * user's message, which is why this is a separate control from «Повторить».
+ */
+function ConnectionState({
+  connection,
+  onReconnect,
+}: {
+  connection: AgentConnection;
+  onReconnect: () => void;
+}) {
+  if (connection.kind === 'online') return null;
+  if (connection.kind === 'lost') {
+    return (
+      <p className={styles.notice} data-testid="connection-state" role="status">
+        <span>
+          Связь с помощником прервана. Проверка могла продолжиться на сервере — отправлять
+          сообщение заново не нужно.
+        </span>
+        <Button onClick={onReconnect} size={32} view="outlined">
+          Подключиться заново
+        </Button>
+      </p>
+    );
+  }
+  return (
+    <p className={styles.composerError} data-testid="connection-state" role="alert">
+      <span>
+        {connection.message} Черновик сохранён; сведения компаний и сравнение открываются в
+        материалах.
+      </span>
+    </p>
+  );
+}
+
+/**
  * The single place a failed run is announced (07 E04/E05).
  *
  * One alert with one retry: the composer only keeps the draft, so the user is
  * never offered two competing ways to recover from the same failure.
  */
-function RunState({ state, onRetry }: { state: PublicAgentState; onRetry: () => void }) {
+function RunState({
+  state,
+  connection,
+  onRetry,
+}: {
+  state: PublicAgentState;
+  connection: AgentConnection;
+  onRetry: () => void;
+}) {
   const run = state.run;
+  // While the connection is down the published run status is stale by
+  // definition, so it is not repeated next to the connection notice.
+  const showsRun = connection.kind === 'online';
   return (
     <>
       {/* The raw status stays in the DOM for tests and assistive tooling. */}
       <span data-testid="run-status" hidden={true}>
         {run?.status ?? 'нет запуска'}
       </span>
-      {run !== null && run.status !== 'accepted' && !run.error ? (
+      {showsRun && run !== null && run.status !== 'accepted' && !run.error ? (
         <p className={styles.notice} role="status">
           {runLabels[run.status]}
         </p>
       ) : null}
-      {run?.error ? (
+      {showsRun && run?.error ? (
         <p className={styles.composerError} role="alert">
           <span>
             {runLabels[run.status]}. {run.error.message}
@@ -129,7 +204,12 @@ function RunState({ state, onRetry }: { state: PublicAgentState; onRetry: () => 
   );
 }
 
-function composerStatus(state: PublicAgentState, isRunning: boolean): ComposerStatus {
+function composerStatus(
+  state: PublicAgentState,
+  isRunning: boolean,
+  connection: AgentConnection,
+): ComposerStatus {
+  if (connection.kind === 'unavailable') return 'error';
   const status = state.run?.status;
   if (status === 'failed') return 'error';
   if (status === 'cancelling') return 'cancelling';
@@ -160,37 +240,159 @@ function useSendMessage(
 
 function AgentComposer({
   fallback,
-  draft,
+  connection,
   lastSentRef,
-  onDraftChange,
-  inputRef,
+  onSend,
 }: {
   fallback: PublicAgentState;
-  draft: string;
+  connection: AgentConnection;
   lastSentRef: RefObject<string>;
-  onDraftChange: (value: string) => void;
-  inputRef?: RefObject<HTMLTextAreaElement | null>;
+  onSend: () => void;
 }) {
   const aui = useAui();
+  const view = useContext(ChatViewContext);
   const state = useAgentProjection(fallback);
   const isRunning = useAuiState((value) => value.thread.isRunning);
-  const send = useSendMessage(lastSentRef, () => onDraftChange(''));
+  const send = useSendMessage(lastSentRef, () => view.onDraftChange(''));
 
   return (
     <Composer
-      inputRef={inputRef}
-      onChange={onDraftChange}
-      onSend={send}
+      inputRef={view.inputRef}
+      onChange={view.onDraftChange}
+      onSend={(text) => {
+        onSend();
+        send(text);
+      }}
       onStop={() => aui.thread.composer().cancel()}
-      status={composerStatus(state, isRunning)}
-      value={draft}
+      status={composerStatus(state, isRunning, connection)}
+      value={view.draft}
     />
   );
 }
 
+function LiveTrail({
+  fallback,
+  connection,
+  lastSentRef,
+  onReconnect,
+  onRetry,
+}: {
+  fallback: PublicAgentState;
+  connection: AgentConnection;
+  lastSentRef: RefObject<string>;
+  onReconnect: () => void;
+  onRetry: () => void;
+}) {
+  const view = useContext(ChatViewContext);
+  const state = useAgentProjection(fallback);
+  const send = useSendMessage(lastSentRef, () => undefined);
+  // Reading the ref inside the handler keeps render free of ref access.
+  const retry = () => {
+    onRetry();
+    send(lastSentRef.current);
+  };
+  return (
+    <>
+      {state.messages.length === 0 && state.run === null ? view.emptyState : null}
+      <LiveActivity state={state} />
+      <ConnectionState connection={connection} onReconnect={onReconnect} />
+      <RunState connection={connection} onRetry={retry} state={state} />
+    </>
+  );
+}
+
+/** The whole chat body; everything that changes lives below the runtime host. */
+function ChatBody({
+  fallback,
+  connectionStore,
+  lastSentRef,
+  onReconnect,
+  onRetry,
+}: {
+  fallback: PublicAgentState;
+  connectionStore: ValueStore<AgentConnection>;
+  lastSentRef: RefObject<string>;
+  onReconnect: () => void;
+  onRetry: () => void;
+}) {
+  const view = useContext(ChatViewContext);
+  const connection = useStoreValue(connectionStore);
+
+  const feed = (
+    <>
+      {view.history}
+      <LiveMessages />
+      <LiveTrail
+        connection={connection}
+        fallback={fallback}
+        lastSentRef={lastSentRef}
+        onReconnect={onReconnect}
+        onRetry={onRetry}
+      />
+    </>
+  );
+  const composer = (
+    <AgentComposer
+      connection={connection}
+      fallback={fallback}
+      lastSentRef={lastSentRef}
+      onSend={onRetry}
+    />
+  );
+
+  return (
+    <ThreadPrimitive.Root className={view.layout ? styles.threadRoot : styles.feed}>
+      {view.layout ? view.layout(feed, composer) : (
+        <>
+          {feed}
+          {composer}
+        </>
+      )}
+    </ThreadPrimitive.Root>
+  );
+}
+
+/**
+ * Owns the runtime for one thread and never re-renders on view changes.
+ *
+ * Its props are the transport options only, so `memo` keeps the live thread
+ * alive while the user types, opens the panel or scrolls.
+ */
+const AgentRuntimeHost = memo(function AgentRuntimeHost(options: AgentRuntimeOptions) {
+  const { runtime, connection, reconnect, dismissConnection } = useAgentTransport(options);
+  const fallback = useMemo(
+    () => options.initialState ?? emptyAgentState(options.projectId, options.threadId),
+    [options.initialState, options.projectId, options.threadId],
+  );
+  const lastSentRef = useRef('');
+
+  // A run that was still active when the thread was opened is re-attached once;
+  // Specs 04 §7 forbids re-sending the message that started it.
+  const attached = useRef(false);
+  useEffect(() => {
+    if (attached.current || options.activeRunId == null) return;
+    attached.current = true;
+    reconnect();
+  }, [options.activeRunId, reconnect]);
+
+  return (
+    <AssistantRuntimeProvider runtime={runtime}>
+      <ChatBody
+        connectionStore={connection}
+        fallback={fallback}
+        lastSentRef={lastSentRef}
+        onReconnect={reconnect}
+        onRetry={dismissConnection}
+      />
+    </AssistantRuntimeProvider>
+  );
+});
+
 export interface AgentChatProps extends AgentRuntimeOptions {
   /** Saved blocks rendered above the live thread. */
   readonly history?: ReactNode;
+  /** Shown while the thread genuinely has no messages of its own. */
+  readonly emptyState?: ReactNode;
   readonly draft?: string;
   readonly onDraftChange?: (value: string) => void;
   readonly inputRef?: RefObject<HTMLTextAreaElement | null>;
@@ -200,69 +402,34 @@ export interface AgentChatProps extends AgentRuntimeOptions {
 
 export function AgentChat({
   history,
+  emptyState,
   draft,
   onDraftChange,
   inputRef,
   layout,
   ...options
 }: AgentChatProps) {
-  const runtime = useAgentRuntime(options);
-  const fallback = useMemo(
-    () => emptyAgentState(options.projectId, options.threadId),
-    [options.projectId, options.threadId],
-  );
   // A chat rendered without an owner of the draft keeps it locally.
   const [localDraft, setLocalDraft] = useState('');
-  const lastSentRef = useRef('');
-  const value = draft ?? localDraft;
-  const change = onDraftChange ?? setLocalDraft;
-
-  const feed = (
-    <>
-      {history}
-      <LiveMessages />
-      <LiveTrail fallback={fallback} lastSentRef={lastSentRef} />
-    </>
-  );
-  const composer = (
-    <AgentComposer
-      draft={value}
-      fallback={fallback}
-      inputRef={inputRef}
-      lastSentRef={lastSentRef}
-      onDraftChange={change}
-    />
-  );
+  const view: ChatView = {
+    history,
+    emptyState,
+    draft: draft ?? localDraft,
+    onDraftChange: onDraftChange ?? setLocalDraft,
+    inputRef,
+    layout,
+  };
 
   return (
-    <AssistantRuntimeProvider runtime={runtime}>
-      <ThreadPrimitive.Root className={layout ? styles.threadRoot : styles.feed}>
-        {layout ? layout(feed, composer) : (
-          <>
-            {feed}
-            {composer}
-          </>
-        )}
-      </ThreadPrimitive.Root>
-    </AssistantRuntimeProvider>
-  );
-}
-
-function LiveTrail({
-  fallback,
-  lastSentRef,
-}: {
-  fallback: PublicAgentState;
-  lastSentRef: RefObject<string>;
-}) {
-  const state = useAgentProjection(fallback);
-  const send = useSendMessage(lastSentRef, () => undefined);
-  // Reading the ref inside the handler keeps render free of ref access.
-  const retry = () => send(lastSentRef.current);
-  return (
-    <>
-      <LiveActivity state={state} />
-      <RunState onRetry={retry} state={state} />
-    </>
+    <ChatViewContext.Provider value={view}>
+      <AgentRuntimeHost
+        activeRunId={options.activeRunId}
+        apiBase={options.apiBase}
+        initialState={options.initialState}
+        newId={options.newId}
+        projectId={options.projectId}
+        threadId={options.threadId}
+      />
+    </ChatViewContext.Provider>
   );
 }

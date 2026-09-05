@@ -11,7 +11,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Button } from '@alfalab/core-components/button';
 import type { DiscussionContext } from '../../api/reportContracts';
+import type { ApiProject } from '../../api/contracts';
+import { ReturningState } from './ReturningState';
 import { AgentChat } from '../../chat/AgentChat';
+import { ProjectChat } from '../../chat/ProjectChat';
 import {
   ConversationFeed,
   EmptyConversation,
@@ -38,6 +41,8 @@ interface Props {
   readonly materialActions: MaterialActions;
   /** Lets the panel put a context chip into this chat's composer. */
   readonly onInsertDraftReady?: (insert: (text: string | DiscussionContext) => void) => void;
+  /** What a returning user is told before the conversation itself. */
+  readonly resume?: ApiProject;
 }
 
 const UNAVAILABLE =
@@ -49,6 +54,7 @@ export function ChatSurface({
   handoffDraft,
   materialActions,
   onInsertDraftReady,
+  resume,
   fixtureMode = false,
 }: Props) {
   const draftKey = `draft:${project.id}:${chat.id}`;
@@ -97,11 +103,13 @@ export function ChatSurface({
     onFocusComposer: () => inputRef.current?.focus(),
     onInsertDraft: insertDraft,
   };
+  const focusComposer = useCallback(() => inputRef.current?.focus(), []);
 
   const history = (
     <>
+      {resume ? <ReturningState project={resume} onContinue={focusComposer} onOpenSummary={materialActions.onOpenSummary} /> : null}
       <ConversationFeed actions={actions} blocks={blocks} />
-      {blocks.length === 0 && !isLive ? fixtureMode ? <EmptyConversation /> : <div className={styles.detail}><p>История разговора пока недоступна.</p><p className={styles.muted}>Откройте материалы, чтобы посмотреть сведения компаний или сравнить отчёты.</p></div> : null}
+      {blocks.length === 0 && !isLive && fixtureMode ? <EmptyConversation /> : null}
     </>
   );
 
@@ -135,6 +143,22 @@ export function ChatSurface({
       </div>
     </div>
   );
+
+  // Fixture chats keep the demo transport; a real project restores its stored
+  // conversation over REST before it subscribes (06 §3).
+  if (!fixtureMode) {
+    return (
+      <ProjectChat
+        draft={draft}
+        history={history}
+        inputRef={inputRef}
+        layout={layout}
+        onDraftChange={setDraft}
+        projectId={project.id}
+        threadId={chat.id}
+      />
+    );
+  }
 
   if (isLive) {
     return (

@@ -19,6 +19,12 @@ import { LiveCompanyReport } from './LiveCompanyReport';
 import { LiveEvidence } from './LiveEvidence';
 import { factText, formatDecimal, fragmentRows } from './liveReportView';
 
+function notImplemented() {
+  return Response.json(
+    { code: 'not_found', message: 'not implemented', retryable: false, request_id: 'test', details: null },
+    { status: 404 },
+  );
+}
 function errorResponse() {
   return Response.json(
     {
@@ -33,6 +39,8 @@ function errorResponse() {
 }
 function sourceFetch(input: RequestInfo | URL): Promise<Response> {
   const url = new URL(String(input), 'http://localhost');
+  // The stored conversation endpoint is not implemented yet; the chat degrades.
+  if (url.pathname.endsWith('/conversation')) return Promise.resolve(notImplemented());
   if (url.pathname.endsWith('/overview')) return Promise.resolve(Response.json(overview));
   if (url.pathname.includes('/evidence/'))
     return Promise.resolve(
@@ -165,7 +173,8 @@ describe('live report material binding', () => {
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Материалы в черновике')).toHaveTextContent('Выручка');
     expect(draft).toHaveValue('Проверить аванс');
-    expect(screen.getByRole('button', { name: 'Отправить' })).toBeDisabled();
+    // The composer is live now: a non-empty draft can be sent to the agent.
+    expect(screen.getByRole('button', { name: 'Отправить' })).toBeEnabled();
     expect(Object.values(localStorage).join('')).toContain(REF);
   });
   it('shows loading, retains honest errors, and retries without a mock fallback', async () => {
