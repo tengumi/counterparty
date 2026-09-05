@@ -43,7 +43,8 @@ OVERVIEW_TOOL = "get_company_overview"
 SECTION_TOOL = "get_report_section"
 DEFAULT_SECTION = "financials"
 
-_INN = re.compile(r"(?<!\d)(\d{10}|\d{12})(?!\d)")
+_INN = re.compile(r"(?<![\dA-Fa-f-])(\d{10}|\d{12})(?![\dA-Fa-f-])")
+"""An INN, never a digit run inside a UUID: hex and dash neighbours disqualify."""
 
 
 class DeterministicChatModel(BaseChatModel):
@@ -146,7 +147,7 @@ def _payload(message: ToolMessage) -> Any:
 
 def _find_inn(messages: Sequence[BaseMessage]) -> str | None:
     for message in reversed(messages):
-        text = message.text() if hasattr(message, "text") else str(message.content)
+        text = message.text if isinstance(message.text, str) else str(message.content)
         match = _INN.search(text)
         if match is not None:
             return match.group(1)

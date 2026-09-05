@@ -25,6 +25,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
+from langgraph.graph.state import CompiledStateGraph
 
 from .context import AgentContext
 from .evidence import (
@@ -36,6 +37,9 @@ from .evidence import (
 from .filesystem import scoped_permissions
 from .middleware import EvidenceLedgerMiddleware
 from .prompts import REPAIR_INSTRUCTION
+
+CompiledHarness = CompiledStateGraph[Any, Any, Any, Any]
+"""The compiled LangGraph the harness runs. Its generics are library detail."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,9 +66,9 @@ def create_harness(
     context: AgentContext,
     ledger: RunEvidenceLedger,
     checkpointer: BaseCheckpointSaver[str] | None = None,
-) -> object:
+) -> CompiledHarness:
     """Build the compiled Deep Agents graph for one thread."""
-    return create_deep_agent(
+    graph: CompiledHarness = create_deep_agent(
         model=model,
         tools=list(tools),
         system_prompt=context.render(),
@@ -73,13 +77,14 @@ def create_harness(
         backend=StateBackend(),
         checkpointer=checkpointer,
     )
+    return graph
 
 
 def final_text(messages: Sequence[BaseMessage]) -> str:
     """Return the text of the last assistant message of a turn."""
     for message in reversed(messages):
         if isinstance(message, AIMessage) and not message.tool_calls:
-            return message.text()
+            return str(message.text)
     return ""
 
 
@@ -90,7 +95,7 @@ def _repair_prompt(report: ValidationReport, ledger: RunEvidenceLedger) -> str:
 
 
 async def run_turn(
-    graph: Any,
+    graph: CompiledHarness,
     *,
     question: str,
     config: RunnableConfig,

@@ -28,7 +28,7 @@ from .evidence import (
     validate_answer,
 )
 from .filesystem import scoped_permissions, thread_workspace_root
-from .graph import TurnResult, create_harness, final_text, run_turn
+from .graph import CompiledHarness, TurnResult, create_harness, final_text, run_turn
 from .middleware import EvidenceLedgerMiddleware
 from .models import create_chat_model
 from .tools import reports_connection, reports_toolset
@@ -37,6 +37,7 @@ __all__ = [
     "AgentContext",
     "Claim",
     "CompanyContext",
+    "CompiledHarness",
     "ContextSource",
     "DeterministicChatModel",
     "EvidenceLedgerMiddleware",
