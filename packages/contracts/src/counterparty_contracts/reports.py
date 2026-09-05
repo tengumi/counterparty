@@ -22,6 +22,7 @@ from uuid import UUID
 from pydantic import Field, model_validator
 
 from .base import ContractModel, NonEmptyString, SchemaVersion, UtcDatetime
+from .diagnostics import ContractWarning
 from .enums import (
     ArbitrationAggregation,
     Availability,
@@ -265,7 +266,7 @@ class CompanyOverview(ContractModel):
     """Completeness of every known section, including the absent ones: a
     section the UI cannot show must still be nameable as missing."""
 
-    warnings: list[str] = Field(default_factory=list)
+    warnings: list[ContractWarning] = Field(default_factory=list)
     rule_version: NonEmptyString
 
     @model_validator(mode="after")
@@ -591,7 +592,7 @@ class ReportSection(ContractModel):
     total_records: NonNegativeCount | None = None
     """Total across pages when the server can count it without guessing."""
 
-    warnings: list[str] = Field(default_factory=list)
+    warnings: list[ContractWarning] = Field(default_factory=list)
     rule_version: NonEmptyString
 
     @model_validator(mode="after")
@@ -618,7 +619,7 @@ class ComparisonRow(ContractModel):
     report: ReportIdentity
     cells: list[FactValue] = Field(default_factory=list)
     status: ComparisonRowStatus
-    warnings: list[str] = Field(default_factory=list)
+    warnings: list[ContractWarning] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_cells(self) -> Self:
@@ -642,7 +643,7 @@ class Comparison(ContractModel):
     year_policy: YearPolicy
     year: FiscalYear | None = None
     rows: list[ComparisonRow] = Field(default_factory=list)
-    warnings: list[str] = Field(default_factory=list)
+    warnings: list[ContractWarning] = Field(default_factory=list)
     rule_version: NonEmptyString
 
     @model_validator(mode="after")

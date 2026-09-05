@@ -247,3 +247,153 @@ class ProjectDeletionState(StrEnum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     FAILED = "failed"
+
+
+class WarningCode(StrEnum):
+    """Category of a non-fatal diagnostic attached to a published payload.
+
+    A warning explains an incompleteness; it never turns into a value. A client
+    that does not know a code still shows its message rather than dropping it.
+    """
+
+    UNSPECIFIED = "unspecified"
+    """A diagnostic carried over from a lower layer that has no category yet."""
+
+    SOURCE_MISSING = "source_missing"
+    """The source did not carry the field or section at all."""
+
+    PARSE_FAILED = "parse_failed"
+    """The source carried something that could not be read as its type."""
+
+    PARTIAL_DATA = "partial_data"
+    """Part of the requested result could not be built."""
+
+    UNKNOWN_ENUM_VALUE = "unknown_enum_value"
+    """A raw external token was kept as is because it has no confirmed meaning."""
+
+    PRECISION_REDUCED = "precision_reduced"
+    """A value was rounded, truncated or narrowed for presentation."""
+
+    STALE_SNAPSHOT = "stale_snapshot"
+    """The snapshot the answer was read from is old enough to matter."""
+
+    PERIOD_MISMATCH = "period_mismatch"
+    """The compared periods are not adjacent or not the same across companies."""
+
+    PERIOD_AMBIGUOUS = "period_ambiguous"
+    """More than one source record claims the same period."""
+
+    AGGREGATE_MISMATCH = "aggregate_mismatch"
+    """Two reported aggregates of the same facts disagree; neither is corrected."""
+
+    INCOMPLETE_TOTAL = "incomplete_total"
+    """The known part of a total is a lower bound, not the total."""
+
+    EMPTY_NOT_CONFIRMED = "empty_not_confirmed"
+    """An empty container was returned and does not prove that nothing exists."""
+
+    NOT_COMPARABLE = "not_comparable"
+    """Values could not be put side by side without changing their meaning."""
+
+    RESULT_TRUNCATED = "result_truncated"
+    """The response hit a server size or record limit and is continued elsewhere."""
+
+
+class MessageRole(StrEnum):
+    """Who a public conversation message belongs to.
+
+    ``system_notice`` is the service speaking about the run itself; it is never
+    presented as the assistant's own answer.
+    """
+
+    USER = "user"
+    ASSISTANT = "assistant"
+    SYSTEM_NOTICE = "system_notice"
+
+
+class MessageStatus(StrEnum):
+    """Delivery state of one public message.
+
+    ``partial`` keeps what was already produced; it is not a completed answer
+    and must not be read as one.
+    """
+
+    PENDING = "pending"
+    STREAMING = "streaming"
+    COMPLETE = "complete"
+    PARTIAL = "partial"
+    ERROR = "error"
+
+
+class ActivityKind(StrEnum):
+    """What the agent is publicly doing.
+
+    This is the safe public label of an action, not a mirror of low-level
+    callbacks: no prompt, raw tool argument or reasoning is published.
+    """
+
+    READING_REPORT = "reading_report"
+    READING_DOCUMENT = "reading_document"
+    COMPARING = "comparing"
+    CALCULATING = "calculating"
+    UPDATING_ANALYSIS = "updating_analysis"
+    SKILL_INVOCATION = "skill_invocation"
+
+
+class ActivityStatus(StrEnum):
+    """Lifecycle of one published activity."""
+
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class SaveStatus(StrEnum):
+    """Whether the server confirmed that the projection is persisted.
+
+    ``saved`` is set by the server after the write, never optimistically by the
+    stream.
+    """
+
+    UNSAVED = "unsaved"
+    SAVING = "saving"
+    SAVED = "saved"
+
+
+class PendingCommandStatus(StrEnum):
+    """Lifecycle of a follow-up accepted while a run is working.
+
+    ``applied`` means the message was added to the conversation context at a
+    safe boundary and persisted. It does not mean the answer is finished.
+    """
+
+    ACCEPTED = "accepted"
+    QUEUED = "queued"
+    APPLYING = "applying"
+    APPLIED = "applied"
+    CANCELLED = "cancelled"
+    FAILED = "failed"
+
+
+class SkillInvocationStatus(StrEnum):
+    """Lifecycle of one skill execution published to the UI."""
+
+    LOADING = "loading"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    CACHED = "cached"
+
+
+class McpStatus(StrEnum):
+    """Business outcome of one MCP tool call.
+
+    A protocol failure is not one of these: a transport error never arrives as
+    ``ok`` with empty data, and empty data never means "no risk".
+    """
+
+    OK = "ok"
+    PARTIAL = "partial"
+    NOT_FOUND = "not_found"
+    UNAVAILABLE = "unavailable"

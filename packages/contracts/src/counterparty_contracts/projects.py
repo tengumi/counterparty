@@ -48,6 +48,7 @@ __all__ = [
     "AddCompaniesResponse",
     "AddCompanyItem",
     "AddCompanyResult",
+    "ArtifactAttachment",
     "ArtifactPreview",
     "CompanySummary",
     "CreateDecisionRequest",
@@ -93,6 +94,20 @@ class ArtifactPreview(ContractModel):
     available: bool
     """``False`` once the artifact can no longer be opened; a newer version
     never rewrites an already sent reference."""
+
+
+class ArtifactAttachment(ContractModel):
+    """A reference to one immutable artifact version, or a section of it.
+
+    The server resolves the attachment: it checks the project, the existence of
+    the pinned version and the section. A URL or a server path is never
+    accepted as an attachment, and a newer version never rewrites a reference
+    that was already sent.
+    """
+
+    artifact_id: ArtifactId
+    version: int = Field(ge=1)
+    section_id: NonEmptyString | None = None
 
 
 class CompanySummary(ContractModel):
