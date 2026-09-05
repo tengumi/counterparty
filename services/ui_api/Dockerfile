@@ -10,6 +10,7 @@ ENV UV_PROJECT_ENVIRONMENT=/app/.venv
 
 WORKDIR /workspace/services/ui_api
 COPY packages/contracts /workspace/packages/contracts
+COPY packages/storage /workspace/packages/storage
 COPY services/ui_api/pyproject.toml services/ui_api/uv.lock ./
 COPY services/ui_api/src ./src
 RUN uv sync --frozen --no-dev --no-editable
