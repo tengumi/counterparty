@@ -276,7 +276,7 @@ export function Comparison({
                         </td>
                       );
                     })}
-                    <td>Не указаны</td>
+                    <td>Пока недоступны</td>
                   </tr>
                 ))}
               </tbody>
