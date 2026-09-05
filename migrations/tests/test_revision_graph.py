@@ -42,6 +42,8 @@ def test_env_only_manages_owned_schemas() -> None:
     assert env.include_name("workspace", "schema", {}) is True
     assert env.include_name("agent_state", "schema", {}) is False
     assert env.include_name("checkpoints", "table", {"schema_name": "agent_state"}) is False
+    assert env.include_name("checkpoints", "table", {"schema_name": "workspace"}) is False
+    assert env.include_name("agent_runs", "table", {"schema_name": "workspace"}) is True
     assert env.include_name("companies", "table", {"schema_name": "reports"}) is True
 
 

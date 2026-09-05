@@ -2,6 +2,8 @@
 
 from .reports import CompanyReadRepository, CompanySearchResult, ReportSnapshotReadRepository
 from .workspace import (
+    AgentRunOwner,
+    AgentRunRepository,
     CompanyAddition,
     IdempotencyRepository,
     ProjectCompanyRecord,
@@ -10,9 +12,12 @@ from .workspace import (
     Reservation,
     ReservationOutcome,
     ThreadRepository,
+    agent_run_owner,
 )
 
 __all__ = [
+    "AgentRunOwner",
+    "AgentRunRepository",
     "CompanyAddition",
     "CompanyReadRepository",
     "CompanySearchResult",
@@ -24,4 +29,5 @@ __all__ = [
     "Reservation",
     "ReservationOutcome",
     "ThreadRepository",
+    "agent_run_owner",
 ]

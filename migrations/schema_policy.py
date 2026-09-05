@@ -1,19 +1,22 @@
-"""Which database objects these migrations are allowed to manage.
+"""Exclude framework-owned tables while managing reports and workspace.
 
-PostgreSQL also hosts schemas this project does not own. A framework-owned
-namespace — for example an ``agent_state`` schema holding LangGraph checkpoint
-tables, whose DDL belongs to the library and is applied as its own deployment
-step — must stay invisible to autogenerate, so that a project revision can
-never propose dropping it.
-
-This lives outside ``env.py`` because ``env.py`` runs migrations on import and
-therefore cannot be imported by a test.
+AsyncPostgresSaver owns its own DDL inside workspace. Its exact table names are
+excluded from Alembic comparison, so autogenerate never proposes dropping them.
 """
 
 from alembic.runtime.environment import NameFilterParentNames, NameFilterType
 from counterparty_storage import MANAGED_SCHEMAS
 
 __all__ = ["MANAGED_SCHEMAS", "include_name"]
+
+FRAMEWORK_TABLES = frozenset(
+    {
+        "checkpoint_migrations",
+        "checkpoints",
+        "checkpoint_blobs",
+        "checkpoint_writes",
+    }
+)
 
 
 def include_name(
@@ -25,5 +28,7 @@ def include_name(
     if type_ == "schema":
         return name in MANAGED_SCHEMAS
     if type_ == "table":
-        return parent_names.get("schema_name") in MANAGED_SCHEMAS
+        return parent_names.get("schema_name") in MANAGED_SCHEMAS and not (
+            parent_names.get("schema_name") == "workspace" and name in FRAMEWORK_TABLES
+        )
     return True

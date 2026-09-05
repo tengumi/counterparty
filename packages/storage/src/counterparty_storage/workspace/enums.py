@@ -45,3 +45,16 @@ class IdempotencyState(StrEnum):
 
     IN_FLIGHT = "in_flight"
     COMPLETED = "completed"
+
+
+class AgentRunStatus(StrEnum):
+    """Durable execution status; values match the existing public RunStatus."""
+
+    ACCEPTED = "accepted"
+    RUNNING = "running"
+    CANCELLING = "cancelling"
+    COMPLETED = "completed"
+    AWAITING_INPUT = "awaiting_input"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    INTERRUPTED = "interrupted"

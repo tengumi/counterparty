@@ -10,9 +10,9 @@ decided by the database, not by the code it happens to run:
 * ``ui_api`` serves the product. It reads both schemas and writes only inside
   ``workspace``: it cannot edit the provided report it is showing.
 * ``agent`` reasons inside a project. It reads the project context it works on
-  and, in this vertical, may update exactly one column — the activity time of a
-  thread. It reaches the report corpus through MCP, so it holds no privilege on
-  ``reports`` whatsoever, and it cannot rename, create or delete anything.
+  and stores run lifecycle. It may update a thread activity time, but cannot
+  rename or delete project context. It reaches reports through MCP and holds
+  no privilege on the ``reports`` schema.
 
 Two rules keep the matrix honest as the schema grows:
 
@@ -23,9 +23,8 @@ Two rules keep the matrix honest as the schema grows:
 
 The roles are created ``NOLOGIN``. They are group roles: a deployment creates
 its own login user and grants it the group, so no password is ever handled by a
-migration. Framework-owned checkpoint storage lives in a namespace this project
-does not own; granting privileges there belongs to the deployment step that
-creates it, and is deliberately absent here.
+migration. Framework-owned checkpoint tables live inside workspace. Their
+privileges belong to the explicit saver deployment step, not this matrix.
 """
 
 from collections.abc import Iterable, Mapping, Sequence
@@ -129,6 +128,7 @@ ROLE_GRANTS: Final[Mapping[DatabaseRole, tuple[TableGrant, ...]]] = {
     DatabaseRole.AGENT: (
         # Enumerated table by table on purpose: a workspace table added later
         # stays invisible to the agent until someone adds a line here.
+        TableGrant(WORKSPACE_SCHEMA, "agent_runs", _APPEND),
         TableGrant(WORKSPACE_SCHEMA, "projects", _READ),
         TableGrant(WORKSPACE_SCHEMA, "project_companies", _READ),
         TableGrant(

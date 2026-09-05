@@ -136,3 +136,20 @@ def test_database_downgrade_preserves_roles_used_by_another_database(
         with _database_url(second_database_url):
             command.downgrade(alembic_config, "base")
         second_engine.dispose()
+
+
+def test_run_revision_preserves_framework_tables(alembic_config: Config, engine: Engine) -> None:
+    """App run rollback leaves library checkpoint tables in workspace untouched."""
+    command.upgrade(alembic_config, "head")
+    try:
+        with engine.begin() as connection:
+            connection.execute(text("CREATE TABLE workspace.checkpoints (marker text)"))
+            connection.execute(text("INSERT INTO workspace.checkpoints VALUES ('keep')"))
+        command.downgrade(alembic_config, "0004")
+        command.upgrade(alembic_config, "head")
+        with engine.connect() as connection:
+            assert connection.scalar(text("SELECT marker FROM workspace.checkpoints")) == "keep"
+    finally:
+        with engine.begin() as connection:
+            connection.execute(text("DROP TABLE IF EXISTS workspace.checkpoints"))
+        command.downgrade(alembic_config, "base")
