@@ -710,3 +710,31 @@ async def test_company_search_uses_latest_local_profile_and_stable_cursor(
         limit=10,
     )
     assert [row.company.id for row in second_page] == [second_company]
+
+
+async def test_historical_report_access_stays_inside_the_live_project(
+    uow: AsyncUnitOfWork,
+    other_uow: AsyncUnitOfWork,
+    owner_id: UUID,
+    snapshot: tuple[UUID, UUID],
+) -> None:
+    """Removing a company preserves its source, without opening another project or tenant."""
+    company_id, report_id = snapshot
+    project = await _project(uow, owner_id)
+    other_project = await _project(uow, owner_id, "Unrelated")
+    scope = uow.scope.project(project.id)
+    await uow.project_companies.add(scope, company_id=company_id, report_id=report_id)
+    await uow.project_companies.remove(scope, company_id=company_id)
+    assert await uow.project_companies.has_historical_report(scope, report_id)
+    assert not await uow.project_companies.has_historical_report(
+        uow.scope.project(other_project.id), report_id
+    )
+    with pytest.raises(ValueError):
+        await other_uow.project_companies.has_historical_report(scope, report_id)
+    with pytest.raises(NotFoundError):
+        await other_uow.project_companies.has_historical_report(
+            other_uow.scope.project(project.id), report_id
+        )
+    await uow.projects.soft_delete(project.id)
+    with pytest.raises(NotFoundError):
+        await uow.project_companies.has_historical_report(scope, report_id)
