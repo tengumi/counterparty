@@ -15,6 +15,7 @@ from counterparty_contracts import (
     ReportSectionName,
 )
 
+from counterparty_domain.report_evidence import build_report_evidence
 from counterparty_domain.report_reads import ReportReadData, build_company_overview
 from counterparty_domain.report_sections import build_report_section
 
@@ -204,3 +205,38 @@ def test_rest_empty_filters_and_mcp_omitted_filters_share_cursor() -> None:
         data, request.model_copy(update={"filters": ReportSectionFilters()})
     )
     assert mcp == rest
+
+
+@pytest.mark.parametrize("suffix", ["", "/assets/currentAssets/stocks"])
+def test_evidence_keeps_old_financial_period_outside_overview(suffix: str) -> None:
+    """An exact old source ref retains its validated year, regardless of array order."""
+    old = {"common": {"year": 2021, "proceeds": 0}, "assets": {"currentAssets": {"stocks": 0}}}
+    data = report_data({"finReports": [old, {"common": {"year": 2025, "proceeds": 50}}]})
+    data = replace(
+        data,
+        financials=[
+            {
+                "year": 2021,
+                "source_path": "/finReports/0",
+                "proceeds": Decimal(0),
+                "stocks": Decimal(0),
+            },
+            {"year": 2025, "source_path": "/finReports/1", "proceeds": Decimal(50)},
+        ],
+    )
+    ref = f"report:{data.report_id}:/finReports/0{suffix}"
+    assert all(ref not in fact.evidence_refs for fact in build_company_overview(data).facts)
+    result = build_report_evidence(data, ref)
+    assert result is not None
+    assert result.evidence.period == 2021
+    assert result.evidence.source_path == f"/finReports/0{suffix}"
+    assert result.value == (0 if suffix else old)
+
+
+def test_evidence_does_not_borrow_report_date_for_unknown_period() -> None:
+    """A source without a typed financial period keeps the period unknown."""
+    data = report_data({"foundersInfo": {"shareCapital": 10000}})
+    result = build_report_evidence(data, f"report:{data.report_id}:/foundersInfo/shareCapital")
+    assert result is not None
+    assert result.evidence.period is None
+    assert result.value == 10000
