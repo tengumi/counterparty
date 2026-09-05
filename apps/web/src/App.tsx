@@ -1,6 +1,8 @@
 import { Link, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { ChecksPage } from './pages/ChecksPage';
 import { CheckPage } from './pages/CheckPage';
+import { WorkspaceQueryProvider } from './api/QueryProvider';
+import type { ApiProject } from './api/contracts';
 import styles from './App.module.css';
 
 function AppShell() {
@@ -19,21 +21,23 @@ function AppShell() {
   );
 }
 
-export function App() {
+export function App({ initialProjects }: { initialProjects?: readonly ApiProject[] }) {
   return (
-    <Routes>
-      <Route element={<AppShell />}>
-        <Route path="/" element={<Navigate to="/checks" replace />} />
-        <Route path="/checks" element={<ChecksPage />} />
-        <Route path="/checks/:projectId" element={<CheckPage />} />
-        <Route path="/checks/:projectId/chats/:threadId" element={<CheckPage />} />
-        <Route path="*" element={
-          <section className={styles.content}>
-            <h1>Страница не найдена</h1>
-            <Link to="/checks">Все проверки</Link>
-          </section>
-        } />
-      </Route>
-    </Routes>
+    <WorkspaceQueryProvider initialProjects={initialProjects}>
+      <Routes>
+        <Route element={<AppShell />}>
+          <Route path="/" element={<Navigate to="/checks" replace />} />
+          <Route path="/checks" element={<ChecksPage />} />
+          <Route path="/checks/:projectId" element={<CheckPage />} />
+          <Route path="/checks/:projectId/chats/:threadId" element={<CheckPage />} />
+          <Route path="*" element={
+            <section className={styles.content}>
+              <h1>Страница не найдена</h1>
+              <Link to="/checks">Все проверки</Link>
+            </section>
+          } />
+        </Route>
+      </Routes>
+    </WorkspaceQueryProvider>
   );
 }

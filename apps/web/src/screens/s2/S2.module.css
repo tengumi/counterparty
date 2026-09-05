@@ -5,8 +5,10 @@
 .back { flex: none; white-space: nowrap; color: rgba(4, 4, 19, .55); }
 .divider { flex: none; width: 1px; height: 20px; background: #e7e8eb; }
 .projectTitle { font-size: 14px; line-height: 20px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.projectTitleButton { border: 0; background: none; padding: 4px; font: inherit; font-size: 14px; line-height: 20px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; cursor: pointer; color: inherit; }
 .saveState { flex: none; font-size: 13px; line-height: 18px; color: rgba(5, 8, 29, .38); }
 .saveError { flex: none; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; line-height: 18px; color: #d91d0b; }
+.retryLink { border: 0; background: none; padding: 0; color: #2a77ef; cursor: pointer; text-decoration: underline; }
 .headerActions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: none; position: relative; }
 
 /* S2-13/S2-14 chat switcher */
@@ -93,6 +95,11 @@
 .rowName { display: block; line-height: 20px; }
 .rowMeta { display: block; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); }
 .rowSide { flex: none; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); }
+.companyManageRow { display: flex; align-items: center; gap: 8px; }
+.companyManageRow .rowButton { flex: 1; min-width: 0; }
+.companyEditor { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.companyError { margin: 0; color: #d91d0b; font-size: 13px; line-height: 18px; }
+.companyResults { margin: 0; padding-left: 20px; color: rgba(4, 4, 19, .55); font-size: 13px; line-height: 20px; }
 .termLabel { width: 96px; flex: none; font-size: 13px; line-height: 18px; color: rgba(4, 4, 19, .55); }
 .unknown { color: rgba(5, 8, 29, .38); }
 .detail { display: flex; flex-direction: column; gap: 12px; }

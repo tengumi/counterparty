@@ -21,6 +21,10 @@
 .meta { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
 .date { font-size: 13px; line-height: 18px; color: rgba(5, 8, 29, .38); }
 .empty { margin: 16px 0 0; padding-top: 16px; border-top: 1px solid #e7e8eb; color: rgba(4, 4, 19, .55); }
+.state { margin: 32px 0 0; color: rgba(4, 4, 19, .55); }
+.errorState { margin: 32px 0 0; padding: 16px; border: 1px solid #f0b5ae; border-radius: 12px; color: #8f160b; }
+.errorState p { margin: 0 0 8px; }
+.submitError { margin: 8px 0 0; color: #d91d0b; font-size: 13px; line-height: 18px; }
 
 @media (max-width: 1100px) {
   .scroll { overflow: visible; }
