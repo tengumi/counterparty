@@ -190,5 +190,6 @@
 @media (max-width: 640px) {
   .draftContext { flex-wrap: wrap; min-width: 0; box-sizing: border-box; }
   .draftContext > span { flex: 1 1 100%; }
-  .draftContext button { min-width: 44px; min-height: 44px; flex-shrink: 0; }
+  /* Beat Core Button's .text.text reset only inside draft context chips. */
+  .draftContexts .draftContext button { min-width: 44px; min-height: 44px; flex-shrink: 0; }
 }
