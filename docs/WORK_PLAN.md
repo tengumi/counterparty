@@ -45,13 +45,13 @@ storage. Изменения contract v0 согласуются до паралл
 
 | ID | Результат | Depends on | Область | Статус |
 |---|---|---|---|---|
-| F0-01 | Соглашения Python 3.13 и шаблон самостоятельного uv-проекта без Python-конфига в корне | — | docs/tooling | todo |
-| F0-02 | Пустые устанавливаемые `contracts`, `domain`, `storage` с import smoke tests | F0-01 | `packages/` | todo |
+| F0-01 | Соглашения Python 3.13 и шаблон самостоятельного uv-проекта без Python-конфига в корне | — | docs/tooling | done |
+| F0-02 | Пустые устанавливаемые `contracts`, `domain`, `storage` с import smoke tests | F0-01 | `packages/` | done |
 | F0-03A | `ui_api`: отдельные pyproject/lockfile, health endpoint, собственный Dockerfile и smoke test образа | F0-01, F0-02 | `services/ui_api` | todo |
 | F0-03B | `agent`: отдельные pyproject/lockfile, health endpoint, собственный Dockerfile и smoke test образа | F0-01, F0-02 | `services/agent` | todo |
 | F0-03C | `mcp`: отдельные pyproject/lockfile, health endpoint, собственный Dockerfile и smoke test образа | F0-01, F0-02 | `services/mcp` | todo |
-| F0-04 | React/Vite/TypeScript strict, Core DS foundation, собственный Dockerfile и статический smoke screen | — | `apps/web` | todo |
-| F0-05 | Contract v0: IDs, source/evidence refs, availability/outcome, project/thread/run envelopes | F0-02 | `packages/contracts` | todo |
+| F0-04 | React/Vite/TypeScript strict, Core DS foundation, собственный Dockerfile и статический smoke screen | — | `apps/web` | done |
+| F0-05 | Contract v0: IDs, source/evidence refs, availability/outcome, project/thread/run envelopes | F0-02 | `packages/contracts` | done |
 | F0-06 | Spike V01: assistant-stream ↔ assistant-ui передаёт текст, typed activity, terminal error и cancel | F0-03B, F0-04, F0-05 | `agent`, `web`, contract test | todo |
 | F0-07 | Spike V04: LangGraph PostgreSQL checkpoint в схеме `workspace`, restart помечает run interrupted | F0-03B | `agent`, `migrations` | todo |
 | F0-08 | Spike V05: FastMCP Streamable HTTP, один typed read-only tool и корректный async cleanup | F0-03C, F0-05 | `mcp`, integration test | todo |
@@ -106,7 +106,7 @@ Gate F0:
 
 | ID | Результат | Depends on | Статус |
 |---|---|---|---|
-| WEB-01 | App shell, маршруты `/checks` и `/checks/:projectId/chats/:threadId` | F0-04 | todo |
+| WEB-01 | App shell, маршруты `/checks` и `/checks/:projectId/chats/:threadId` | F0-04 | done |
 | WEB-02 | S1: поле задачи, примеры и список сохранённых проверок | WEB-01 | todo |
 | WEB-03 | S2 shell: header, chat switcher, company context strip, responsive layout | WEB-01 | todo |
 | WEB-04 | Conversation blocks, activity/progress и composer states на typed mocks | WEB-03, F0-05 | todo |

@@ -144,9 +144,9 @@ contract v0 и внешний фундамент UI до создания сер
 
 | Task | Статус | Исполнитель/результат |
 |---|---|---|
-| A1 / F0-01, F0-02, F0-05 | review | integrated through `1c6ffd7`; 23 contract tests, package quality/build checks pass |
-| A2 / F0-04, WEB-01 | review | integrated through `624f4d2`; GPT-6 medium; 5 tests, lint/type/build/Docker smoke pass |
-| A3 / IMP-01 audit | review | mock contract audit complete; Extended JSON/source-path controls confirmed |
+| A1 / F0-01, F0-02, F0-05 | done | accepted; integrated through `1c6ffd7`; 23 contract tests, package quality/build checks pass |
+| A2 / F0-04, WEB-01 | done | accepted; integrated through `624f4d2`; GPT-6 medium; 5 tests, lint/type/build/Docker smoke pass |
+| A3 / IMP-01 audit | done | accepted; mock contract audit complete; Extended JSON/source-path controls confirmed |
 
 ## Волна B — три Python-сервиса
 
@@ -197,9 +197,9 @@ docs/Specs/10_SYSTEM_CONTRACTS.md. Не подключай workspace и не п�
 
 | Task | Статус | Исполнитель/результат |
 |---|---|---|
-| B1 / F0-03A | todo | — |
-| B2 / F0-03B, V04 spike | todo | — |
-| B3 / F0-03C, V05 spike | todo | — |
+| B1 / F0-03A | in progress | `agent/b1-ui-api-shell` · `.worktrees/b1-ui-api-shell` |
+| B2 / F0-03B, V04 spike | in progress | `agent/b2-agent-shell` · `.worktrees/b2-agent-shell` |
+| B3 / F0-03C, V05 spike | in progress | `agent/b3-mcp-shell` · `.worktrees/b3-mcp-shell` |
 
 ## Волна C — интеграционные риски и первый data/domain слой
 
