@@ -8,6 +8,7 @@ from fastapi import FastAPI
 
 from .checkpointing import Checkpointer, postgres_checkpointer
 from .config import AgentSettings
+from .transport import RunRegistry, deterministic_agent
 
 CheckpointerFactory = Callable[[str], AbstractAsyncContextManager[Checkpointer]]
 
@@ -17,6 +18,7 @@ class AgentResources:
     """Resources shared for exactly one application lifespan."""
 
     checkpointer: Checkpointer | None
+    runs: RunRegistry
 
 
 def create_lifespan(
@@ -28,13 +30,15 @@ def create_lifespan(
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         dsn = settings.postgres_dsn
-        if dsn is None:
-            app.state.resources = AgentResources(checkpointer=None)
-            yield
-            return
+        async with RunRegistry(deterministic_agent) as runs:
+            app.state.runs = runs
+            if dsn is None:
+                app.state.resources = AgentResources(checkpointer=None, runs=runs)
+                yield
+                return
 
-        async with checkpointer_factory(dsn.get_secret_value()) as checkpointer:
-            app.state.resources = AgentResources(checkpointer=checkpointer)
-            yield
+            async with checkpointer_factory(dsn.get_secret_value()) as checkpointer:
+                app.state.resources = AgentResources(checkpointer=checkpointer, runs=runs)
+                yield
 
     return lifespan
