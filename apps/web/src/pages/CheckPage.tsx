@@ -161,6 +161,7 @@ function ProjectScreen({ apiProject, project, threadId, fixtureMode }: { apiProj
             }}
             onInsertDraftReady={registerInsert}
             project={project}
+            resume={fixtureMode ? undefined : apiProject}
           />
         )}
       </div>

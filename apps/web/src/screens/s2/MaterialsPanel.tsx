@@ -20,10 +20,12 @@ import { CompanyReport } from './CompanyReport';
 import { LiveCompanyReport } from './LiveCompanyReport';
 import { LiveEvidence } from './LiveEvidence';
 import { Comparison } from './Comparison';
+import { DecisionPanel } from './DecisionPanel';
 import type { DiscussionContext } from '../../api/reportContracts';
 import type { MaterialsGroup, MaterialsState, MaterialsView } from './materialsView';
 import { parseNumber, readStored, writeStored } from './persisted';
 import { currentView, groupTitles } from './materialsView';
+import { outcomeLabels } from './decisionView';
 import styles from './S2.module.css';
 
 interface Props {
@@ -96,7 +98,25 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, c
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [companyDraft, setCompanyDraft] = useState('');
   const view = currentView(state);
-  const materials = apiProject ? { terms: [], documents: [], summary: { short: 'Недоступно', line: 'Вывод и запись решения пока недоступны', recorded: false } } : getMaterials(project.id);
+  const materials = apiProject
+    ? {
+        terms: [],
+        documents: [],
+        summary: apiProject.latest_decision
+          ? {
+              short: 'Записан',
+              line: `Ваше решение: ${outcomeLabels[apiProject.latest_decision.outcome]}`,
+              recorded: true,
+            }
+          : {
+              short: apiProject.latest_artifact ? 'Есть вывод' : 'Нет',
+              line: apiProject.latest_artifact
+                ? 'Вывод помощника готов; решение ещё не записано'
+                : 'Решение ещё не записано',
+              recorded: false,
+            },
+      }
+    : getMaterials(project.id);
   const scrollKey = `materials-scroll:${project.id}:${JSON.stringify(view)}`;
 
   useEffect(() => {
@@ -429,7 +449,12 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, c
           </div>
         ) : null}
 
-        {view.kind === 'summary' && apiProject ? <p className={styles.muted}>Вывод помощника и запись решения пока недоступны. Сведения компаний и сравнение можно открыть в материалах.</p> : null}
+        {view.kind === 'summary' && apiProject ? (
+          <DecisionPanel
+            onOpenEvidence={(evidenceId) => push({ kind: 'evidence', evidenceId })}
+            project={apiProject}
+          />
+        ) : null}
         {view.kind === 'summary' && !apiProject ? (
           <div className={styles.detail}>
             <p className={materials.summary.recorded ? styles.recorded : styles.proposal}>

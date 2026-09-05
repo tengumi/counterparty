@@ -1,3 +1,5 @@
+import type { ApiUserDecision, ArtifactFreshness } from './decisions';
+
 export type WorkflowStatus = 'in_progress' | 'needs_information' | 'decision_recorded';
 
 export interface ApiProjectCompany {
@@ -10,6 +12,17 @@ export interface ApiProjectCompany {
   readonly added_at: string;
 }
 
+/** Compact reference to the latest AI conclusion of a project (Specs 10 §4). */
+export interface ApiArtifactPreview {
+  readonly artifact_id: string;
+  readonly version: number;
+  readonly title: string;
+  readonly source_thread_id: string;
+  readonly created_at: string;
+  readonly freshness: ArtifactFreshness;
+  readonly available: boolean;
+}
+
 export interface ApiProject {
   readonly schema_version: string;
   readonly id: string;
@@ -20,6 +33,9 @@ export interface ApiProject {
   readonly workflow_status: WorkflowStatus;
   readonly companies: readonly ApiProjectCompany[];
   readonly last_open_question: string | null;
+  /** The AI conclusion and the recorded decision are separate entities. */
+  readonly latest_artifact?: ApiArtifactPreview | null;
+  readonly latest_decision?: ApiUserDecision | null;
   readonly created_at: string;
   readonly updated_at: string;
 }
