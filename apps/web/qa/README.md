@@ -27,3 +27,12 @@ Live mode signs in as `demo-analyst`, creates one server-owned project, renames 
 Outputs: viewport PNGs plus `manifest-{mode}.json` with source SHA, Chrome version, dataset scope, assertions and limitations. Mock screenshots never certify live report/agent wiring (WEB-08/09). Failures make the process exit nonzero while preserving a reviewable manifest. Screenshots use viewport bounds, not tall stitched pages.
 
 The same fixture sweep also opens the unchanged accepted designer HTML as a separate file URL, using its own support.js and the exact CDN dependency versions it declares. Reference captures include S1/S2 at all three widths and materials at desktop/mobile. The HTML and support.js hashes are recorded. Reference narrow-width shell behavior is compared against Specs 07; the harness does not alter its HTML to manufacture pixel equality.
+
+Targeted follow-up after a reviewed fix, retaining first-pass files and their original SHA:
+
+```sh
+npm run qa:browser -- --capture --target=tablet-s2 --output=../../artifacts/qa/WEB-07/follow-up
+npm run qa:browser -- --capture --target=availability --output=../../artifacts/qa/WEB-07/follow-up
+```
+
+The first command repeats tablet S2/panel/report/evidence/draft/scroll; the second checks report source-state wording and panel bounds on mobile/desktop. They create separate manifests, skip reference/live, and never relabel existing PNGs with the newer SHA.
