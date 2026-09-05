@@ -5,14 +5,17 @@ import { resolve } from 'node:path';
 import { startChrome } from './browser.ts';
 import { matrix } from './config.ts';
 import type { Manifest } from './config.ts';
-import { runFixtures, runLive, runReference } from './scenarios.ts';
+import { runAvailability, runFixtures, runLive, runReference, runTabletS2 } from './scenarios.ts';
 
 const args = process.argv.slice(2);
 const option = (name: string, fallback: string) => args.find((arg) => arg.startsWith(`${name}=`))?.slice(name.length + 1) ?? fallback;
 const mode = option('--mode', 'fixtures');
+const target = option('--target', 'full');
+if (!['full', 'tablet-s2', 'availability'].includes(target)) throw new Error('--target must be full, tablet-s2 or availability');
+if (target !== 'full' && mode !== 'fixtures') throw new Error('Targeted reruns use --mode=fixtures');
 if (!['fixtures', 'live', 'all'].includes(mode)) throw new Error('--mode must be fixtures, live or all');
 if (!args.includes('--capture')) {
-  console.log(JSON.stringify({ mode, matrix, browserStarted: false, next: 'npm run qa:browser -- --capture --mode=all' }, null, 2));
+  console.log(JSON.stringify({ mode, target, matrix, browserStarted: false, next: 'npm run qa:browser -- --capture --mode=all' }, null, 2));
 } else {
   const baseURL = option('--url', 'http://127.0.0.1:5173');
   const output = resolve(option('--output', '../../artifacts/qa/WEB-07'));
@@ -26,7 +29,7 @@ if (!args.includes('--capture')) {
   const reference = { file: 'artifacts/Design TZ для экранов/Проверка контрагентов v2.dc.html', sha256: await digest(referenceFile), supportSHA256: await digest(resolve('../../artifacts/Design TZ для экранов/support.js')) };
   const chrome = await startChrome(executable);
   const manifest: Manifest = {
-    scope: 'WEB-07', sourceSHA, sourceDirty, createdAt: new Date().toISOString(),
+    scope: 'WEB-07', target, sourceSHA, sourceDirty, createdAt: new Date().toISOString(),
     browser: chrome.browser.version(), transport: 'Playwright connectOverCDP', baseURL,
     reference, checks: [], captures: [], consoleErrors: [],
     limitations: [
@@ -39,10 +42,14 @@ if (!args.includes('--capture')) {
   };
   try {
     const run = { browser: chrome.browser, manifest, output, baseURL };
-    if (mode !== 'live') { await runReference(run, referenceFile); await runFixtures(run); }
-    if (mode !== 'fixtures') await runLive(run);
+    if (target === 'tablet-s2') await runTabletS2(run);
+    else if (target === 'availability') await runAvailability(run);
+    else {
+      if (mode !== 'live') { await runReference(run, referenceFile); await runFixtures(run); }
+      if (mode !== 'fixtures') await runLive(run);
+    }
   } finally {
-    await writeFile(resolve(output, `manifest-${mode}.json`), `${JSON.stringify(manifest, null, 2)}\n`);
+    await writeFile(resolve(output, `manifest-${target === 'full' ? mode : target}.json`), `${JSON.stringify(manifest, null, 2)}\n`);
     await chrome.close();
   }
   const failed = manifest.checks.filter((check) => check.verdict === 'fail');

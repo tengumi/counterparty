@@ -22,6 +22,7 @@ export interface Capture {
 }
 export interface Manifest {
   scope: 'WEB-07';
+  target: string;
   sourceSHA: string;
   sourceDirty: boolean;
   createdAt: string;

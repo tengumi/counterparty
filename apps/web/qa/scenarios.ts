@@ -56,11 +56,11 @@ async function makePage(run: Run, viewport: Viewport) {
   return { context, page };
 }
 
-async function mainFixtures(run: Run, viewport: Viewport) {
+async function mainFixtures(run: Run, viewport: Viewport, s2Only = false) {
   const { context, page } = await makePage(run, viewport);
   const fixtures = await installFixtures(page);
   try {
-    await caseRun(run, viewport, 'typed-fixtures', 'S1 populated and keyboard', async () => {
+    if (!s2Only) await caseRun(run, viewport, 'typed-fixtures', 'S1 populated and keyboard', async () => {
       await page.goto(`${run.baseURL}/checks`);
       await page.getByRole('link', { name: /Поставка оборудования/ }).waitFor();
       await capture(run, page, viewport, 'typed-fixtures', 's1-populated');
@@ -125,20 +125,11 @@ async function mainFixtures(run: Run, viewport: Viewport) {
       }
       await panel.getByRole('button', { name: /Компания А.*ИНН/ }).click();
       await panel.getByText('Учебный пример.', { exact: false }).waitFor();
-      if (viewport.name !== 'tablet') await capture(run, page, viewport, 'typed-fixtures', 'report');
-      await panel.getByRole('button', { name: /^Финансы/ }).click();
-      check(run, viewport, 'typed-fixtures', 'Report confirmed zero is explicit', await panel.getByText('0 ₽', { exact: true }).isVisible());
-      for (const [section, expected] of [
-        ['Взыскания', 'В отчёте события не обнаружены'],
-        ['Деятельность и разрешения', 'В отчёте нет этих сведений'],
-        ['Другие сведения', 'Эти сведения недоступны'],
-      ] as const) {
-        await panel.getByRole('button', { name: new RegExp(`^${section}`) }).click();
-        check(run, viewport, 'typed-fixtures', `${section}: source state remains distinct`, await panel.getByText(expected, { exact: true }).first().isVisible());
-      }
+      if (viewport.name !== 'tablet' || s2Only) await capture(run, page, viewport, 'typed-fixtures', 'report');
+      await verifyAvailability(run, page, viewport);
       await panel.getByRole('button', { name: 'Основание: Капитал и резервы, 2025', exact: true }).click();
       await panel.getByRole('heading', { name: 'Основание 1', exact: true }).waitFor();
-      if (viewport.name !== 'tablet') await capture(run, page, viewport, 'typed-fixtures', 'evidence');
+      if (viewport.name !== 'tablet' || s2Only) await capture(run, page, viewport, 'typed-fixtures', 'evidence');
       check(run, viewport, 'typed-fixtures', 'Evidence includes company/period/source/as-of', await panel.getByText('Дата среза', { exact: true }).isVisible() && await panel.getByText('Компания А', { exact: true }).isVisible());
       await panel.getByRole('button', { name: 'К отчёту', exact: true }).click();
       await panel.getByRole('button', { name: 'К материалам', exact: true }).click();
@@ -193,7 +184,7 @@ async function mainFixtures(run: Run, viewport: Viewport) {
       await panel.getByRole('button', { name: 'Назад к разговору — закрыть материалы', exact: true }).click();
     });
 
-    if (viewport.name === 'mobile') {
+    if (viewport.name === 'mobile' && !s2Only) {
       await caseRun(run, viewport, 'typed-fixtures', 'Long names', async () => {
         await page.goto(`${run.baseURL}/checks/logistics-project/chats/logistics-thread`);
         await page.getByRole('button', { name: 'Материалы', exact: true }).click();
@@ -204,7 +195,7 @@ async function mainFixtures(run: Run, viewport: Viewport) {
         await panel.getByRole('button', { name: 'Назад к разговору — закрыть материалы', exact: true }).click();
       });
     }
-    await caseRun(run, viewport, 'typed-fixtures', '200% text zoom', async () => {
+    if (!s2Only) await caseRun(run, viewport, 'typed-fixtures', '200% text zoom', async () => {
       await page.goto(`${run.baseURL}/checks`);
       await page.getByRole('textbox', { name: 'Задача проверки' }).waitFor();
       // Browser emulation of text-only zoom: double computed text sizes, preserve layout widths.
@@ -221,6 +212,53 @@ async function mainFixtures(run: Run, viewport: Viewport) {
     await fixtures.release();
     await context.close();
   }
+}
+
+async function verifyAvailability(run: Run, page: Page, viewport: Viewport) {
+  const panel = page.getByRole('complementary', { name: 'Материалы проверки' });
+  for (const [section, expected] of [
+    ['Финансы', '0 ₽'],
+    ['Взыскания', 'В отчёте события не обнаружены'],
+    ['Деятельность и разрешения', 'В отчёте нет этих сведений'],
+    ['Другие сведения', 'Эти сведения недоступны'],
+  ] as const) {
+    const toggle = panel.getByRole('button', { name: new RegExp(`^${section}`) });
+    if (await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click();
+    const bodyId = await toggle.getAttribute('aria-controls');
+    assert.ok(bodyId);
+    // The same empty/missing wording can occur in several collapsed sections.
+    const body = panel.locator(`[id="${bodyId}"]`);
+    check(run, viewport, 'typed-fixtures', `${section}: source state remains distinct`, await body.getByText(expected, { exact: true }).first().isVisible());
+  }
+}
+
+export async function runAvailability(run: Run) {
+  for (const viewport of [viewports[0], viewports[2]]) {
+    const { context, page } = await makePage(run, viewport);
+    const fixtures = await installFixtures(page);
+    try {
+      await caseRun(run, viewport, 'typed-fixtures', 'Targeted report availability', async () => {
+        await page.goto(`${run.baseURL}/checks/demo-project/chats/demo-thread`);
+        await page.getByRole('textbox', { name: 'Сообщение помощнику' }).waitFor();
+        if (viewport.name === 'mobile') {
+          await capture(run, page, viewport, 'typed-fixtures', 's2-conversation');
+          check(run, viewport, 'typed-fixtures', 'Mobile idle hides desktop keyboard hint', !await page.getByText('Enter отправляет, Shift+Enter переносит строку', { exact: true }).isVisible());
+        }
+        await page.getByRole('button', { name: 'Материалы', exact: true }).click();
+        const panel = page.getByRole('complementary', { name: 'Материалы проверки' });
+        const box = await panel.boundingBox();
+        check(run, viewport, 'typed-fixtures', 'P1 width follows breakpoint', !!box && Math.abs(box.width - (viewport.name === 'mobile' ? viewport.width : 400)) <= 1, JSON.stringify(box));
+        await panel.getByRole('button', { name: /Компания А.*ИНН/ }).click();
+        await verifyAvailability(run, page, viewport);
+        await capture(run, page, viewport, 'typed-fixtures', 'report-availability');
+        await noOverflow(run, page, viewport, 'typed-fixtures', 'Report availability');
+      });
+    } finally { await fixtures.release(); await context.close(); }
+  }
+}
+
+export async function runTabletS2(run: Run) {
+  await mainFixtures(run, viewports[1], true);
 }
 
 async function stateFixtures(run: Run) {
