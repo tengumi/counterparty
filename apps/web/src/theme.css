@@ -1,0 +1,8 @@
+@import '@alfalab/core-components/vars/index.css';
+@import '@alfalab/core-components/themes/corp.css';
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; color: rgba(3, 3, 6, .88); background: #fff; font-size: 14px; line-height: 20px; -webkit-font-smoothing: antialiased; }
+a { color: #2a77ef; text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 2px solid #2a77ef; outline-offset: 4px; }
