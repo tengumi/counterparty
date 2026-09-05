@@ -5,9 +5,15 @@ build-backend = "hatchling.build"
 [project]
 name = "counterparty-import-reports"
 version = "0.1.0"
-description = "Extended JSON decoder and schema fingerprint for the approved report snapshot"
+description = "Idempotent import of the approved report snapshot into PostgreSQL"
 requires-python = ">=3.13,<3.14"
-dependencies = ["counterparty-storage"]
+dependencies = [
+  "counterparty-contracts",
+  "counterparty-domain",
+  "counterparty-storage",
+  "psycopg[binary]>=3.2,<4",
+  "sqlalchemy>=2.0.36,<3",
+]
 
 [dependency-groups]
 dev = [
@@ -17,6 +23,8 @@ dev = [
 ]
 
 [tool.uv.sources]
+counterparty-contracts = { path = "../../packages/contracts" }
+counterparty-domain = { path = "../../packages/domain", editable = true }
 counterparty-storage = { path = "../../packages/storage", editable = true }
 
 [tool.hatch.build.targets.wheel]
@@ -39,3 +47,12 @@ files = ["src", "tests"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+# `packages/domain` ships no `py.typed` marker yet, so mypy treats it as an
+# untyped installed package. Its source is available here, so it is analysed
+# rather than ignored: `ignore_missing_imports` would silently drop type
+# checking of every call into the domain layer. Remove this block once the
+# marker is added there.
+[[tool.mypy.overrides]]
+module = ["counterparty_domain.*"]
+follow_untyped_imports = true
