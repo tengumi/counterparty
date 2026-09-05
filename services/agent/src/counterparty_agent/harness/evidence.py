@@ -100,6 +100,16 @@ def _is_evidence_ref(value: Mapping[str, object]) -> bool:
 
 
 def _as_json(payload: object) -> object:
+    if (
+        isinstance(payload, list)
+        and payload
+        and all(
+            isinstance(block, Mapping) and isinstance(block.get("text"), str) for block in payload
+        )
+    ):
+        # A tool result as content blocks (the LangChain MCP adapter's shape):
+        # the JSON envelope is the concatenated text, not the list itself.
+        payload = "".join(str(block["text"]) for block in payload)
     if isinstance(payload, str):
         try:
             return json.loads(payload)

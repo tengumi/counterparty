@@ -134,6 +134,63 @@ def test_with_mcp_the_harness_runs_the_thread() -> None:
     assert select_runner(SETTINGS, None) is not deterministic_agent
 
 
+async def test_a_grounded_answer_survives_the_mcp_content_block_shape(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The live MCP adapter returns text content blocks, not a JSON string.
+
+    Both the deterministic model's tool-result parsing and the evidence ledger
+    must read the envelope out of ``[{"type": "text", "text": "<json>"}]`` or
+    every grounded line is dropped as unreferenced.
+    """
+    from counterparty_contracts import (
+        CompanyOverviewEnvelope,
+        McpStatus,
+        ReportSectionEnvelope,
+    )
+    from harness_fixtures import REPORT_ID, company_overview, financials_section
+    from langchain_core.tools import tool
+
+    def blocks(payload: str) -> list[dict[str, str]]:
+        return [{"type": "text", "text": payload}]
+
+    @tool
+    def get_company_overview(inn: str | None = None, report_id: str | None = None) -> object:
+        """Identify one imported company."""
+        return blocks(
+            CompanyOverviewEnvelope(
+                status=McpStatus.OK,
+                data=company_overview(),
+                source_report_ids=[REPORT_ID],
+                rule_version="mcp-read-v1",
+            ).model_dump_json()
+        )
+
+    @tool
+    def get_report_section(report_id: str, section: str) -> object:
+        """Inspect one section of a pinned report."""
+        return blocks(
+            ReportSectionEnvelope(
+                status=McpStatus.OK,
+                data=financials_section(),
+                source_report_ids=[REPORT_ID],
+                rule_version="mcp-read-v1",
+            ).model_dump_json()
+        )
+
+    @asynccontextmanager
+    async def toolset(_settings: AgentSettings) -> AsyncIterator[Sequence[BaseTool]]:
+        yield [get_company_overview, get_report_section]
+
+    monkeypatch.setattr(runner_module, "reports_toolset", toolset)
+    run = make_run(f"Supplier {INN} asks for 80 percent upfront. What do the figures say?")
+    await create_harness_runner(SETTINGS)(RunContext(run))
+
+    answer = "".join(event.text for event in run.events if isinstance(event, AppendTextOperation))
+    assert "[evidence:" in answer
+    assert not [event for event in run.events if isinstance(event, TerminalError)]
+
+
 async def test_the_runner_passes_the_runs_trusted_scope_to_the_loaders() -> None:
     """The harness loads context and keys checkpoints from ``ctx.scope``."""
     from counterparty_storage import ThreadScope

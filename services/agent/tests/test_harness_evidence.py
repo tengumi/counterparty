@@ -44,6 +44,21 @@ def test_ledger_reads_a_nested_tool_payload() -> None:
     assert observed.resolves("ev-1")
 
 
+def test_ledger_reads_a_content_block_tool_result() -> None:
+    """The MCP adapter returns text content blocks, not a JSON string."""
+    observed = RunEvidenceLedger()
+    observed.observe(
+        [
+            {"type": "text", "text": '{"data": {"facts": ['},
+            {
+                "type": "text",
+                "text": '{"evidence_refs": ["report:r1:/finReports/0/common/profit"]}]}}',
+            },
+        ]
+    )
+    assert observed.resolves("report:r1:/finReports/0/common/profit")
+
+
 def test_a_cited_claim_passes() -> None:
     """A cited claim passes."""
     answer = f"- Proceeds 2025: 74586000 RUB [evidence:{PROCEEDS_REF}]"

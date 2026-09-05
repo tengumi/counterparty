@@ -136,7 +136,21 @@ def _tool_results(messages: Sequence[BaseMessage]) -> dict[str, Any]:
 
 
 def _payload(message: ToolMessage) -> Any:
+    """Decode a tool result to its structured envelope.
+
+    The LangChain MCP adapter delivers a tool result as a list of content
+    blocks (``[{"type": "text", "text": "<json>"}]``); a plain adapter delivers
+    the JSON string directly. Both are reduced to the parsed envelope here so
+    the policy above reads ``data``/``report`` the same way in tests and
+    against the live MCP.
+    """
     content = message.content
+    if isinstance(content, list):
+        content = "".join(
+            block["text"]
+            for block in content
+            if isinstance(block, dict) and isinstance(block.get("text"), str)
+        )
     if isinstance(content, str):
         try:
             return json.loads(content)

@@ -593,9 +593,23 @@ J влит. Что дал каждый срез и его известная д�
    - Известное: `GET /rpc/agent/runs/{id}` для ещё живущего в памяти run
      отдаёт `finished_at:null`/`revision:0` (in-memory `_run_info` копирует
      только статус) — pre-existing, durable строка корректна.
-5. **Сквозная приёмка** — один сценарий компании А: web → agent → mcp →
-   grounded-ответ с evidence → запись решения через UI API. + короткий demo
-   runbook и точный список ограничений (урезанный REL-01).
+5. **Сквозная приёмка** — ✅ сделано 06.09.2026 на контейнерном стеке.
+   Компания А = ООО «СПОРТ» (ИНН 9705152496). web/proxy → ui_api (auth →
+   проверка → контрагент по ИНН, ctx v1) → agent RPC → mcp → grounded-ответ:
+   18 финансовых строк 2023-2025, каждая с разрешимой
+   `[evidence:report:<snapshot>:/finReports/…]`, блок «Неизвестно» с
+   отсутствующими разделами; run осел в `agent_runs` (`completed`); решение
+   `ready_with_conditions` с двумя условиями и evidence_refs записано (201);
+   `…/conversation` показал `run:completed, active_run_id:null`.
+   - Живой прогон вскрыл интеграционный баг: LangChain MCP-адаптер отдаёт
+     tool-result как content-blocks `[{"type":"text","text":"<json>"}]`, а
+     детерминированный адаптер и evidence-ledger ждали JSON-строку → ВСЕ
+     grounded-строки отбрасывались как unreferenced и ответ был пустым.
+     Починено в `harness/deterministic.py::_payload` и
+     `harness/evidence.py::_as_json` (+2 регресс-теста). agent 70.
+   - Runbook: `docs/DEMO_RUNBOOK.md` (поднять стек, пройти сценарий, проверить
+     живучесть run'а, границы каркаса, свернуть).
+   - Независимый проверяющий на живой прогон п. 5 по плану ещё нужен.
 6. **Быстрый рефакторинг раскладки (только перемещение файлов)** — `services/ui_api/src/counterparty_ui_api/`
    лежит плоско (20 модулей): развести на подпакеты (`routes/` для
    `projects/companies/reports/report_details`, `reads/`, `loaders/`), поправить

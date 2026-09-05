@@ -193,7 +193,7 @@ AG-04 и AG-06. Пользователь решил закончить оста�
 | QA-03 | Browser flow: reconnect, cancel, document, evidence, decision | WEB-11, OPS-01 | todo |
 | QA-04 | Agent evals из Specs 08 §52, deterministic mocks и малый набор real-model runs; шесть из восьми сценариев не требуют документов и выполнимы без DOC | AG-04, AG-06 | todo |
 | QA-05 | Security/ownership, PII-safe logs, limits и failure states | OPS-01 | todo |
-| REL-01 | Все V01–V13 и F01–F21, остаточные ограничения и demo runbook | QA-01…QA-05 | todo |
+| REL-01 | Все V01–V13 и F01–F21, остаточные ограничения и demo runbook | QA-01…QA-05 | partial (06.09.2026: `docs/DEMO_RUNBOOK.md` — один сквозной сценарий компании А на контейнерном стеке + список ограничений каркаса; полный V/F-прогон и QA-01…05 остаются) |
 
 Slim-часть OPS-01 выполнена в волне F: текущий `compose.yaml` поднимает
 PostgreSQL, миграции, роли и импорт. Статус OPS-01 остаётся `todo`, пока в общий
