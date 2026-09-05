@@ -19,8 +19,8 @@ function openCheck(path: string) {
         <CurrentPath />
         <Routes>
           <Route element={<ChecksPage />} path="/checks" />
-          <Route element={<CheckPage />} path="/checks/:projectId" />
-          <Route element={<CheckPage />} path="/checks/:projectId/chats/:threadId" />
+          <Route element={<CheckPage fixtureMode />} path="/checks/:projectId" />
+          <Route element={<CheckPage fixtureMode />} path="/checks/:projectId/chats/:threadId" />
         </Routes>
       </WorkspaceQueryProvider>
     </MemoryRouter>,

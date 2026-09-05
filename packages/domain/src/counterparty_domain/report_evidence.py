@@ -10,13 +10,15 @@ from counterparty_contracts import (
     ContractWarning,
     EvidenceKind,
     EvidenceRef,
+    FactValue,
+    FinancialPeriod,
     GetReportSectionInput,
     ReportEvidence,
     ReportId,
     ReportSectionName,
     WarningCode,
 )
-from pydantic import JsonValue
+from pydantic import BaseModel, JsonValue
 
 from .report_reads import (
     _MISSING,
@@ -45,6 +47,21 @@ def _references(value: object) -> Iterator[tuple[str, Availability | None]]:
             yield from _references(child)
 
 
+def _reference_periods(value: object) -> Iterator[tuple[str, int | str]]:
+    """Read periods only from validated facts and financial records with exact refs."""
+    if isinstance(value, (FactValue, FinancialPeriod)):
+        period = value.period if isinstance(value, FactValue) else value.year
+        if period is not None:
+            for ref in value.evidence_refs:
+                yield ref, period
+    if isinstance(value, BaseModel):
+        for field in type(value).model_fields:
+            yield from _reference_periods(getattr(value, field))
+    elif isinstance(value, list):
+        for child in value:
+            yield from _reference_periods(child)
+
+
 def build_report_evidence(data: ReportReadData, ref_id: str) -> ReportEvidence | None:
     """Resolve an issued source ref after the caller has authorized its report.
 
@@ -54,7 +71,9 @@ def build_report_evidence(data: ReportReadData, ref_id: str) -> ReportEvidence |
     locator = resolve_report_evidence_id(ref_id)
     if locator is None or locator[0] != data.report_id or data.ingestion_status == "invalid":
         return None
-    issued = dict(_references(build_company_overview(data).model_dump(mode="json")))
+    overview = build_company_overview(data)
+    issued = dict(_references(overview.model_dump(mode="json")))
+    periods = dict(_reference_periods(overview))
     # Include all pages: an old reference stays resolvable after navigation to
     # a different page, without trusting a path supplied by the client.
     for section in ReportSectionName:
@@ -64,6 +83,7 @@ def build_report_evidence(data: ReportReadData, ref_id: str) -> ReportEvidence |
         while True:
             page = build_report_section(data, request)
             issued.update(_references(page.model_dump(mode="json")))
+            periods.update(_reference_periods(page))
             if page.page.next_cursor is None:
                 break
             request = request.model_copy(update={"cursor": page.page.next_cursor})
@@ -92,6 +112,7 @@ def build_report_evidence(data: ReportReadData, ref_id: str) -> ReportEvidence |
             report_id=ReportId(data.report_id),
             company_id=CompanyId(data.company_id),
             source_path=path,
+            period=periods.get(ref_id),
         ),
         report=data.report,
         availability=availability,

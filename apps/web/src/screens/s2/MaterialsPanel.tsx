@@ -11,12 +11,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@alfalab/core-components/button';
 import { Textarea } from '@alfalab/core-components/textarea';
-import type { AddCompanyResult } from '../../api/contracts';
+import type { AddCompanyResult, ApiProject } from '../../api/contracts';
 import type { CompanyRef, ProjectDetail } from '../../mocks/types';
 import { documentStateLabels } from '../../mocks/types';
 import { findEvidence, getMaterials } from '../../mocks/workspace';
 import { getCompanyReport } from '../../mocks/reports';
 import { CompanyReport } from './CompanyReport';
+import { LiveCompanyReport } from './LiveCompanyReport';
+import { LiveEvidence } from './LiveEvidence';
+import { Comparison } from './Comparison';
+import type { DiscussionContext } from '../../api/reportContracts';
 import type { MaterialsGroup, MaterialsState, MaterialsView } from './materialsView';
 import { parseNumber, readStored, writeStored } from './persisted';
 import { currentView, groupTitles } from './materialsView';
@@ -24,11 +28,12 @@ import styles from './S2.module.css';
 
 interface Props {
   readonly project: ProjectDetail;
+  readonly apiProject?: ApiProject;
   readonly state: MaterialsState;
   readonly onChange: (state: MaterialsState) => void;
   readonly onClose: () => void;
   /** Puts a removable context chip into the composer (07 S2-08). */
-  readonly onDiscuss: (text: string) => void;
+  readonly onDiscuss: (text: string | DiscussionContext) => void;
   readonly companyChange?: {
     readonly busy: boolean;
     readonly error: string | null;
@@ -85,13 +90,13 @@ function CompanyRow({ company, current, onOpen }: { company: CompanyRef; current
   );
 }
 
-export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, companyChange }: Props) {
+export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, companyChange, apiProject }: Props) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [companyDraft, setCompanyDraft] = useState('');
   const view = currentView(state);
-  const materials = getMaterials(project.id);
+  const materials = apiProject ? { terms: [], documents: [], summary: { short: 'Недоступно', line: 'Вывод и запись решения пока недоступны', recorded: false } } : getMaterials(project.id);
   const scrollKey = `materials-scroll:${project.id}:${JSON.stringify(view)}`;
 
   useEffect(() => {
@@ -112,12 +117,12 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, c
         : [...state.expanded, group],
     });
 
-  const evidence = view.kind === 'evidence' ? findEvidence(view.evidenceId) : undefined;
+  const evidence = !apiProject && view.kind === 'evidence' ? findEvidence(view.evidenceId) : undefined;
   const company =
     view.kind === 'company'
       ? project.companies.find((item) => item.id === view.companyId)
       : undefined;
-  const report = view.kind === 'company' ? getCompanyReport(view.companyId) : undefined;
+  const report = !apiProject && view.kind === 'company' ? getCompanyReport(view.companyId) : undefined;
   const document =
     view.kind === 'document'
       ? materials.documents.find((item) => item.id === view.documentId)
@@ -125,7 +130,7 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, c
 
   const previous = state.stack[state.stack.length - 2];
   const backLabel =
-    previous?.kind === 'company'
+    previous?.kind === 'comparison' ? 'К сравнению' : previous?.kind === 'company'
       ? 'К отчёту'
       : previous?.kind === 'evidence'
         ? 'К основанию'
@@ -138,6 +143,7 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, c
       evidence?.number == null ? 'Основание' : `Основание ${evidence.number}`,
     document: document?.name ?? 'Документ',
     summary: 'Итог проверки',
+    comparison: 'Сравнение компаний',
   };
 
   return (
@@ -216,6 +222,7 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, c
                   ) : null}
                 </div>
               ))}
+              {apiProject && project.companies.length >= 2 ? <Button onClick={() => push({ kind: 'comparison' })} size={40} view="outlined">Сравнить компании</Button> : null}
               {companyChange ? (
                 <div className={styles.companyEditor}>
                   <Textarea
@@ -257,13 +264,13 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, c
             </Group>
 
             <Group
-              count={String(materials.terms.length)}
+              count={apiProject ? 'Недоступно' : String(materials.terms.length)}
               expanded={state.expanded.includes('terms')}
               group="terms"
               onToggle={() => toggle('terms')}
             >
               {materials.terms.length === 0 ? (
-                <p className={styles.muted}>Условия сделки ещё не записаны.</p>
+                <p className={styles.muted}>{apiProject ? 'Запись и загрузка условий сделки пока недоступны.' : 'Условия сделки ещё не записаны.'}</p>
               ) : (
                 materials.terms.map((term) => (
                   <div className={styles.row} key={term.id}>
@@ -280,14 +287,14 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, c
             </Group>
 
             <Group
-              count={String(materials.documents.length)}
+              count={apiProject ? 'Недоступно' : String(materials.documents.length)}
               expanded={state.expanded.includes('documents')}
               group="documents"
               onToggle={() => toggle('documents')}
             >
               {materials.documents.length === 0 ? (
                 <p className={styles.muted}>
-                  Файлы не загружены. Проверку можно закончить без них.
+                  {apiProject ? 'Загрузка и просмотр документов пока недоступны.' : 'Файлы не загружены. Проверку можно закончить без них.'}
                 </p>
               ) : (
                 materials.documents.map((item) => (
@@ -331,6 +338,8 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, c
             <div className={styles.detail}>
               <p className={styles.muted}>Компания удалена из проверки.</p>
             </div>
+          ) : apiProject && company.reportId ? (
+            <LiveCompanyReport projectId={project.id} reportId={company.reportId} onEvidence={(evidenceId) => push({ kind: 'evidence', evidenceId })} onDiscuss={onDiscuss} />
           ) : report === undefined ? (
             <div className={styles.detail}>
               <p className={styles.rowMeta}>ИНН {company.inn}</p>
@@ -349,7 +358,9 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, c
           )
         ) : null}
 
-        {view.kind === 'evidence' ? (
+        {view.kind === 'evidence' && apiProject ? <LiveEvidence key={view.evidenceId} projectId={project.id} evidenceRef={view.evidenceId} onDiscuss={onDiscuss} /> : null}
+        {view.kind === 'comparison' && apiProject ? <Comparison project={apiProject} onEvidence={(evidenceId) => push({ kind: 'evidence', evidenceId })} onDiscuss={onDiscuss} /> : null}
+        {view.kind === 'evidence' && !apiProject ? (
           <div className={styles.detail}>
             {evidence === undefined ? (
               <p className={styles.muted}>Основание недоступно: сведения не загружены.</p>
@@ -405,7 +416,7 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, c
         {view.kind === 'document' ? (
           <div className={styles.detail}>
             {document === undefined ? (
-              <p className={styles.muted}>Документ удалён из проверки.</p>
+              <p className={styles.muted}>{apiProject ? 'Просмотр документов пока недоступен.' : 'Документ удалён из проверки.'}</p>
             ) : (
               <>
                 <p className={styles.rowMeta}>{document.meta}</p>
@@ -418,7 +429,8 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, c
           </div>
         ) : null}
 
-        {view.kind === 'summary' ? (
+        {view.kind === 'summary' && apiProject ? <p className={styles.muted}>Вывод помощника и запись решения пока недоступны. Сведения компаний и сравнение можно открыть в материалах.</p> : null}
+        {view.kind === 'summary' && !apiProject ? (
           <div className={styles.detail}>
             <p className={materials.summary.recorded ? styles.recorded : styles.proposal}>
               {materials.summary.recorded ? 'Записано вами' : 'Предложение помощника'}
