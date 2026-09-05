@@ -10,6 +10,7 @@ from sqlalchemy import Engine, create_engine
 
 MIGRATIONS_DIR = Path(__file__).resolve().parent.parent
 TEST_DATABASE_URL_ENV = "COUNTERPARTY_TEST_DATABASE_URL"
+SECOND_TEST_DATABASE_URL_ENV = "COUNTERPARTY_TEST_SECOND_DATABASE_URL"
 
 
 @pytest.fixture(scope="session")
@@ -22,6 +23,17 @@ def database_url() -> str:
     url = os.environ.get(TEST_DATABASE_URL_ENV)
     if not url:
         pytest.skip(f"{TEST_DATABASE_URL_ENV} is not set; migrations were not run")
+    return url
+
+
+@pytest.fixture(scope="session")
+def second_database_url() -> str:
+    """URL of a second database in the same disposable PostgreSQL cluster."""
+    url = os.environ.get(SECOND_TEST_DATABASE_URL_ENV)
+    if not url:
+        pytest.skip(
+            f"{SECOND_TEST_DATABASE_URL_ENV} is not set; two-database role lifecycle was not run"
+        )
     return url
 
 
