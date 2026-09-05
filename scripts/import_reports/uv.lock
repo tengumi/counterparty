@@ -12,11 +12,11 @@ wheels = [
 ]
 
 [[package]]
-name = "counterparty-storage"
+name = "counterparty-import-reports"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "sqlalchemy" },
+    { name = "counterparty-storage" },
 ]
 
 [package.dev-dependencies]
@@ -24,6 +24,24 @@ dev = [
     { name = "mypy" },
     { name = "pytest" },
     { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "counterparty-storage", editable = "../../packages/storage" }]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.18,<2" },
+    { name = "pytest", specifier = ">=8.4,<10" },
+    { name = "ruff", specifier = ">=0.13,<0.16" },
+]
+
+[[package]]
+name = "counterparty-storage"
+version = "0.1.0"
+source = { editable = "../../packages/storage" }
+dependencies = [
+    { name = "sqlalchemy" },
 ]
 
 [package.metadata]
