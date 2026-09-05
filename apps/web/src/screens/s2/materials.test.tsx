@@ -68,9 +68,11 @@ describe('S2 materials panel navigation', () => {
 
     const detail = panel();
     expect(within(detail).getByRole('heading', { name: 'Основание 3' })).toBeVisible();
-    expect(within(detail).getByText('14 марта 2014')).toBeVisible();
+    expect(within(detail).getByText('16 апреля 2009')).toBeVisible();
     expect(within(detail).getByText('Компания А')).toBeVisible();
-    expect(within(detail).getByText('Предоставленный отчёт')).toBeVisible();
+    expect(
+      within(detail).getByText('Предоставленный отчёт, раздел «Другие сведения»'),
+    ).toBeVisible();
     expect(within(detail).getByText('5 августа 2026')).toBeVisible();
   });
 
@@ -78,11 +80,13 @@ describe('S2 materials panel navigation', () => {
     const user = userEvent.setup();
     openCheck(DEMO);
 
-    await user.click(screen.getByRole('button', { name: 'Основание 1: Капитал и резервы' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Основание 1: Капитал и резервы, 2025' }),
+    );
     await user.click(screen.getByRole('button', { name: 'Обсудить' }));
 
     expect(screen.getByLabelText('Сообщение помощнику')).toHaveValue(
-      'Капитал и резервы · Компания А · 2025 год',
+      'Капитал и резервы, 2025 · Компания А · 2025 год, годовая отчётность',
     );
   });
 

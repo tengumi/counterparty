@@ -5,6 +5,7 @@
  * compared with it. WEB-08 replaces the two accessors with REST queries.
  */
 
+import { findReportEvidence } from './reports';
 import type {
   ChatSummary,
   ConversationBlock,
@@ -38,7 +39,7 @@ const demoProject: ProjectDetail = {
   lastThreadId: 'demo-thread',
   isDemo: true,
   saveState: 'saved',
-  companies: [{ id: 'company-a', name: 'Компания А', inn: '7714497158' }],
+  companies: [{ id: 'company-a', name: 'Компания А', inn: '7449088645' }],
   chats: [
     {
       id: 'demo-thread',
@@ -93,7 +94,7 @@ const innProject: ProjectDetail = {
   lastThreadId: 'inn-thread',
   isDemo: false,
   saveState: 'saved',
-  companies: [{ id: 'company-a', name: 'Компания А', inn: '7714497158' }],
+  companies: [{ id: 'company-unknown', name: 'Компания по ИНН 7714497158', inn: '7714497158' }],
   chats: [
     {
       id: 'inn-thread',
@@ -130,36 +131,24 @@ export function newChat(index: number): ChatSummary {
  * Conversation (WEB-04)
  * ------------------------------------------------------------------ */
 
-const evidence: readonly EvidenceRecord[] = [
+/**
+ * Bases that do not come from a company report.
+ *
+ * A report row carries its own basis (see `reports.ts`); this list holds the
+ * ones read out of an uploaded document, so the basis can open the file.
+ */
+const documentEvidence: readonly EvidenceRecord[] = [
   {
-    id: 'ev-capital',
-    number: 1,
-    title: 'Капитал и резервы',
-    value: '1 240 000 ₽',
+    id: 'ev-offer',
+    number: 4,
+    title: 'Срок поставки по счёту',
+    value: '21 день после комплектации заказа',
     companyName: 'Компания А',
-    period: '2025 год',
-    source: 'Предоставленный отчёт',
-    asOf: '5 августа 2026',
-  },
-  {
-    id: 'ev-executions',
-    number: 2,
-    title: 'Действующие исполнительные производства',
-    value: '2 производства на 180 000 ₽',
-    companyName: 'Компания А',
-    period: 'на дату среза',
-    source: 'Предоставленный отчёт',
-    asOf: '5 августа 2026',
-  },
-  {
-    id: 'ev-age',
-    number: 3,
-    title: 'Дата регистрации',
-    value: '14 марта 2014',
-    companyName: 'Компания А',
-    period: '—',
-    source: 'Предоставленный отчёт',
-    asOf: '5 августа 2026',
+    period: 'Счёт-оферта № 114 от 3 сентября 2026',
+    source: 'Счёт-оферта.pdf, страница 1',
+    asOf: '5 сентября 2026',
+    context: 'Дата комплектации в документе не названа, поэтому срок из него не следует.',
+    documentId: 'doc-invoice',
   },
 ];
 
@@ -210,23 +199,28 @@ const demoConversation: readonly ConversationBlock[] = [
     kind: 'answer',
     id: 'demo-answer-1',
     text:
-      'Аванс 80% от 2 400 000 ₽ — это 1 920 000 ₽ до отгрузки. Это больше собственного капитала компании, ' +
-      'поэтому риск потери денег при срыве поставки ложится на вас.',
+      'Аванс 80% от 2 400 000 ₽ — это 1 920 000 ₽ до отгрузки. Собственный капитал компании отрицательный, ' +
+      'поэтому подушки на возврат аванса у неё нет и риск при срыве поставки ложится на вас.',
     points: [
       {
         id: 'demo-point-1',
-        text: 'Капитал и резервы — 1 240 000 ₽, то есть меньше суммы аванса',
+        text: 'Капитал и резервы за 2025 год — −300 000 ₽, годом ранее −1 224 000 ₽',
         evidenceId: 'ev-capital',
       },
       {
         id: 'demo-point-2',
-        text: 'Есть действующие исполнительные производства на 180 000 ₽',
+        text: 'Действующих исполнительных производств в отчёте не обнаружено, 12 завершены',
         evidenceId: 'ev-executions',
       },
       {
         id: 'demo-point-3',
-        text: 'Компания работает с 2014 года, разрывов в деятельности не видно',
+        text: 'Компания работает с 2009 года, статус — действующая',
         evidenceId: 'ev-age',
+      },
+      {
+        id: 'demo-point-4',
+        text: 'Срок поставки в счёте отсчитывается от комплектации, а её дата не названа',
+        evidenceId: 'ev-offer',
       },
     ],
     followUp: 'Оплата до поставки или после? Насколько критичен срок 20 сентября?',
@@ -328,10 +322,18 @@ export function getConversation(chatId: string | undefined): readonly Conversati
   return conversations[chatId] ?? [];
 }
 
-/** One numbered basis, or `undefined` when the reference is unknown. */
+/**
+ * One basis, or `undefined` when the reference cannot be resolved.
+ *
+ * Report rows and document quotes are looked up in one place, so a statement
+ * and the report row behind it are literally the same record.
+ */
 export function findEvidence(evidenceId: string | null | undefined): EvidenceRecord | undefined {
   if (!evidenceId) return undefined;
-  return evidence.find((record) => record.id === evidenceId);
+  return (
+    findReportEvidence(evidenceId) ??
+    documentEvidence.find((record) => record.id === evidenceId)
+  );
 }
 
 /* ------------------------------------------------------------------ *
