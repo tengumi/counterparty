@@ -79,6 +79,24 @@ dev = [
 ]
 
 [[package]]
+name = "counterparty-domain"
+version = "0.1.0"
+source = { directory = "../../packages/domain" }
+dependencies = [
+    { name = "counterparty-contracts" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "counterparty-contracts", directory = "../../packages/contracts" }]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.18,<2" },
+    { name = "pytest", specifier = ">=8.4,<10" },
+    { name = "ruff", specifier = ">=0.13,<0.16" },
+]
+
+[[package]]
 name = "counterparty-storage"
 version = "0.1.0"
 source = { directory = "../../packages/storage" }
@@ -104,6 +122,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "counterparty-contracts" },
+    { name = "counterparty-domain" },
     { name = "counterparty-storage" },
     { name = "fastapi" },
     { name = "psycopg", extra = ["binary"] },
@@ -122,6 +141,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "counterparty-contracts", directory = "../../packages/contracts" },
+    { name = "counterparty-domain", directory = "../../packages/domain" },
     { name = "counterparty-storage", directory = "../../packages/storage" },
     { name = "fastapi", specifier = ">=0.116,<1" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2,<4" },
