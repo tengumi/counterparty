@@ -247,3 +247,53 @@ class ProjectDeletionState(StrEnum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     FAILED = "failed"
+
+
+class WarningCode(StrEnum):
+    """Category of a non-fatal diagnostic attached to a published payload.
+
+    A warning explains an incompleteness; it never turns into a value. A client
+    that does not know a code still shows its message rather than dropping it.
+    """
+
+    UNSPECIFIED = "unspecified"
+    """A diagnostic carried over from a lower layer that has no category yet."""
+
+    SOURCE_MISSING = "source_missing"
+    """The source did not carry the field or section at all."""
+
+    PARSE_FAILED = "parse_failed"
+    """The source carried something that could not be read as its type."""
+
+    PARTIAL_DATA = "partial_data"
+    """Part of the requested result could not be built."""
+
+    UNKNOWN_ENUM_VALUE = "unknown_enum_value"
+    """A raw external token was kept as is because it has no confirmed meaning."""
+
+    PRECISION_REDUCED = "precision_reduced"
+    """A value was rounded, truncated or narrowed for presentation."""
+
+    STALE_SNAPSHOT = "stale_snapshot"
+    """The snapshot the answer was read from is old enough to matter."""
+
+    PERIOD_MISMATCH = "period_mismatch"
+    """The compared periods are not adjacent or not the same across companies."""
+
+    PERIOD_AMBIGUOUS = "period_ambiguous"
+    """More than one source record claims the same period."""
+
+    AGGREGATE_MISMATCH = "aggregate_mismatch"
+    """Two reported aggregates of the same facts disagree; neither is corrected."""
+
+    INCOMPLETE_TOTAL = "incomplete_total"
+    """The known part of a total is a lower bound, not the total."""
+
+    EMPTY_NOT_CONFIRMED = "empty_not_confirmed"
+    """An empty container was returned and does not prove that nothing exists."""
+
+    NOT_COMPARABLE = "not_comparable"
+    """Values could not be put side by side without changing their meaning."""
+
+    RESULT_TRUNCATED = "result_truncated"
+    """The response hit a server size or record limit and is continued elsewhere."""

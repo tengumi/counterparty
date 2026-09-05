@@ -14,6 +14,7 @@ from typing import Self
 from pydantic import Field, model_validator
 
 from .base import ContractModel, NonEmptyString, SchemaVersion
+from .diagnostics import ContractWarning
 from .enums import Availability, ValueType
 from .identifiers import EvidenceRefId
 from .values import CurrencyCode, parse_calendar_date, parse_decimal_string
@@ -39,7 +40,9 @@ class FactValue(ContractModel):
         availability: Why a non-value is not there, per the domain semantics.
         evidence_refs: Resolvable evidence ids. At least one is required for an
             available value, so no reported fact is ungrounded.
-        warnings: Non-fatal notes about precision, age or comparability.
+        warnings: Typed non-fatal notes about precision, age or comparability.
+            Each note names its category, so a client can group or suppress it
+            without matching free-form text.
     """
 
     schema_version: SchemaVersion = "0.1"
@@ -52,7 +55,7 @@ class FactValue(ContractModel):
     period: int | str | None = None
     availability: Availability
     evidence_refs: list[EvidenceRefId] = Field(default_factory=list)
-    warnings: list[str] = Field(default_factory=list)
+    warnings: list[ContractWarning] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_availability_and_type(self) -> Self:

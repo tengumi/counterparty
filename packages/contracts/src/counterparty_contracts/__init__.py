@@ -16,6 +16,7 @@ Money is a :class:`decimal.Decimal` transported as a plain string, and a source
 """
 
 from .base import ContractModel, NonEmptyString, SchemaVersion, UtcDatetime
+from .diagnostics import ContractWarning, unspecified_warning
 from .enums import (
     ArbitrationAggregation,
     ArtifactFreshness,
@@ -37,6 +38,7 @@ from .enums import (
     RunStatus,
     ThreadStatus,
     ValueType,
+    WarningCode,
     WorkflowStatus,
     YearPolicy,
 )
@@ -177,6 +179,7 @@ __all__ = [
     "ComparisonRowStatus",
     "ConfirmationStatus",
     "ContractModel",
+    "ContractWarning",
     "CounterpartyRole",
     "CreateDecisionRequest",
     "CreateProjectRequest",
@@ -253,6 +256,7 @@ __all__ = [
     "UserId",
     "UtcDatetime",
     "ValueType",
+    "WarningCode",
     "WordBlockLocator",
     "WorkflowStatus",
     "YearPolicy",
@@ -261,4 +265,5 @@ __all__ = [
     "decimal_to_string",
     "parse_calendar_date",
     "parse_decimal_string",
+    "unspecified_warning",
 ]
