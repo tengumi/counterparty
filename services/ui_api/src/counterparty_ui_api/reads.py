@@ -1,13 +1,10 @@
 """Read model behind the project and company responses.
 
-The tenant-scoped repositories answer "may this caller touch this row"; this
-module answers "what does one page of the answer look like" without asking the
-same question once per row. Every statement here is filtered by the tenant of
-the unit of work it was given, exactly as the repositories are, and every one
-of them is a read: the counterparty check is written through the repositories,
-and the ``reports`` schema is never written at all.
+Repositories read the company index and tenant-scoped project compositions in
+batches; this module maps those records to the public DTOs and counts chats
+for the whole project page. The ``reports`` schema is never written at all.
 
-Two rules are visible in the SQL rather than left to the caller:
+Two rules remain explicit in the response:
 
 * a counterparty is read together with the snapshot pinned on it, not with the
   newest snapshot of that company, so a later import cannot silently change
@@ -19,7 +16,6 @@ Two rules are visible in the SQL rather than left to the caller:
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime
 from uuid import UUID
 
 from counterparty_contracts import (
@@ -30,18 +26,13 @@ from counterparty_contracts import (
     ReportId,
 )
 from counterparty_storage import AsyncUnitOfWork
-from counterparty_storage.reports.models import Company, CompanyProfile, ReportSnapshot
-from counterparty_storage.workspace.models import Project as ProjectRow
-from counterparty_storage.workspace.models import ProjectCompany as ProjectCompanyRow
 from counterparty_storage.workspace.models import Thread
-from sqlalchemy import and_, func, or_, select
-from sqlalchemy.sql import FromClause
+from sqlalchemy import func, select
 
 __all__ = [
     "CompanyPage",
     "ProjectDetails",
     "load_company_page",
-    "load_owned_projects",
     "load_project_details",
 ]
 
@@ -65,84 +56,6 @@ def _display_name(short_name: str | None, full_name: str | None, inn: str) -> st
         if candidate is not None and candidate.strip():
             return candidate
     return inn
-
-
-def _latest_snapshot() -> FromClause:
-    """Select the newest snapshot id we hold per company.
-
-    "Newest" is the source report date: importing an older file later does not
-    make it the current picture.
-    """
-    ranked = (
-        select(
-            ReportSnapshot.company_id.label("company_id"),
-            ReportSnapshot.id.label("report_id"),
-            ReportSnapshot.source_report_at.label("source_report_at"),
-            func.row_number()
-            .over(
-                partition_by=ReportSnapshot.company_id,
-                order_by=(
-                    ReportSnapshot.source_report_at.desc(),
-                    ReportSnapshot.ingested_at.desc(),
-                    ReportSnapshot.id.desc(),
-                ),
-            )
-            .label("rank"),
-        )
-        .subquery()
-        .alias("ranked_snapshots")
-    )
-    return (
-        select(ranked.c.company_id, ranked.c.report_id, ranked.c.source_report_at)
-        .where(ranked.c.rank == 1)
-        .subquery()
-        .alias("latest_snapshot")
-    )
-
-
-async def load_owned_projects(
-    uow: AsyncUnitOfWork,
-    *,
-    owner_id: UUID,
-    limit: int,
-    updated_before: datetime | None,
-    before_id: UUID | None,
-) -> list[ProjectRow]:
-    """Return one page of the checks this user owns, most recent activity first.
-
-    The ownership filter is here rather than in ``ProjectRepository`` only
-    because the repository does not take one yet: listing a project the caller
-    cannot open would be worse than the duplication. The keyset is the pair
-    ``(updated_at, id)``, so two projects touched in the same instant are still
-    paged through exactly once.
-
-    Args:
-        uow: Transaction of the request; its tenant filters the statement.
-        owner_id: The authenticated caller; never a value from a request body.
-        limit: How many rows to read, cursor probe included.
-        updated_before: Sort key of the last row of the previous page.
-        before_id: Id of the last row of the previous page.
-
-    Returns:
-        The projects, deleted ones excluded.
-    """
-    statement = (
-        select(ProjectRow)
-        .where(
-            ProjectRow.tenant_id == uow.scope.tenant_id,
-            ProjectRow.owner_id == owner_id,
-            ProjectRow.deleted_at.is_(None),
-        )
-        .order_by(ProjectRow.updated_at.desc(), ProjectRow.id.desc())
-    )
-    if updated_before is not None:
-        keyset = ProjectRow.updated_at < updated_before
-        if before_id is not None:
-            keyset = keyset | and_(
-                ProjectRow.updated_at == updated_before, ProjectRow.id < before_id
-            )
-        statement = statement.where(keyset)
-    return list((await uow.session.execute(statement.limit(limit))).scalars())
 
 
 async def load_project_details(
@@ -171,39 +84,25 @@ async def load_project_details(
     ids = list(project_ids)
     companies_by_project: dict[UUID, list[ProjectCompany]] = {project_id: [] for project_id in ids}
 
-    composition = (
-        select(
-            ProjectCompanyRow.project_id,
-            ProjectCompanyRow.company_id,
-            ProjectCompanyRow.report_id,
-            ProjectCompanyRow.role,
-            ProjectCompanyRow.shortlisted,
-            ProjectCompanyRow.added_at,
-            Company.inn,
-            CompanyProfile.short_name,
-            CompanyProfile.full_name,
-        )
-        .join(Company, Company.id == ProjectCompanyRow.company_id)
-        .outerjoin(CompanyProfile, CompanyProfile.report_id == ProjectCompanyRow.report_id)
-        .where(
-            ProjectCompanyRow.tenant_id == tenant_id,
-            ProjectCompanyRow.project_id.in_(ids),
-            ProjectCompanyRow.removed_at.is_(None),
-        )
-        .order_by(ProjectCompanyRow.project_id, ProjectCompanyRow.slot)
-    )
-    for row in (await uow.session.execute(composition)).all():
-        companies_by_project[row.project_id].append(
-            ProjectCompany(
-                company_id=CompanyId(row.company_id),
-                report_id=ReportId(row.report_id),
-                inn=row.inn,
-                short_name=_display_name(row.short_name, row.full_name, row.inn),
-                role=CounterpartyRole(row.role.value),
-                shortlisted=row.shortlisted,
-                added_at=row.added_at,
+    compositions = await uow.project_companies.list_active_for_projects(ids)
+    for project_id, records in compositions.items():
+        for record in records:
+            membership, company, profile = record.membership, record.company, record.profile
+            companies_by_project[project_id].append(
+                ProjectCompany(
+                    company_id=CompanyId(membership.company_id),
+                    report_id=ReportId(membership.report_id),
+                    inn=company.inn,
+                    short_name=_display_name(
+                        None if profile is None else profile.short_name,
+                        None if profile is None else profile.full_name,
+                        company.inn,
+                    ),
+                    role=CounterpartyRole(membership.role.value),
+                    shortlisted=membership.shortlisted,
+                    added_at=membership.added_at,
+                )
             )
-        )
 
     threads = (
         select(Thread.project_id, func.count(Thread.id))
@@ -247,7 +146,7 @@ async def load_company_page(
     Args:
         uow: Transaction of the request.
         inn: Exact INN to look up.
-        query: Substring of the INN or of a reported name.
+        query: Literal substring of INN, OGRN or the latest reported name.
         limit: Page size.
         after_inn: Keyset cursor: INN of the last item of the previous page.
         after_id: Keyset cursor: id of the last item of the previous page.
@@ -255,54 +154,29 @@ async def load_company_page(
     Returns:
         The page and whether the index holds more matches after it.
     """
-    latest = _latest_snapshot()
-    statement = (
-        select(
-            Company.id,
-            Company.inn,
-            Company.ogrn,
-            latest.c.report_id,
-            latest.c.source_report_at,
-            CompanyProfile.short_name,
-            CompanyProfile.full_name,
-        )
-        .outerjoin(latest, latest.c.company_id == Company.id)
-        .outerjoin(CompanyProfile, CompanyProfile.report_id == latest.c.report_id)
-        .order_by(Company.inn, Company.id)
+    rows = await uow.companies.search(
+        inn=inn,
+        query=query,
+        limit=limit + 1,
+        after_inn=after_inn,
+        after_id=after_id,
     )
-    if inn is not None:
-        statement = statement.where(Company.inn == inn)
-    if query is not None:
-        pattern = f"%{query}%"
-        statement = statement.where(
-            or_(
-                Company.inn.ilike(pattern),
-                CompanyProfile.short_name.ilike(pattern),
-                CompanyProfile.full_name.ilike(pattern),
-            )
-        )
-    if after_inn is not None and after_id is not None:
-        statement = statement.where(
-            or_(
-                Company.inn > after_inn,
-                and_(Company.inn == after_inn, Company.id > after_id),
-            )
-        )
-
-    rows = (await uow.session.execute(statement.limit(limit + 1))).all()
-    has_more = len(rows) > limit
     return CompanyPage(
         items=[
             CompanySummary(
-                company_id=CompanyId(row.id),
-                inn=row.inn,
-                ogrn=row.ogrn,
-                short_name=_display_name(row.short_name, row.full_name, row.inn),
-                full_name=row.full_name,
-                latest_report_id=None if row.report_id is None else ReportId(row.report_id),
-                latest_report_at=row.source_report_at,
+                company_id=CompanyId(row.company.id),
+                inn=row.company.inn,
+                ogrn=row.company.ogrn,
+                short_name=_display_name(
+                    None if row.profile is None else row.profile.short_name,
+                    None if row.profile is None else row.profile.full_name,
+                    row.company.inn,
+                ),
+                full_name=None if row.profile is None else row.profile.full_name,
+                latest_report_id=None if row.report is None else ReportId(row.report.id),
+                latest_report_at=None if row.report is None else row.report.source_report_at,
             )
             for row in rows[:limit]
         ],
-        has_more=has_more,
+        has_more=len(rows) > limit,
     )

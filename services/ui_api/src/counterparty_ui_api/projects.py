@@ -34,7 +34,7 @@ from .cursors import decode_cursor, encode_cursor
 from .dependencies import CurrentSession, ScopedProject, TenantWork
 from .errors import ApiError
 from .idempotency import fingerprint_of, release_reservation, reserve_or_answer
-from .reads import load_owned_projects, load_project_details
+from .reads import load_project_details
 from .views import as_page, as_project
 
 __all__ = ["router"]
@@ -128,9 +128,11 @@ async def list_projects(
     uow: TenantWork,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_LIMIT)] = DEFAULT_PAGE_LIMIT,
     cursor: Annotated[str | None, Query()] = None,
+    query: Annotated[str | None, Query(min_length=1, max_length=200)] = None,
 ) -> Page[Project]:
     """List the caller's checks, most recently active first.
 
+    ``query`` matches a literal title substring, ignoring case.
     Only the caller's own checks are listed: a project that could not be
     opened must not appear in the list that offers to open it.
 
@@ -138,9 +140,9 @@ async def list_projects(
     the collection holds rather than what this page happened to contain.
     """
     position = decode_cursor(cursor) if cursor is not None else None
-    rows = await load_owned_projects(
-        uow,
+    rows = await uow.projects.list_recent(
         owner_id=UUID(str(session.user_id)),
+        title_contains=query,
         limit=limit + 1,
         updated_before=None if position is None else position.instant,
         before_id=None if position is None else position.row_id,
