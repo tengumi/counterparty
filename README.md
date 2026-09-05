@@ -6,9 +6,15 @@
 
 ## Текущий статус
 
-Подробные спецификации MVP готовы. Прежний однопакетный прототип удалён; новый
-каркас монорепозитория ещё не создан. Принятый дизайнерский HTML используется
-как визуально-поведенческий reference для React-реализации.
+Реализованы каркас сервисов, PostgreSQL/storage и импорт 100 разрешённых
+mock-отчётов. UI API предоставляет проекты, состав компаний, карточку отчёта с
+evidence и детерминированное сравнение. React S1/S2 читает и изменяет проекты
+и состав компаний через REST; разговор, отчёт, материалы и решение пока
+используют typed mocks/заглушки. Полноценного агентного сценария ещё нет.
+
+Текущий срез — завершение интеграции волны 1. Визуальная приёмка WEB-07 и
+оставшаяся REST-интеграция WEB-08 не закрыты. Принятый дизайнерский HTML
+используется как визуально-поведенческий reference для React-реализации.
 
 Запускать очередную волну следует по [NEXT_STEPS.md](NEXT_STEPS.md); полный
 backlog и зависимости находятся в [плане разработки](docs/WORK_PLAN.md).
@@ -16,7 +22,7 @@ backlog и зависимости находятся в [плане разраб
 [индексе Specs](docs/Specs/00_OVERVIEW_AND_INDEX.md), краткая карта границ — в
 [архитектуре](docs/architecture.md).
 
-## Целевые части
+## Части репозитория
 
 ```text
 .
@@ -38,9 +44,10 @@ backlog и зависимости находятся в [плане разраб
 └── artifacts/
 ```
 
-У `web`, `ui_api`, `agent` и `mcp` будет собственный `Dockerfile`. Общий
-`compose.yaml` появится позже, когда каждый сервис сможет запускаться и
-проверяться самостоятельно. Скрипт импорта не является сервисом.
+У `web`, `ui_api`, `agent` и `mcp` есть собственные `Dockerfile`. Текущий
+`compose.yaml` поднимает только PostgreSQL и выполняет миграции, настройку роли
+импортёра и разовый импорт. Общий контур сервисов относится к OPS-01.
+Импортёр остаётся скриптом, а не постоянно работающим сервисом.
 
 ## Принятые технические границы
 
@@ -82,6 +89,80 @@ HTML остаётся неизменяемым исходным артефакт
 
 ## Локальный запуск
 
-Команды появятся вместе с каркасом этапа F0 внутри каталогов конкретных
-сервисов и `apps/web`. Корень репозитория не является запускаемым Python-
-проектом.
+Нужны Docker с Compose, uv с Python 3.13 и Node.js >=22.13 с npm. Корень
+репозитория не является Python-проектом. Команды ниже используют локальные
+демо-настройки из `compose.yaml`; при переопределении порта, БД или пользователя
+нужно соответственно изменить команды. Docker-запуск в окружении проверки G6
+не проверен: Docker отсутствует.
+
+Из корня подготовьте БД и импорт:
+
+```sh
+docker compose up -d postgres
+docker compose run --rm import
+```
+
+Миграции и роль импортёра выполняются как зависимости import. Повторный импорт
+того же snapshot не изменяет данные. Для UI API создайте отдельный локальный
+login с правами сервисной роли (Compose пока создаёт login только импортёру):
+
+```sh
+docker compose exec -T postgres psql -U counterparty -d counterparty -v ON_ERROR_STOP=1 <<'SQL'
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'counterparty_web_dev') THEN
+    CREATE ROLE counterparty_web_dev LOGIN PASSWORD 'counterparty_web_dev';
+  END IF;
+END $$;
+GRANT counterparty_ui_api TO counterparty_web_dev;
+GRANT CONNECT ON DATABASE counterparty TO counterparty_web_dev;
+SQL
+```
+
+В отдельном терминале запустите API; приведённый пароль — локальный демо-default:
+
+```sh
+cd services/ui_api
+uv sync --frozen
+UI_API_DATABASE_URL='postgresql+psycopg://counterparty_web_dev:counterparty_web_dev@127.0.0.1:55432/counterparty' \
+UI_API_SESSION_COOKIE_SECURE=false \
+uv run --frozen uvicorn counterparty_ui_api.app:app --host 127.0.0.1 --port 8000
+```
+
+Во втором терминале из корня:
+
+```sh
+cd apps/web
+npm ci
+npm run dev -- --port 5173
+```
+
+Откройте `http://localhost:5173/checks`. Пока в UI нет формы входа: один раз
+выполните в консоли браузера на этой странице демо-вход и дождитесь перезагрузки:
+
+```js
+fetch('/api/v1/auth/session', {
+  method: 'POST',
+  credentials: 'include',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ login: 'demo-analyst' }),
+}).then((response) => {
+  if (!response.ok) throw new Error(`Демо-вход: HTTP ${response.status}`);
+  location.reload();
+});
+```
+
+Cookie остаётся HttpOnly; после перезапуска API демо-вход потребуется повторить.
+Vite проксирует `/api/v1` на `localhost:8000`, поэтому для этого запуска
+`VITE_UI_API_BASE_URL` задавать не нужно. Без настроенной БД доступны health и
+session, а запросы проектов возвращают `dependency_unavailable`.
+
+Проверяемый live flow: создать проверку, открыть материалы, добавить компанию
+по ИНН `7449088645`, переименовать проверку, перезагрузить страницу и проверить
+сохранённый состав. Данные взяты из mock snapshot и не являются актуальной
+проверкой компании. Для новых REST-проектов чат и детали отчёта пока не
+подключены; кнопка сравнения открывает материалы, отдельной таблицы ещё нет.
+
+В `apps/web` обязательные проверки: `npm run lint`, `npm run typecheck`,
+`npm test`, `npm run build`. Скриншоты S1/S2 на 390/1024/1440 и browser flow —
+следующая задача WEB-07; её визуальные состояния используют существующие
+typed fixtures через тестовый harness, отдельно от live CRUD smoke.
