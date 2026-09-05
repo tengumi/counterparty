@@ -8,6 +8,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY packages/contracts packages/contracts
+COPY packages/domain packages/domain
+COPY packages/storage packages/storage
 COPY services/mcp/pyproject.toml services/mcp/uv.lock services/mcp/
 
 WORKDIR /app/services/mcp
