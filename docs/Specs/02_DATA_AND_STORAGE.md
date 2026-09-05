@@ -37,15 +37,17 @@
 
 Обозначение `report.*` относится к объекту report одной исходной записи. Все дочерние записи содержат `report_id`, локальный ID/ordinal и `source_path`; источник каждого периода сохраняется.
 
+Датовые поля источника (`registration_date`, `status_date` и прочие `$date`) хранятся как точный момент времени, а не как календарная дата. Источник кодирует локальную полночь при разных смещениях UTC, поэтому перевод в дату требует угадывания часового пояса и смещает часть значений на сутки. Календарная дата вычисляется на слое отображения, где известен применяемый пояс; в хранилище сырое значение остаётся без потерь.
+
 | Таблица | Ключевые поля | Источник |
 |---|---|---|
 | import_batches | id, file_name, sha256, imported_at, parser_version, counts | Метаданные импорта |
 | companies | id, inn UNIQUE, ogrn, entity_type | report.baseInfo.inn, ogrn; тип не угадывать, если не подтверждён |
 | report_snapshots | id, company_id, source_record_id, source_report_at, ingested_at, hash, raw_jsonb, batch_id, ingestion_status | _id; весь report; report.reportDate |
-| company_profiles | report_id PK, short_name, full_name, kpp, okpo, address, registration_date, years_from_registration, email, company_size, bank_risk_raw | report.baseInfo.*; address — строка, registrationInfo.registrationDate/yearsFromRegistration — дата и возраст; исторические реквизиты привязаны к снимку |
+| company_profiles | report_id PK, short_name, full_name, kpp, okpo, address, registration_date, years_from_registration, email, website, company_size, bank_risk_raw, extra_jsonb | report.baseInfo.*; address — строка, registrationInfo.registrationDate/yearsFromRegistration — дата и возраст; исторические реквизиты привязаны к снимку |
 | company_statuses | report_id PK, status_raw, status_date, reason_raw, extra_jsonb | report.status.status/date/reasonName; reason_raw соответствует reasonName, неизвестные вложенные поля сохранять |
-| activity_codes | id, report_id, code, description, is_primary | report.kindsOfActivityInfo.mainKindOfActivity, otherKindsOfActivity[] |
-| financial_statements | id, report_id, year, proceeds, profit, total_assets, current_assets, stocks, receivables, cash, noncurrent_assets, fixed_assets, balance_total_liabilities_side, equity, long_term_total, long_term_other, short_term_total, short_term_borrowed, accounts_payable, extra_jsonb | report.finReports[]; подробные пути ниже |
+| activity_codes | id, report_id, ordinal, code, description, is_primary | report.kindsOfActivityInfo.mainKindOfActivity, otherKindsOfActivity[] |
+| financial_statements | id, report_id, ordinal, year, proceeds, profit, total_assets, current_assets, stocks, receivables, cash, noncurrent_assets, fixed_assets, balance_total_liabilities_side, equity, long_term_total, long_term_other, short_term_total, short_term_borrowed, accounts_payable, extra_jsonb | report.finReports[]; подробные пути ниже |
 | reported_coefficients | id, report_id, year, sustainability, solvency, profitability, raw_jsonb | report.coefficient.year/sustainability/solvency/profitability; в проверенном файле объект |
 | founders | id, report_id, name, inn, amount, share, date_from, active, extra_jsonb | report.foundersInfo.cofounders[] |
 | authorized_persons | id, report_id, name, inn, position_name, position_date, extra_jsonb | report.foundersInfo.authPerson |
@@ -65,8 +67,9 @@
 | branch_summaries | report_id PK, reported_count | report.branchesInfo.branchesCount |
 | branches | id, report_id, name, address, extra_jsonb | report.branchesInfo.branches[].name/address |
 | section_availability | report_id, section, source_state, record_count, warnings_jsonb | Результат парсинга; missing / present_empty / present / invalid |
+| import_warnings | id, batch_id, report_id NULL, source_record_id NULL, severity, code, source_path, message | Результат парсинга; неизвестное поле, неизвестное значение enum или неразобранное число записывается сюда, а не приводится к значению по умолчанию |
 
-`extra_jsonb` сохраняет остаток блока, но не заменяет нужные для фильтров и расчётов колонки. Нельзя терять неизвестные значения enum или неподдержанные поля без записи import warning. Raw JSONB сохраняет структуру; хэш исходного файла обеспечивает привязку к исходным байтам. JSONB не гарантирует сохранение порядка ключей исходного текста.
+`extra_jsonb` сохраняет остаток блока, но не заменяет нужные для фильтров и расчётов колонки. Нельзя терять неизвестные значения enum или неподдержанные поля без записи import warning: адресатом такой записи является `import_warnings`. `ordinal` хранит позицию элемента в исходном массиве, потому что JSON-массив упорядочен, а выборка из таблицы — нет; без него исходный `source_path` элемента невосстановим и evidence не разрешается обратно в источник. Raw JSONB сохраняет структуру; хэш исходного файла обеспечивает привязку к исходным байтам. JSONB не гарантирует сохранение порядка ключей исходного текста.
 
 ### Финансовые пути
 
