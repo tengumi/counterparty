@@ -16,7 +16,8 @@ from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from uuid import UUID
 
-from counterparty_contracts import ProjectId, RunStatus, ThreadId
+from counterparty_contracts import RunStatus
+from counterparty_storage import ThreadScope
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import BaseCheckpointSaver
 
@@ -34,39 +35,39 @@ logger = logging.getLogger(__name__)
 ASSISTANT_MESSAGE_INDEX = "1"
 _TEXT_PATH = ("messages", ASSISTANT_MESSAGE_INDEX, "blocks", "0", "text")
 
-ContextLoader = Callable[[ProjectId, ThreadId], Awaitable[AgentContext]]
-ConfigFactory = Callable[[ProjectId, ThreadId], Awaitable[RunnableConfig]]
+ContextLoader = Callable[[ThreadScope], Awaitable[AgentContext]]
+ConfigFactory = Callable[[ThreadScope], Awaitable[RunnableConfig]]
 
 
-async def default_context(project_id: ProjectId, thread_id: ThreadId) -> AgentContext:
-    """Build the minimum context available before the RPC carries a tenant.
+async def default_context(scope: ThreadScope) -> AgentContext:
+    """Build the minimum context for a process without a database.
 
-    The project layer is intentionally thin rather than invented: identifiers
-    are real, and the descriptive values stay empty until an authorized
-    :class:`~counterparty_agent.harness.context.WorkspaceContextSource` is
-    injected here.
+    The project layer is thin rather than invented: the identifiers are real
+    and the descriptive values stay empty. A process with a database uses
+    :class:`~counterparty_agent.harness.context.WorkspaceContextSource`
+    instead, which reads the authorized project and thread layers.
     """
     return build_context(
-        project_id=project_id,
-        tenant_id=UUID(int=0),
+        project_id=scope.project_id,
+        tenant_id=scope.tenant_id,
         title="",
         workflow_status="unknown",
         context_version=0,
         companies=[],
-        thread_id=thread_id,
+        thread_id=scope.thread_id,
         thread_title="",
         thread_status="active",
     )
 
 
-async def default_config(project_id: ProjectId, thread_id: ThreadId) -> RunnableConfig:
-    """Key checkpoints by the thread the RPC named.
+async def default_config(scope: ThreadScope) -> RunnableConfig:
+    """Key checkpoints by the thread id alone, for a process without a database.
 
-    Once the RPC carries a tenant scope, replace this with
+    A process with a database uses
     :func:`counterparty_agent.checkpointing.checkpoint_config`, which derives
-    the same key from a server-authorized thread instead of a request value.
+    the key from a server-authorized thread instead of a bare identifier.
     """
-    return RunnableConfig(configurable={"thread_id": str(thread_id)})
+    return RunnableConfig(configurable={"thread_id": str(scope.thread_id)})
 
 
 def create_harness_runner(
@@ -106,8 +107,13 @@ def create_harness_runner(
             },
         )
         try:
-            context = await context_loader(state.project_id, state.thread_id)
-            config = await config_factory(state.project_id, state.thread_id)
+            scope = ctx.scope or ThreadScope(
+                tenant_id=UUID(int=0),
+                project_id=UUID(str(state.project_id)),
+                thread_id=UUID(str(state.thread_id)),
+            )
+            context = await context_loader(scope)
+            config = await config_factory(scope)
             # Specs 04 §3 caps tool calls per run; one model step per call plus
             # the final answer is the graph-level equivalent of that budget.
             config["recursion_limit"] = settings.max_tool_calls * 2 + 1

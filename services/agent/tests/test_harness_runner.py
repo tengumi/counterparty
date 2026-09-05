@@ -132,3 +132,32 @@ def test_with_mcp_the_harness_runs_the_thread() -> None:
     from counterparty_agent.transport import deterministic_agent
 
     assert select_runner(SETTINGS, None) is not deterministic_agent
+
+
+async def test_the_runner_passes_the_runs_trusted_scope_to_the_loaders() -> None:
+    """The harness loads context and keys checkpoints from ``ctx.scope``."""
+    from counterparty_storage import ThreadScope
+    from langchain_core.runnables import RunnableConfig
+
+    from counterparty_agent.harness.context import AgentContext
+    from counterparty_agent.harness.runner import default_config, default_context
+
+    seen: dict[str, ThreadScope] = {}
+
+    async def context_loader(scope: ThreadScope) -> AgentContext:
+        seen["context"] = scope
+        return await default_context(scope)
+
+    async def config_factory(scope: ThreadScope) -> RunnableConfig:
+        seen["config"] = scope
+        return await default_config(scope)
+
+    scope = ThreadScope(tenant_id=uuid4(), project_id=uuid4(), thread_id=uuid4())
+    run = make_run("Anything grounded?")
+    run.scope = scope
+    await create_harness_runner(
+        SETTINGS, context_loader=context_loader, config_factory=config_factory
+    )(RunContext(run))
+
+    assert seen["context"] is scope
+    assert seen["config"] is scope

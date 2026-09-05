@@ -70,6 +70,11 @@ class Run:
     client_request_id: ClientRequestId
     initial_state: PublicAgentState
     prompt: str
+    scope: ThreadScope | None = None
+    """The trusted ``(tenant, project, thread)`` the RPC resolved, when a
+    database is configured. ``None`` in a process without one; the runner then
+    falls back to a thin, tenant-less context."""
+
     status: RunStatus = field(default=RunStatus.ACCEPTED, init=False)
     _events: list[RunEvent] = field(default_factory=list, init=False)
     _changed: asyncio.Event = field(default_factory=asyncio.Event, init=False)
@@ -154,6 +159,11 @@ class RunContext:
         return self._run.prompt
 
     @property
+    def scope(self) -> ThreadScope | None:
+        """The trusted scope of this run, or ``None`` without a database."""
+        return self._run.scope
+
+    @property
     def cancel_requested(self) -> bool:
         """Whether the run should stop at the next safe boundary."""
         return self._run.cancel_requested
@@ -204,7 +214,6 @@ class RunRegistry:
         self._runs: dict[RunId, Run] = {}
         self._by_request: dict[ClientRequestId, Run] = {}
         self._tasks: dict[RunId, asyncio.Task[None]] = {}
-        self._scopes: dict[RunId, ThreadScope] = {}
 
     def get(self, run_id: RunId) -> Run | None:
         """Look up a run that this process started."""
@@ -223,6 +232,7 @@ class RunRegistry:
         """
         if run.id in self._runs:
             raise ValueError(f"run {run.id} already started")
+        run.scope = scope
         if self.durable is not None and scope is not None:
             await self.durable.accept(
                 scope,
@@ -230,7 +240,6 @@ class RunRegistry:
                 client_request_id=UUID(str(run.client_request_id)),
                 based_on_context_version=_based_on_context_version(run),
             )
-            self._scopes[run.id] = scope
         self._runs[run.id] = run
         self._by_request[run.client_request_id] = run
         task = asyncio.create_task(self._execute(run), name=f"agent-run-{run.id}")
@@ -244,13 +253,12 @@ class RunRegistry:
         if run is None:
             return None
         run.request_cancel()
-        scope = self._scopes.get(run_id)
-        if self.durable is not None and scope is not None and not run.finished:
-            await self.durable.advance(scope, run_id, RunStatus.CANCELLING)
+        if self.durable is not None and run.scope is not None and not run.finished:
+            await self.durable.advance(run.scope, run_id, RunStatus.CANCELLING)
         return run
 
     async def _execute(self, run: Run) -> None:
-        scope = self._scopes.get(run.id)
+        scope = run.scope
         try:
             await self._mirror(run.id, scope, RunStatus.RUNNING)
             await self._runner(RunContext(run))
@@ -294,7 +302,6 @@ class RunRegistry:
         self._runs.clear()
         self._by_request.clear()
         self._tasks.clear()
-        self._scopes.clear()
 
     async def __aenter__(self) -> "RunRegistry":
         """Enter the registry scope."""

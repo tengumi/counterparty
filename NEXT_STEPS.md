@@ -566,12 +566,18 @@ J влит. Что дал каждый срез и его известная д�
    - Проверки: agent 66 (5 новых durable-тестов на изолированной
      PostgreSQL + non-owner runtime login), storage 88, ui_api 70, mcp 32 —
      зелёные. Независимый проверяющий по плану ещё нужен.
-3. **Проброс tenant scope в RPC агента** — фундамент готов
-   (`resolve_thread_scope` + `/chat` проверяет scope). Осталось: заменить
-   тонкие `default_context`/`default_config` в `harness/runner.py` на
-   `WorkspaceContextSource` + `checkpoint_config(owner, scope)`, пробросив
-   резолвнутый `ThreadScope` в runner. Нужен небольшой read-only session
-   factory в композиции агента (или чтение контекста на owner-connection).
+3. **Проброс tenant scope в RPC агента** — ✅ сделано 06.09.2026.
+   - `Run`/`RunContext` несут резолвнутый `ThreadScope`; `RunRegistry.start`
+     проставляет его. `harness/runner.py` берёт `ctx.scope` (или тонкий
+     fallback `tenant=0` для процесса без БД) и передаёт в загрузчики.
+   - `default_context`/`default_config` теперь принимают `ThreadScope`.
+   - Композиция: при наличии DSN поднимается небольшой read-only
+     `session_factory` (pool 2); `select_runner` подключает
+     `WorkspaceContextSource(session_factory).load` и
+     `partial(checkpoint_config, owner)` — авторизованные слои проекта/треда
+     и checkpoint-ключ по server-verified треду, не по значению из запроса.
+   - Проверки: agent 68 (2 новых: runner передаёт scope в загрузчики; RPC
+     резолвит доверенный scope из проекта и отвергает чужой тред).
 4. **OPS-01 до конца** — реально поднять стек, чинить что сломается на живом
    старте, подтвердить healthchecks, один ручной проход. Нужен Docker в окружении
    (в прошлых сессиях его не было).

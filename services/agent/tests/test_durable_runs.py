@@ -239,3 +239,23 @@ def test_an_unknown_run_is_still_not_found(client: TestClient) -> None:
     assert client.get(f"/rpc/agent/runs/{missing}").status_code == 404
     assert client.post(f"/rpc/agent/runs/{missing}/cancel").status_code == 404
     assert client.post(f"/rpc/agent/runs/{missing}/subscribe").status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_the_rpc_resolves_a_trusted_scope_from_the_project(seeded: Seeded) -> None:
+    """The tenant comes from the project row; a foreign thread does not resolve."""
+    _, runtime, _, scope = seeded
+    async with postgres_run_owner(runtime) as owner:
+        resolved = await owner.resolve_thread_scope(
+            project_id=scope.project_id, thread_id=scope.thread_id
+        )
+        assert resolved is not None
+        assert resolved.tenant_id == scope.tenant_id
+        assert resolved.project_id == scope.project_id
+
+        assert (
+            await owner.resolve_thread_scope(project_id=scope.project_id, thread_id=uuid4()) is None
+        )
+        assert (
+            await owner.resolve_thread_scope(project_id=uuid4(), thread_id=scope.thread_id) is None
+        )
