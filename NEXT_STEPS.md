@@ -417,9 +417,9 @@ evidence REST, но в API-01…05 они не входили и ещё не р�
 | I1 / API-06 | ready for review | REST sections/evidence, shared projections и repository bundle; 100×17 разделов, 14035 refs; независимые HTTP-проверки пройдены |
 | I2 / MCP-01/02 | ready for review | authenticated read-only tools; независимо 31 tests, 5555 refs, parity 100 overviews/96 pages; Docker build не проверен |
 | I3 / F0-07 | ready for review | native saver в workspace, AgentRun и restart; исправление I7 независимо подтверждено; Docker build не проверен |
-| I4 / WEB-08 report slice | integrated, browser pending | live report/evidence/comparison; 92 web tests, lint/typecheck/build; DOC/terms/analysis unavailable |
+| I4 / WEB-08 report slice | ready, final UI replay pending | live report/evidence/comparison; 92 web tests, lint/typecheck/build; 53 browser checks passed, touch targets/favicon corrected in `42daeb7` |
 | I5 / API-agent verification | passed with limitations | `eff2c64`; baseline 441, targeted agent22/storage83/migrations19/domain122, 21 HTTP checks, fencing и framework roundtrip |
-| I6 / MCP-web verification | final browser preparation | MCP/parity passed; финальный сценарий на живом API, desktop/mobile и tablet bounds |
+| I6 / MCP-web verification | final targeted replay | MCP/parity passed; live browser 53 checks/13 screenshots; адресная проверка mobile44px и favicon после найденных мелких дефектов |
 | I7 / checkpoint write fencing | ready for review | `6377532`; saver использует owner connection, stale graph/aput/aput_writes/delete отвергнуты; I5 подтвердил продолжение новым процессом |
 
 I1–I3 стартуют параллельно от baseline `1173476`. Contracts/domain и storage
@@ -461,8 +461,24 @@ Root обновляет статусы здесь; WORK_PLAN done — после
 - I4 исправил потерю периода финансового evidence, включая дополнительные поля
   старых лет вне overview. Domain122 и независимые 21 HTTP-проверка прошли.
 - Demo PostgreSQL мигрирован до 0005; штатные checkpoint tables развёрнуты
-  отдельной deploy-командой. Финальный browser ещё не запущен; API/Vite поднимаются
-  после интеграции I6 runner. Исходный mock и HTML не менялись.
+  отдельной deploy-командой. Live browser на `2dce684`: 53 assertions прошли,
+  13 screenshots, все 24 API-ответа без HTTP-ошибок. Единственный console404
+  оказался отсутствующим favicon; визуальная проверка нашла mobile context
+  buttons меньше 44px. I4 исправил оба в `42daeb7`; I6 проверяет адресно.
+  Исходный manifest сохранён, повтор полного flow не требуется.
+
+После пользовательского review I:
+
+1. Отметить принятые API-06, MCP-01/02 и F0-07 в WORK_PLAN; для WEB-08 явно
+   сохранить границу: живая отчётная часть материалов и сравнение реализованы,
+   terms/documents/analysis/decision API ещё отсутствуют.
+2. Предлагаемый следующий срез J — первый ответ агента по закреплённому отчёту
+   с проверяемыми evidence refs: AG-01 → AG-02 → AG-03; параллельно MCP-03 и
+   независимая parity-проверка сравнения. Provider/model остаются конфигурацией.
+3. Постоянное подключение разговорного RPC, reconnect/cancel и WEB-09 идут
+   после этого через AG-04; не выдавать текущий persistence primitive за полный
+   сохраняемый разговор. DOC и решения сохраняют собственные зависимости.
+4. Новую крупную волну до review не запускать. Worktrees I1–I7 сохраняются.
 
 ## Волна C — интеграционные риски и первый data/domain слой
 
