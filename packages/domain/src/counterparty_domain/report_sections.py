@@ -6,11 +6,11 @@ import hashlib
 import json
 from collections.abc import Mapping
 from datetime import UTC, datetime
-from decimal import Decimal, InvalidOperation
 from typing import Any
 from uuid import NAMESPACE_URL, uuid5
 
 from counterparty_contracts import (
+    SECTION_RECORD_KINDS,
     SECTION_SOURCE_KEYS,
     Activity,
     ArbitrationAggregate,
@@ -46,6 +46,7 @@ from .report_reads import (
     ReportReadData,
     _field_availability,
     _pointer,
+    _source_decimal,
     report_evidence_id,
     section_availability,
 )
@@ -81,21 +82,6 @@ def _instant(value: object) -> datetime | None:
     return parsed.astimezone(UTC) if parsed.tzinfo is not None else None
 
 
-def _decimal(value: object) -> Decimal | None:
-    if isinstance(value, Mapping) and len(value) == 1:
-        value = next(
-            (value[key] for key in ("$numberLong", "$numberInt", "$numberDecimal") if key in value),
-            None,
-        )
-    if isinstance(value, bool) or not isinstance(value, str | int | Decimal):
-        return None
-    try:
-        parsed = Decimal(value)
-    except InvalidOperation:
-        return None
-    return parsed if parsed.is_finite() else None
-
-
 def source_fact(
     data: ReportReadData,
     path: str,
@@ -110,14 +96,21 @@ def source_fact(
     """Project one scalar without equating missing, empty, invalid or zero."""
     availability = _field_availability(data.raw, path, data.invalid_paths)
     raw = _pointer(data.raw, path)
+    ref_path = path
+    if raw is _MISSING:
+        parent_path = path.rsplit("/", 1)[0]
+        parent = _pointer(data.raw, parent_path)
+        if parent is None or parent == {} or parent == []:
+            availability = Availability.PRESENT_EMPTY
+            ref_path = parent_path
     value: Any = None
     if availability is Availability.AVAILABLE:
         supplied = raw if normalized is _MISSING else normalized
         if value_type is ValueType.DECIMAL:
-            parsed = _decimal(supplied)
+            parsed = _source_decimal(supplied)
             value = None if parsed is None else decimal_to_string(parsed)
         elif value_type is ValueType.INTEGER:
-            parsed = _decimal(supplied)
+            parsed = _source_decimal(supplied)
             value = (
                 int(parsed) if parsed is not None and parsed == parsed.to_integral_value() else None
             )
@@ -147,7 +140,11 @@ def source_fact(
         currency=currency,
         period=period,
         availability=availability,
-        evidence_refs=[] if raw is _MISSING else [report_evidence_id(data.report_id, path)],
+        evidence_refs=(
+            []
+            if raw is _MISSING and ref_path == path
+            else [report_evidence_id(data.report_id, ref_path)]
+        ),
         warnings=warnings,
     )
 
@@ -158,8 +155,10 @@ def _record_refs(data: ReportReadData, path: str) -> list[str]:
 
 def _items(data: ReportReadData, path: str) -> list[tuple[str, Mapping[str, Any]]]:
     value = _pointer(data.raw, path)
-    if not isinstance(value, list):
+    if value is _MISSING or value is None or value == []:
         return []
+    if not isinstance(value, list) or any(not isinstance(row, Mapping) for row in value):
+        raise ValueError("source records must be objects in an array")
     return [(f"{path}/{index}", row) for index, row in enumerate(value) if isinstance(row, Mapping)]
 
 
@@ -207,6 +206,8 @@ def _financials(data: ReportReadData) -> list[ReportRecord]:
 
 def _raw_records(data: ReportReadData, section: ReportSectionName) -> list[ReportRecord]:
     records: list[ReportRecord] = []
+    if not SECTION_RECORD_KINDS[section]:
+        return []
     if section is ReportSectionName.FINANCIALS:
         return _financials(data)
     if section is ReportSectionName.PROFILE:
@@ -379,16 +380,30 @@ def _arbitration(data: ReportReadData) -> list[ReportRecord]:
             if not isinstance(row, Mapping) or not key.startswith(prefix + "Arbitration"):
                 continue
             path = f"{group_path}/{key}"
+            case_status = key.removeprefix(prefix + "Arbitration")
+            code = {"Finished": "f", "Appealed": "a", "Pending": "p"}.get(case_status)
+            if code is None:
+                raise ValueError("unknown status aggregate layout")
+            field_prefix = ("p" if role is PartyRole.PLAINTIFF else "d") + code
             records.append(
                 ArbitrationAggregate(
                     aggregation=ArbitrationAggregation.BY_STATUS,
                     role=role,
-                    case_status_raw=key.removeprefix(prefix + "Arbitration"),
+                    case_status_raw=case_status,
                     count=source_fact(
-                        data, path + "/count", "count", "Количество", ValueType.INTEGER
+                        data,
+                        path + f"/{field_prefix}Count",
+                        "count",
+                        "Количество",
+                        ValueType.INTEGER,
                     ),
                     amount=source_fact(
-                        data, path + "/amount", "amount", "Сумма", ValueType.DECIMAL, currency="RUB"
+                        data,
+                        path + f"/{field_prefix}Amount",
+                        "amount",
+                        "Сумма",
+                        ValueType.DECIMAL,
+                        currency="RUB",
                     ),
                     evidence_refs=_record_refs(data, path),
                 )
@@ -425,11 +440,23 @@ def _scalar_facts(data: ReportReadData, section: ReportSectionName) -> list[Fact
                         FactValue(
                             key=path,
                             label=path.split("/")[-1],
-                            value=instant.date().isoformat(),
-                            value_type=ValueType.DATE,
+                            value=instant.isoformat(),
+                            value_type=ValueType.STRING,
                             period=period,
                             availability=Availability.AVAILABLE,
                             evidence_refs=_record_refs(data, path),
+                        )
+                    )
+                else:
+                    facts.append(
+                        source_fact(
+                            data,
+                            path,
+                            path,
+                            path.split("/")[-1],
+                            ValueType.STRING,
+                            normalized=None,
+                            period=period,
                         )
                     )
                 return
@@ -509,11 +536,9 @@ def build_report_section(data: ReportReadData, request: GetReportSectionInput) -
     if availability is Availability.AVAILABLE:
         try:
             records = _raw_records(data, request.section)
-            from counterparty_contracts import SECTION_RECORD_KINDS
-
             if not SECTION_RECORD_KINDS[request.section]:
                 facts = _scalar_facts(data, request.section)
-        except (ValueError, ValidationError):
+        except (ValueError, KeyError, TypeError, ValidationError):
             availability = Availability.INVALID
             warnings.append(
                 ContractWarning(
@@ -544,6 +569,23 @@ def build_report_section(data: ReportReadData, request: GetReportSectionInput) -
                 message=(
                     "Календарные даты без времени доступны в исходном фрагменте; "
                     "точный UTC момент не задан"
+                ),
+            )
+        )
+
+    def has_unknown(value: object) -> bool:
+        if isinstance(value, Mapping):
+            if "availability" in value and value["availability"] != "available":
+                return True
+            return any(has_unknown(child) for child in value.values())
+        return isinstance(value, list) and any(has_unknown(child) for child in value)
+
+    if any(has_unknown(item.model_dump(mode="json")) for item in [*records, *facts]):
+        warnings.append(
+            ContractWarning(
+                code=WarningCode.PARTIAL_DATA,
+                message=(
+                    "Раздел содержит поля без подтверждённых значений; они не считаются нулевыми"
                 ),
             )
         )

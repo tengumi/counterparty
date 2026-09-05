@@ -7,7 +7,7 @@ no files, database sessions or network connections.
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any, Final
 from uuid import UUID
 
@@ -181,11 +181,30 @@ def _fact(
     )
 
 
+def _source_decimal(value: object) -> Decimal | None:
+    if isinstance(value, Mapping) and len(value) == 1:
+        value = next(
+            (value[key] for key in ("$numberLong", "$numberInt", "$numberDecimal") if key in value),
+            None,
+        )
+    if isinstance(value, bool) or not isinstance(value, str | int | Decimal):
+        return None
+    try:
+        parsed = Decimal(value)
+    except InvalidOperation:
+        return None
+    return parsed if parsed.is_finite() else None
+
+
 def _proceedings_facts(report_id: UUID, raw: Mapping[str, Any]) -> list[FactValue]:
     """Summarize raw proceedings with domain rules until they get typed tables."""
     source_path = "/executionProceedings"
     raw_records = _pointer(raw, source_path)
-    if not isinstance(raw_records, list) or not raw_records:
+    if (
+        not isinstance(raw_records, list)
+        or not raw_records
+        or any(not isinstance(row, Mapping) for row in raw_records)
+    ):
         return []
     records: list[ExecutionProceeding] = []
     for index, raw_record in enumerate(raw_records):
@@ -200,17 +219,25 @@ def _proceedings_facts(report_id: UUID, raw: Mapping[str, Any]) -> list[FactValu
             if isinstance(active, bool)
             else FactSlot[bool].missing("proceeding active flag is unavailable")
         )
-        try:
-            parsed_amount = Decimal(str(amount))
-        except Exception:
-            amount_slot = FactSlot[Decimal].missing(
-                "proceeding amount is unavailable", evidence_refs=(record_ref,)
-            )
-        else:
-            amount_slot = FactSlot[Decimal].available(
+        parsed_amount = _source_decimal(amount)
+        amount_availability = _field_availability(raw, f"{record_path}/amount", set())
+        amount_slot = (
+            FactSlot[Decimal].available(
                 parsed_amount,
                 evidence_refs=(report_evidence_id(report_id, f"{record_path}/amount"),),
             )
+            if parsed_amount is not None
+            else FactSlot[Decimal](
+                value=None,
+                availability=(
+                    Availability.INVALID
+                    if amount_availability is Availability.AVAILABLE
+                    else amount_availability
+                ),
+                reason="proceeding amount is unavailable",
+                evidence_refs=(record_ref,),
+            )
+        )
         records.append(
             ExecutionProceeding(
                 active=active_slot,
