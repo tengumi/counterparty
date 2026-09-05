@@ -11,11 +11,19 @@ A resource of another tenant is answered ``not_found`` rather than
 from typing import Any
 
 from counterparty_contracts import Error, ErrorCode
+from counterparty_storage import (
+    ContextVersionConflictError,
+    IdempotencyConflictError,
+    NotFoundError,
+    ProjectCompanyLimitError,
+    ProjectDeletedError,
+    StorageError,
+)
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-__all__ = ["ApiError", "install_error_handlers", "request_id_of"]
+__all__ = ["ApiError", "as_api_error", "install_error_handlers", "request_id_of"]
 
 _STATUS_BY_CODE: dict[ErrorCode, int] = {
     ErrorCode.VALIDATION_ERROR: status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -67,6 +75,50 @@ class ApiError(Exception):
         )
 
 
+def as_api_error(error: Exception) -> ApiError:
+    """Translate a persistence refusal into its public shape.
+
+    The storage messages name row identifiers, so none of them is forwarded: a
+    caller learns which decision it has to make, not what the database found.
+
+    Args:
+        error: The failure raised by ``counterparty_storage``.
+
+    Returns:
+        The public refusal, defaulting to ``internal_error`` for a failure this
+        service has no public meaning for.
+    """
+    if isinstance(error, NotFoundError | ProjectDeletedError):
+        return ApiError(ErrorCode.NOT_FOUND, f"{_subject(error)} not found")
+    if isinstance(error, ContextVersionConflictError):
+        return ApiError(
+            ErrorCode.CONFLICT,
+            "the project context changed since it was read; re-read and try again",
+            details={"expected_context_version": error.expected, "context_version": error.actual},
+        )
+    if isinstance(error, ProjectCompanyLimitError):
+        return ApiError(
+            ErrorCode.LIMIT_EXCEEDED,
+            f"a project compares at most {error.limit} counterparties",
+            details={"limit": error.limit},
+        )
+    if isinstance(error, IdempotencyConflictError):
+        return ApiError(
+            ErrorCode.CONFLICT,
+            "this request id was already used for a different request",
+            details={"reason": "request_id_reused"},
+        )
+    return ApiError(ErrorCode.INTERNAL_ERROR, "the request could not be completed")
+
+
+def _subject(error: Exception) -> str:
+    """Name what was not found, without quoting an identifier."""
+    if isinstance(error, ProjectDeletedError):
+        return "project"
+    kind = getattr(error, "kind", "resource")
+    return kind if isinstance(kind, str) else "resource"
+
+
 def request_id_of(request: Request) -> str:
     """Return the correlation id assigned to this request."""
     request_id = getattr(request.state, "request_id", None)
@@ -82,6 +134,15 @@ def install_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=error.status_code,
             content=error.to_contract(request_id_of(request)).model_dump(mode="json"),
+        )
+
+    @app.exception_handler(StorageError)
+    async def _handle_storage_error(request: Request, error: Exception) -> JSONResponse:
+        """Render a persistence refusal as the decision the caller must make."""
+        refusal = as_api_error(error)
+        return JSONResponse(
+            status_code=refusal.status_code,
+            content=refusal.to_contract(request_id_of(request)).model_dump(mode="json"),
         )
 
     @app.exception_handler(RequestValidationError)

@@ -4,18 +4,28 @@ Ownership is the one check that is never demonstrative. A caller may not name
 their tenant, and a project id in a URL proves nothing: the server looks the
 project up and compares it with the authenticated session.
 
-The workspace schema does not exist yet, so the lookup is a port. The in-memory
-implementation is a stand-in for the repository that will replace it; the rule
-it enforces — a project belongs to exactly one tenant and one owner, and a
-thread belongs to exactly one project — does not change with the storage.
+The lookup is a port with two implementations. :class:`StorageProjectDirectory`
+reads the ``workspace`` schema through the tenant-scoped repositories, so the
+tenant filter is applied by the repository rather than by this module;
+:class:`InMemoryProjectDirectory` stays for tests that exercise the dependency
+without a database. The rule both enforce — a project belongs to exactly one
+tenant and one owner, and a thread belongs to exactly one project — does not
+change with the storage.
 """
 
 from dataclasses import dataclass
 from typing import Protocol
+from uuid import UUID
 
 from counterparty_contracts import ProjectId, TenantId, ThreadId, UserId
+from counterparty_storage import AsyncUnitOfWork
 
-__all__ = ["InMemoryProjectDirectory", "ProjectDirectory", "ProjectRecord"]
+__all__ = [
+    "InMemoryProjectDirectory",
+    "ProjectDirectory",
+    "ProjectRecord",
+    "StorageProjectDirectory",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,8 +51,43 @@ class ProjectDirectory(Protocol):
         ...
 
 
+class StorageProjectDirectory:
+    """Ownership read from the ``workspace`` schema of one tenant.
+
+    The unit of work is already bound to the caller's tenant, so a project of
+    another tenant is not merely rejected here: it is not reachable by this
+    repository at all.
+    """
+
+    def __init__(self, uow: AsyncUnitOfWork) -> None:
+        """Bind the directory to the transaction of one request."""
+        self._uow = uow
+
+    async def find_project(self, project_id: ProjectId) -> ProjectRecord | None:
+        """Return the ownership record of a project of this tenant.
+
+        A deleted project is not returned: access closes when the deletion is
+        accepted, not when its cleanup finishes.
+        """
+        project = await self._uow.projects.get(UUID(str(project_id)))
+        if project is None:
+            return None
+        return ProjectRecord(
+            project_id=project_id,
+            tenant_id=TenantId(project.tenant_id),
+            owner_user_id=UserId(project.owner_id),
+        )
+
+    async def thread_belongs_to_project(
+        self, *, project_id: ProjectId, thread_id: ThreadId
+    ) -> bool:
+        """Whether the chat is part of that exact project of this tenant."""
+        thread = await self._uow.threads.get(UUID(str(thread_id)))
+        return thread is not None and thread.project_id == UUID(str(project_id))
+
+
 class InMemoryProjectDirectory:
-    """Process-local ownership directory used until workspace storage lands."""
+    """Process-local ownership directory used by tests without a database."""
 
     def __init__(self) -> None:
         """Start with no projects."""

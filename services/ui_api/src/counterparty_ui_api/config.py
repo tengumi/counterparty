@@ -13,12 +13,21 @@ from typing import Self
 from counterparty_contracts import TenantId, UserId
 from pydantic import BaseModel, ConfigDict, Field
 
-__all__ = ["DEMO_USERS_ENV", "DemoUser", "Settings"]
+__all__ = ["DATABASE_URL_ENV", "DEMO_USERS_ENV", "DemoUser", "Settings"]
 
 DEMO_USERS_ENV = "UI_API_DEMO_USERS"
 """JSON mapping of login to ``{tenant_id, user_id, display_name}``."""
 
+DATABASE_URL_ENV = "UI_API_DATABASE_URL"
+"""Async PostgreSQL URL the service connects with.
+
+The connection is made as the ``counterparty_ui_api`` role: it reads both
+schemas and writes only ``workspace``. The service does not re-implement that
+restriction, and it must not be handed a wider role to work around it.
+"""
+
 _SESSION_TTL_ENV = "UI_API_SESSION_TTL_SECONDS"
+_POOL_SIZE_ENV = "UI_API_DATABASE_POOL_SIZE"
 _COOKIE_NAME_ENV = "UI_API_SESSION_COOKIE"
 _COOKIE_SECURE_ENV = "UI_API_SESSION_COOKIE_SECURE"
 _DEMO_AUTH_ENV = "UI_API_DEMO_AUTH"
@@ -68,6 +77,13 @@ class Settings(BaseModel):
     """``False`` only for local HTTP development; the cookie is always
     ``HttpOnly`` and ``SameSite=Lax`` regardless."""
 
+    database_url: str | None = None
+    """``None`` in a process that serves only health and session endpoints; a
+    project request then refuses with ``dependency_unavailable`` instead of
+    pretending that the workspace is empty."""
+
+    database_pool_size: int = Field(default=5, ge=1)
+
     @classmethod
     def from_env(cls, environ: dict[str, str] | None = None) -> Self:
         """Build settings from the process environment.
@@ -97,6 +113,8 @@ class Settings(BaseModel):
                 "session_ttl_seconds": int(env.get(_SESSION_TTL_ENV, 8 * 60 * 60)),
                 "session_cookie_name": env.get(_COOKIE_NAME_ENV, "cp_session"),
                 "session_cookie_secure": _flag(env, _COOKIE_SECURE_ENV, default=True),
+                "database_url": env.get(DATABASE_URL_ENV) or None,
+                "database_pool_size": int(env.get(_POOL_SIZE_ENV, 5)),
             }
         )
 
