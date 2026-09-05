@@ -15,7 +15,7 @@ const dirty = execFileSync('git', ['status', '--porcelain', '--', '../..', ':!..
 if (dirty) throw new Error('Commit source before targeted verification');
 await mkdir(output, { recursive: true });
 const chrome = await startChrome(process.env.WEB08_CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome');
-const result = { sourceSHA, originalSourceSHA: original.sourceSHA, scope: 'Mobile draft targets + favicon only; no full flow repeat', projectId, browser: chrome.browser.version(), consoleErrors: [] as { text: string; url: string }[], pageErrors: [] as string[], targets: [] as { name: string; width: number; height: number }[], favicon: { path: '', status: 0 }, viewport: { width: 390, height: 844 }, overflow: 0, composerVisible: false, screenshot: 'mobile-draft.png', verdict: 'fail' };
+const result = { sourceSHA, originalSourceSHA: original.sourceSHA, scope: 'Mobile draft targets + favicon only; no full flow repeat', projectId, browser: chrome.browser.version(), consoleErrors: [] as { text: string; url: string }[], pageErrors: [] as string[], targets: [] as { name: string; width: number; height: number; minHeight: string; parentClass: string; className: string; rules: string[] }[], favicon: { path: '', status: 0 }, viewport: { width: 390, height: 844 }, innerWidth: 0, overflow: 0, composerVisible: false, screenshot: 'mobile-draft.png', verdict: 'fail' };
 try {
   const context = await chrome.browser.newContext({ viewport: result.viewport, locale: 'ru-RU', isMobile: true, hasTouch: true });
   await context.request.post(`${baseURL}/api/v1/auth/session`, { data: { login: 'demo-analyst' } });
@@ -42,8 +42,8 @@ try {
   await panel.waitFor({ state: 'hidden' });
   const chips = page.locator('[aria-label="Материалы в черновике"]');
   assert.equal(await chips.locator('button').count(), 3);
-  result.targets = await chips.locator('button').evaluateAll((buttons) => buttons.map((button) => { const box = button.getBoundingClientRect(); return { name: button.getAttribute('aria-label') ?? button.textContent ?? '', width: box.width, height: box.height }; }));
-  assert.ok(result.targets.every((target) => target.width >= 44 && target.height >= 44));
+  result.targets = await chips.locator('button').evaluateAll((buttons) => buttons.map((button) => { const box = button.getBoundingClientRect(); const rules: string[] = []; const collect = (entries: CSSRuleList) => { for (const entry of entries) { if (entry instanceof CSSStyleRule && entry.style.minHeight && button.matches(entry.selectorText)) rules.push(`${entry.selectorText}: ${entry.style.cssText}`); if ('cssRules' in entry) collect((entry as CSSGroupingRule).cssRules); } }; for (const sheet of document.styleSheets) { try { collect(sheet.cssRules); } catch { /* Foreign stylesheets cannot be inspected. */ } } return { name: button.getAttribute('aria-label') ?? button.textContent ?? '', width: box.width, height: box.height, minHeight: getComputedStyle(button).minHeight, parentClass: button.parentElement?.className ?? '', className: button.className, rules }; }));
+  result.innerWidth = await page.evaluate(() => window.innerWidth);
   result.overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   const box = await composer.boundingBox();
   result.composerVisible = !!box && box.y >= 0 && box.y + box.height <= result.viewport.height;
@@ -52,6 +52,7 @@ try {
   result.favicon.path = (await page.locator('link[rel="icon"]').getAttribute('href'))!;
   result.favicon.status = (await context.request.get(`${baseURL}${result.favicon.path}`)).status();
   assert.equal(result.favicon.status, 200);
+  assert.ok(result.targets.every((target) => target.width >= 44 && target.height >= 44));
   assert.deepEqual(result.consoleErrors, []);
   assert.deepEqual(result.pageErrors, []);
   await page.evaluate(() => document.fonts.ready);
