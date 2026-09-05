@@ -255,9 +255,9 @@ docs/Specs/10_SYSTEM_CONTRACTS.md. Верни покрытые edge cases и ass
 
 | Task | Статус | Исполнитель/результат |
 |---|---|---|
-| C1 / F0-06, V01 | in progress | `agent/c1-assistant-transport` · `.worktrees/c1-assistant-transport` |
-| C2 / DB-01, DB-02, IMP-01 | in progress | `agent/c2-storage-import` · `.worktrees/c2-storage-import` |
-| C3 / D-01, D-02 | in progress | `agent/c3-domain-evidence` · `.worktrees/c3-domain-evidence` |
+| C1 / F0-06, V01 | review | integrated through `76a61ee`; 14 backend + 11 web tests; V01 подтверждён на обеих сторонах |
+| C2 / DB-01, DB-02, IMP-01 | review | integrated through `2df5629`; 59 tests; upgrade/downgrade проверены на реальном PostgreSQL |
+| C3 / D-01, D-02 | review | integrated through `8986a0c`; 58 tests; валидаторы прогнаны по всему mock JSON |
 
 Пользовательский срез C: показать минимальный живой stream между Agent и Web,
 применение/откат первой миграции, чтение реального mock JSON и unit-проверку

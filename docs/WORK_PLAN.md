@@ -52,7 +52,7 @@ storage. Изменения contract v0 согласуются до паралл
 | F0-03C | `mcp`: отдельные pyproject/lockfile, health endpoint, собственный Dockerfile и smoke test образа | F0-01, F0-02 | `services/mcp` | done |
 | F0-04 | React/Vite/TypeScript strict, Core DS foundation, собственный Dockerfile и статический smoke screen | — | `apps/web` | done |
 | F0-05 | Contract v0: IDs, source/evidence refs, availability/outcome, project/thread/run envelopes | F0-02 | `packages/contracts` | done |
-| F0-06 | Spike V01: assistant-stream ↔ assistant-ui передаёт текст, typed activity, terminal error и cancel | F0-03B, F0-04, F0-05 | `agent`, `web`, contract test | todo |
+| F0-06 | Spike V01: assistant-stream ↔ assistant-ui передаёт текст, typed activity, terminal error и cancel | F0-03B, F0-04, F0-05 | `agent`, `web`, contract test | done |
 | F0-07 | Spike V04: LangGraph PostgreSQL checkpoint в схеме `workspace`, restart помечает run interrupted | F0-03B | `agent`, `migrations` | todo |
 | F0-08 | Spike V05: FastMCP Streamable HTTP, один typed read-only tool и корректный async cleanup | F0-03C, F0-05 | `mcp`, integration test | done |
 
@@ -75,8 +75,8 @@ Gate F0:
 | C-02 | REST DTO проектов, компаний, threads, условий и решений | F0-05 | todo |
 | C-03 | Agent public state, commands, pending command и activity DTO | F0-06 | todo |
 | C-04 | MCP overview/section/comparison DTO и пагинация | F0-08, C-01 | todo |
-| D-01 | ИНН/ОГРН validation, Decimal/date helpers и missing/zero semantics | C-01 | todo |
-| D-02 | Evidence ledger и проверка разрешимости refs | C-01 | todo |
+| D-01 | ИНН/ОГРН validation, Decimal/date helpers и missing/zero semantics | C-01 | done |
+| D-02 | Evidence ledger и проверка разрешимости refs | C-01 | done |
 | D-03 | Детерминированные summary, finance/proceeding calculations | D-01, D-02 | todo |
 | D-04 | Сравнение 2–20 компаний без общего score/winner | D-03 | todo |
 
@@ -84,11 +84,11 @@ Gate F0:
 
 | ID | Результат | Depends on | Статус |
 |---|---|---|---|
-| DB-01 | Alembic base с отдельными схемами `reports` и `workspace` | F0-01 | todo |
-| DB-02 | Таблицы import batch, company, report и первая вертикаль report entities | DB-01, C-01 | todo |
+| DB-01 | Alembic base с отдельными схемами `reports` и `workspace` | F0-01 | done |
+| DB-02 | Таблицы import batch, company, report и первая вертикаль report entities | DB-01, C-01 | done |
 | DB-03 | Таблицы project, project_company, thread и idempotency key | DB-01, C-02 | todo |
 | DB-04 | Async repositories/UoW и отдельные права importer, UI API, MCP, Agent | DB-02, DB-03 | todo |
-| IMP-01 | Extended JSON decoder и schema fingerprint для существующего mock JSON | C-01, D-01 | todo |
+| IMP-01 | Extended JSON decoder и schema fingerprint для существующего mock JSON | C-01, D-01 | done |
 | IMP-02 | Идемпотентный `scripts/import_reports` с batch/hash и отчётом ошибок | DB-02, DB-04, IMP-01 | todo |
 | IMP-03 | Импорт всех 100 mock snapshots и сверка контрольных примеров Specs | IMP-02 | todo |
 
