@@ -324,8 +324,7 @@ class SectionAvailability(ReportsBase):
     __tablename__ = "section_availability"
     __table_args__ = (
         CheckConstraint(
-            "(source_state = 'present' AND record_count IS NOT NULL) "
-            "OR (source_state <> 'present')",
+            "source_state <> 'present' OR record_count IS NOT NULL",
             name="present_requires_record_count",
         ),
         {"schema": REPORTS_SCHEMA},

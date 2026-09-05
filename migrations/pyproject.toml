@@ -1,0 +1,42 @@
+[project]
+name = "counterparty-migrations"
+version = "0.1.0"
+description = "Alembic migrations for the Counterparty Workspace PostgreSQL schemas"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "alembic>=1.16,<2",
+  "counterparty-storage",
+  "psycopg[binary]>=3.2,<4",
+  "sqlalchemy>=2.0.36,<3",
+]
+
+[dependency-groups]
+dev = [
+  "mypy>=1.18,<2",
+  "pytest>=8.4,<10",
+  "ruff>=0.13,<0.16",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+counterparty-storage = { path = "../packages/storage", editable = true }
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+files = ["env.py", "schema_policy.py", "versions", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
