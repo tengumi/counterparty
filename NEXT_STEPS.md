@@ -197,9 +197,9 @@ docs/Specs/10_SYSTEM_CONTRACTS.md. Не подключай workspace и не п�
 
 | Task | Статус | Исполнитель/результат |
 |---|---|---|
-| B1 / F0-03A | in progress | `agent/b1-ui-api-shell` · `.worktrees/b1-ui-api-shell` |
-| B2 / F0-03B, V04 spike | in progress | `agent/b2-agent-shell` · `.worktrees/b2-agent-shell` |
-| B3 / F0-03C, V05 spike | in progress | `agent/b3-mcp-shell` · `.worktrees/b3-mcp-shell` |
+| B1 / F0-03A | review | integrated through `51b3931`; 2 tests, lint/type/build/container health pass |
+| B2 / F0-03B, V04 spike | review | integrated through `bc752bf`; 4 tests, migration proposal в `docs/checkpoints/tasks/B2.md` |
+| B3 / F0-03C, V05 spike | review | integrated through `072777d`; 5 tests, stateless FastMCP HTTP подтверждён |
 
 ## Волна C — интеграционные риски и первый data/domain слой
 
