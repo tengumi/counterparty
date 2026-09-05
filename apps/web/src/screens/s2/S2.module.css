@@ -1,0 +1,74 @@
+.screen { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+
+/* S2-01 header */
+.header { flex: none; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 20px; border-bottom: 1px solid #e7e8eb; }
+.back { flex: none; white-space: nowrap; color: rgba(4, 4, 19, .55); }
+.divider { flex: none; width: 1px; height: 20px; background: #e7e8eb; }
+.projectTitle { font-size: 14px; line-height: 20px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.saveState { flex: none; font-size: 13px; line-height: 18px; color: rgba(5, 8, 29, .38); }
+.saveError { flex: none; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; line-height: 18px; color: #d91d0b; }
+.headerActions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: none; position: relative; }
+
+/* S2-13/S2-14 chat switcher */
+.switcher { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border: 1px solid #e7e8eb; border-radius: 8px; background: none; cursor: pointer; max-width: 220px; }
+.switcherLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.switcherWrap { position: relative; display: flex; }
+.popover { position: absolute; top: 40px; right: 0; width: 280px; padding: 6px; background: #fff; border: 1px solid #e7e8eb; border-radius: 12px; box-shadow: 0 8px 24px rgba(9, 12, 37, .12); z-index: 5; }
+.popoverTitle { margin: 0; padding: 6px 10px; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); }
+.chatList { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow: auto; }
+.chatItem { display: block; width: 100%; text-align: left; border: 0; border-radius: 8px; padding: 8px 10px; background: none; cursor: pointer; color: inherit; }
+.chatItem:hover { background: rgba(15, 25, 55, .04); text-decoration: none; }
+.chatItem[aria-current='true'] { background: rgba(15, 25, 55, .06); }
+.chatName { display: block; line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chatHint { display: block; margin-top: 1px; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.newChat { width: 100%; text-align: left; border: 0; border-radius: 8px; padding: 8px 10px; margin-top: 2px; background: none; cursor: pointer; color: #2a77ef; }
+
+/* S2-02 company context strip */
+.companies { flex: none; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 20px; border-bottom: 1px solid #e7e8eb; color: rgba(4, 4, 19, .55); overflow-x: auto; }
+.companyName { flex: 0 1 auto; min-width: 0; max-width: 360px; border: 0; background: none; padding: 0; cursor: pointer; color: rgba(3, 3, 6, .88); text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.demoTag { flex: none; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); border: 1px solid #e7e8eb; border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
+.moreCompanies { flex: none; color: rgba(5, 8, 29, .38); white-space: nowrap; }
+.companyAction { flex: none; border: 0; background: none; padding: 0; cursor: pointer; color: #2a77ef; white-space: nowrap; }
+.companyAction:disabled { color: rgba(5, 8, 29, .38); cursor: default; }
+.limitNote { flex: none; color: rgba(5, 8, 29, .38); white-space: nowrap; }
+.projectStatus { margin-left: auto; flex: none; padding-left: 12px; }
+
+/* layout */
+.body { flex: 1; min-height: 0; display: flex; position: relative; }
+.conversation { flex: 1; min-width: 0; overflow: auto; }
+.conversationInner { max-width: 760px; margin: 0 auto; padding: 28px 24px 32px; display: flex; flex-direction: column; gap: 24px; }
+.card { border: 1px solid #e7e8eb; border-radius: 14px; padding: 16px 18px; }
+.card h2 { margin: 0 0 8px; font-size: 16px; line-height: 24px; }
+.card p { margin: 0 0 8px; }
+.card p:last-child { margin-bottom: 0; }
+.muted { color: rgba(4, 4, 19, .55); }
+.draft { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* P1 shell: 400 px beside the conversation, overlay under 1000 px */
+.panel { flex: none; width: 400px; border-left: 1px solid #e7e8eb; background: #fff; display: flex; flex-direction: column; overflow: auto; }
+.panelHeader { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 8px 12px 8px 20px; border-bottom: 1px solid #e7e8eb; }
+.panelTitle { margin: 0; font-size: 16px; line-height: 24px; font-weight: 600; }
+.panelClose { margin-left: auto; }
+.panelBody { padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
+.panelGroup { border: 1px solid #e7e8eb; border-radius: 10px; padding: 12px 14px; }
+
+@media (max-width: 1100px) {
+  .screen { overflow: visible; }
+  .conversation { overflow: visible; }
+}
+@media (max-width: 1000px) {
+  .panel { position: absolute; inset: 0 0 0 auto; width: min(400px, 100%); box-shadow: -8px 0 24px rgba(9, 12, 37, .12); z-index: 4; }
+}
+@media (max-width: 640px) {
+  .header { flex-wrap: wrap; row-gap: 4px; padding: 8px 16px; }
+  .divider { display: none; }
+  .projectTitle { order: -1; flex-basis: 100%; white-space: normal; }
+  .headerActions { position: static; }
+  .switcherWrap { position: static; }
+  .switcher { max-width: 160px; }
+  .popover { position: fixed; inset: 0; width: auto; border: 0; border-radius: 0; padding: 12px; overflow: auto; }
+  .chatList { max-height: none; }
+  .companies { padding: 6px 16px; }
+  .conversationInner { padding: 20px 16px 24px; }
+  .panel { position: fixed; inset: 0; width: 100%; z-index: 6; }
+}

@@ -8,28 +8,41 @@ function openRoute(path: string) {
   return render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>);
 }
 
-describe('app foundation routes', () => {
-  it('opens a demo chat and returns to checks using actual navigation', async () => {
+describe('check routes', () => {
+  it('opens a saved check at its stored place and returns to the list', async () => {
     const user = userEvent.setup();
     openRoute('/checks');
     expect(screen.getByRole('heading', { name: 'Проверка контрагентов' })).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Открыть пример проверки' }));
-    expect(screen.getByRole('heading', { name: 'Разговор о поставке' })).toBeVisible();
-    expect(screen.queryByText('Сохранено')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('link', { name: /Поставка оборудования к 20 сентября/ }));
+    expect(screen.getByTitle('Поставка оборудования к 20 сентября')).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Поставка' })).toBeVisible();
+
     await user.click(screen.getByRole('link', { name: '← Все проверки' }));
-    expect(screen.getByRole('heading', { name: 'Мои проверки' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Проверка контрагентов' })).toBeVisible();
   });
 
-  it.each(['/checks/other/chats/thread-2', '/checks/other'])('opens %s without presenting demo as loaded project data', (path) => {
-    openRoute(path);
-    expect(screen.getByRole('heading', { name: 'Разговор' })).toBeVisible();
-    expect(screen.getByText('Разговор пока недоступен. Данные проверки не загружены.')).toBeVisible();
+  it('keeps the demo agent chat available on its own route', () => {
+    openRoute('/checks/demo-project/chats/demo-thread');
+    expect(screen.getByLabelText('Сообщение помощнику')).toBeVisible();
+    expect(screen.getByText('Учебный пример')).toBeVisible();
+  });
+
+  it('does not present an unknown project as loaded data', () => {
+    openRoute('/checks/other/chats/thread-2');
+    expect(screen.getByRole('heading', { name: 'Проверка не найдена' })).toBeVisible();
     expect(screen.queryByText('Поставка оборудования к 20 сентября')).not.toBeInTheDocument();
+  });
+
+  it('says so when the chat of a real project is unknown', () => {
+    openRoute('/checks/demo-project/chats/missing-thread');
+    expect(screen.getByRole('heading', { name: 'Чат не найден' })).toBeVisible();
+    expect(screen.getByTitle('Поставка оборудования к 20 сентября')).toBeVisible();
   });
 
   it('redirects the root to checks', () => {
     openRoute('/');
-    expect(screen.getByRole('heading', { name: 'Мои проверки' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Проверка контрагентов' })).toBeVisible();
   });
 
   it('provides a recovery link for unknown URLs', () => {
