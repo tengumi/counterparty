@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "counterparty-contracts"
+version = "0.1.0"
+description = "Shared public contracts for Counterparty Workspace"
+requires-python = ">=3.13,<3.14"
+dependencies = ["pydantic>=2.12,<3"]
+
+[dependency-groups]
+dev = [
+  "mypy>=1.18,<2",
+  "pytest>=8.4,<10",
+  "ruff>=0.13,<0.16",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/counterparty_contracts"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
