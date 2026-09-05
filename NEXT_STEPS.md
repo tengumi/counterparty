@@ -217,6 +217,28 @@ docs/Specs/10_SYSTEM_CONTRACTS.md. Не подключай workspace и не п�
 | B2 / F0-03B, V04 spike | done | accepted; integrated through `bc752bf`; 4 tests; V04 частичный, migration proposal в `docs/checkpoints/tasks/B2.md` |
 | B3 / F0-03C, V05 spike | done | accepted; integrated through `072777d`; 5 tests, stateless FastMCP HTTP подтверждён |
 
+## Волна D — первый продуктовый подход (волна 1 плана)
+
+Gate F0 пройден полностью. Узкое место волны 1 — `packages/contracts`: от
+DTO зависят 12 из 21 задачи, а редактировать пакет одновременно может только
+один агент. Поэтому первый подход отдаёт contracts одному владельцу целиком, а
+два других слота занимает работой, которая от DTO действительно не зависит.
+
+| Task | Статус | Исполнитель/результат |
+|---|---|---|
+| D1 / C-01, C-02 | in progress | `agent/d1-report-rest-contracts` |
+| D2 / WEB-02, WEB-03 | in progress | `agent/d2-web-screens` |
+| D3 / D-03 | in progress | `agent/d3-domain-calculations` |
+
+Порядок дальнейших подходов волны 1 (уточняется после каждого review):
+
+1. **D (текущий):** contracts C-01/C-02 · web S1/S2 · domain D-03.
+2. **E:** DB-03 + DB-04 · WEB-04 + WEB-05 · C-03/C-04 + API-01.
+3. **F:** IMP-02 + IMP-03 · API-02 + API-03 · WEB-06 + WEB-07. Здесь же slim
+   `OPS-01`: Compose появляется, как только есть что поднимать целиком —
+   PostgreSQL, миграции, импорт и сервисы.
+4. **G:** API-04 + API-05 · D-04 · подключение web к живым API.
+
 ## Волна C — интеграционные риски и первый data/domain слой
 
 После волны B запустить параллельно:
@@ -255,9 +277,9 @@ docs/Specs/10_SYSTEM_CONTRACTS.md. Верни покрытые edge cases и ass
 
 | Task | Статус | Исполнитель/результат |
 |---|---|---|
-| C1 / F0-06, V01 | review | integrated through `76a61ee`; 14 backend + 11 web tests; V01 подтверждён на обеих сторонах |
-| C2 / DB-01, DB-02, IMP-01 | review | integrated through `2df5629`; 59 tests; upgrade/downgrade проверены на реальном PostgreSQL |
-| C3 / D-01, D-02 | review | integrated through `8986a0c`; 58 tests; валидаторы прогнаны по всему mock JSON |
+| C1 / F0-06, V01 | done | accepted; integrated through `76a61ee`; 14 backend + 11 web tests; V01 подтверждён на обеих сторонах |
+| C2 / DB-01, DB-02, IMP-01 | done | accepted; integrated through `2df5629`; 59 tests; upgrade/downgrade проверены на реальном PostgreSQL |
+| C3 / D-01, D-02 | done | accepted; integrated through `8986a0c`; 58 tests; валидаторы прогнаны по всему mock JSON |
 
 Пользовательский срез C: показать минимальный живой stream между Agent и Web,
 применение/откат первой миграции, чтение реального mock JSON и unit-проверку
