@@ -8,14 +8,53 @@ They are not tenant-scoped: the report corpus is shared, and which snapshot a
 project is allowed to reason about is decided by ``workspace``.
 """
 
+from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import FromClause
 
-from ..reports.models import Company, ReportSnapshot
+from ..reports.models import Company, CompanyProfile, ReportSnapshot
 
-__all__ = ["CompanyReadRepository", "ReportSnapshotReadRepository"]
+__all__ = ["CompanyReadRepository", "CompanySearchResult", "ReportSnapshotReadRepository"]
+
+
+@dataclass(frozen=True, slots=True)
+class CompanySearchResult:
+    """One local company match and its newest available report identity."""
+
+    company: Company
+    report: ReportSnapshot | None
+    profile: CompanyProfile | None
+
+
+def _latest_snapshot() -> FromClause:
+    """Return a relation containing the newest snapshot id per company."""
+    ranked = (
+        select(
+            ReportSnapshot.id.label("report_id"),
+            ReportSnapshot.company_id.label("company_id"),
+            func.row_number()
+            .over(
+                partition_by=ReportSnapshot.company_id,
+                order_by=(
+                    ReportSnapshot.source_report_at.desc(),
+                    ReportSnapshot.ingested_at.desc(),
+                    ReportSnapshot.id.desc(),
+                ),
+            )
+            .label("rank"),
+        )
+        .subquery()
+        .alias("ranked_company_snapshots")
+    )
+    return (
+        select(ranked.c.report_id, ranked.c.company_id)
+        .where(ranked.c.rank == 1)
+        .subquery()
+        .alias("latest_company_snapshot")
+    )
 
 
 class CompanyReadRepository:
@@ -37,6 +76,54 @@ class CompanyReadRepository:
         """
         statement = select(Company).where(Company.inn == inn)
         return (await self._session.execute(statement)).scalar_one_or_none()
+
+    async def search(
+        self,
+        *,
+        limit: int,
+        inn: str | None = None,
+        query: str | None = None,
+        after_inn: str | None = None,
+        after_id: UUID | None = None,
+    ) -> list[CompanySearchResult]:
+        """Search only the locally stored index in stable keyset order.
+
+        ``inn`` is exact; ``query`` is a case-insensitive literal substring of
+        INN, OGRN, or a name from the newest report. The repository deliberately
+        performs no external lookup. Callers may request ``limit + 1`` rows to
+        derive a ``has_more`` flag without a count query.
+        """
+        latest = _latest_snapshot()
+        statement = (
+            select(Company, ReportSnapshot, CompanyProfile)
+            .outerjoin(latest, latest.c.company_id == Company.id)
+            .outerjoin(ReportSnapshot, ReportSnapshot.id == latest.c.report_id)
+            .outerjoin(CompanyProfile, CompanyProfile.report_id == latest.c.report_id)
+            .order_by(Company.inn, Company.id)
+        )
+        if inn is not None:
+            statement = statement.where(Company.inn == inn)
+        if query is not None:
+            statement = statement.where(
+                or_(
+                    Company.inn.icontains(query, autoescape=True),
+                    Company.ogrn.icontains(query, autoescape=True),
+                    CompanyProfile.short_name.icontains(query, autoescape=True),
+                    CompanyProfile.full_name.icontains(query, autoescape=True),
+                )
+            )
+        if after_inn is not None and after_id is not None:
+            statement = statement.where(
+                or_(
+                    Company.inn > after_inn,
+                    and_(Company.inn == after_inn, Company.id > after_id),
+                )
+            )
+        rows = (await self._session.execute(statement.limit(limit))).all()
+        return [
+            CompanySearchResult(company=company, report=report, profile=profile)
+            for company, report, profile in rows
+        ]
 
 
 class ReportSnapshotReadRepository:

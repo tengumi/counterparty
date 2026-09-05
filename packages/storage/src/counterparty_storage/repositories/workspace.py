@@ -8,13 +8,14 @@ composite foreign keys in the schema make the same statement one layer down, so
 a query written by hand cannot cross the boundary either.
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import StrEnum
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import Select, and_, func, select, update
+from sqlalchemy import Select, and_, delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +27,7 @@ from ..errors import (
     ProjectCompanyLimitError,
     ProjectDeletedError,
 )
+from ..reports.models import Company, CompanyProfile
 from ..workspace.enums import CounterpartyRole, IdempotencyState, ThreadStatus, WorkflowStatus
 from ..workspace.models import (
     MAX_PROJECT_COMPANIES,
@@ -38,6 +40,7 @@ from ..workspace.models import (
 __all__ = [
     "CompanyAddition",
     "IdempotencyRepository",
+    "ProjectCompanyRecord",
     "ProjectCompanyRepository",
     "ProjectRepository",
     "Reservation",
@@ -140,6 +143,8 @@ class ProjectRepository(_TenantScoped):
         self,
         *,
         limit: int,
+        owner_id: UUID | None = None,
+        title_contains: str | None = None,
         updated_before: datetime | None = None,
         before_id: UUID | None = None,
     ) -> list[Project]:
@@ -149,6 +154,10 @@ class ProjectRepository(_TenantScoped):
         the same instant are still paged through exactly once.
         """
         statement = self._visible().order_by(Project.updated_at.desc(), Project.id.desc())
+        if owner_id is not None:
+            statement = statement.where(Project.owner_id == owner_id)
+        if title_contains is not None:
+            statement = statement.where(Project.title.icontains(title_contains, autoescape=True))
         if updated_before is not None:
             keyset = Project.updated_at < updated_before
             if before_id is not None:
@@ -328,6 +337,16 @@ class CompanyAddition:
     the request succeeded without adding a duplicate."""
 
 
+@dataclass(frozen=True, slots=True)
+class ProjectCompanyRecord:
+    """An active composition row with its pinned report identity details."""
+
+    membership: ProjectCompany
+    company: Company
+    profile: CompanyProfile | None
+    """Profile of the pinned report, never a newer snapshot's profile."""
+
+
 class ProjectCompanyRepository(_TenantScoped):
     """The counterparties currently under review inside a project."""
 
@@ -344,6 +363,49 @@ class ProjectCompanyRepository(_TenantScoped):
             .order_by(ProjectCompany.slot)
         )
         return list((await self._session.execute(statement)).scalars())
+
+    async def list_active_for_projects(
+        self, project_ids: Sequence[UUID]
+    ) -> dict[UUID, list[ProjectCompanyRecord]]:
+        """Read active compositions for a page of visible projects in one query.
+
+        The mapping contains every requested id, including projects with no
+        counterparties and ids not visible to this tenant. Each profile comes
+        from the report pinned by the membership, never from a newer snapshot.
+        """
+        grouped: dict[UUID, list[ProjectCompanyRecord]] = {
+            project_id: [] for project_id in project_ids
+        }
+        if not project_ids:
+            return grouped
+        statement = (
+            select(ProjectCompany, Company, CompanyProfile)
+            .join(
+                Project,
+                and_(
+                    Project.id == ProjectCompany.project_id,
+                    Project.tenant_id == ProjectCompany.tenant_id,
+                ),
+            )
+            .join(Company, Company.id == ProjectCompany.company_id)
+            .outerjoin(CompanyProfile, CompanyProfile.report_id == ProjectCompany.report_id)
+            .where(
+                ProjectCompany.tenant_id == self.tenant_id,
+                ProjectCompany.project_id.in_(project_ids),
+                ProjectCompany.removed_at.is_(None),
+                Project.deleted_at.is_(None),
+            )
+            .order_by(ProjectCompany.project_id, ProjectCompany.slot)
+        )
+        for membership, company, profile in (await self._session.execute(statement)).all():
+            grouped[membership.project_id].append(
+                ProjectCompanyRecord(
+                    membership=membership,
+                    company=company,
+                    profile=profile,
+                )
+            )
+        return grouped
 
     async def add(
         self,
@@ -456,14 +518,22 @@ class IdempotencyRepository(_TenantScoped):
         client_request_id: UUID,
         request_fingerprint: str,
         resource_kind: str,
+        stale_after: timedelta | None = None,
     ) -> Reservation:
         """Claim the request id, or report what the first attempt did with it.
+
+        An in-flight reservation does not expire by default: elapsed time does
+        not prove that its worker stopped. A recovery path may opt into an
+        atomic takeover with ``stale_after`` after reconciling worker state.
 
         Raises:
             IdempotencyConflictError: If the id was already used for a
                 different payload. Replaying the first resource would discard
                 this request without telling anyone.
+            ValueError: If ``stale_after`` is not positive.
         """
+        if stale_after is not None and stale_after <= timedelta(0):
+            raise ValueError("stale_after must be positive")
         statement = (
             insert(IdempotencyKey)
             .values(
@@ -492,6 +562,26 @@ class IdempotencyRepository(_TenantScoped):
             raise IdempotencyConflictError(scope, client_request_id)
         if existing.state is IdempotencyState.COMPLETED:
             return Reservation(outcome=ReservationOutcome.REPLAYED, key=existing)
+        if stale_after is not None:
+            takeover = (
+                update(IdempotencyKey)
+                .where(
+                    IdempotencyKey.tenant_id == self.tenant_id,
+                    IdempotencyKey.scope == scope,
+                    IdempotencyKey.client_request_id == client_request_id,
+                    IdempotencyKey.request_fingerprint == request_fingerprint,
+                    IdempotencyKey.state == IdempotencyState.IN_FLIGHT,
+                    IdempotencyKey.created_at <= _DB_NOW - stale_after,
+                )
+                .values(created_at=_DB_NOW)
+                .returning(IdempotencyKey)
+            )
+            reclaimed = (await self._session.execute(takeover)).scalar_one_or_none()
+            if reclaimed is not None:
+                return Reservation(outcome=ReservationOutcome.STARTED, key=reclaimed)
+            existing = await self._require_key(scope, client_request_id)
+            if existing.state is IdempotencyState.COMPLETED:
+                return Reservation(outcome=ReservationOutcome.REPLAYED, key=existing)
         return Reservation(outcome=ReservationOutcome.IN_FLIGHT, key=existing)
 
     async def complete(
@@ -525,11 +615,34 @@ class IdempotencyRepository(_TenantScoped):
         )
         return (await self._session.execute(statement)).scalar_one()
 
+    async def release(self, *, scope: str, client_request_id: UUID) -> bool:
+        """Delete an unfinished reservation after its work was rolled back.
+
+        Completed reservations are immutable. The caller must roll back the
+        failed work before releasing its key; this method only narrows deletion
+        to the same tenant, operation, request id, and ``in_flight`` state.
+        """
+        statement = (
+            delete(IdempotencyKey)
+            .where(
+                IdempotencyKey.tenant_id == self.tenant_id,
+                IdempotencyKey.scope == scope,
+                IdempotencyKey.client_request_id == client_request_id,
+                IdempotencyKey.state == IdempotencyState.IN_FLIGHT,
+            )
+            .returning(IdempotencyKey.client_request_id)
+        )
+        return (await self._session.execute(statement)).scalar_one_or_none() is not None
+
     async def _require_key(self, scope: str, client_request_id: UUID) -> IdempotencyKey:
-        statement = select(IdempotencyKey).where(
-            IdempotencyKey.tenant_id == self.tenant_id,
-            IdempotencyKey.scope == scope,
-            IdempotencyKey.client_request_id == client_request_id,
+        statement = (
+            select(IdempotencyKey)
+            .where(
+                IdempotencyKey.tenant_id == self.tenant_id,
+                IdempotencyKey.scope == scope,
+                IdempotencyKey.client_request_id == client_request_id,
+            )
+            .execution_options(populate_existing=True)
         )
         key = (await self._session.execute(statement)).scalar_one_or_none()
         if key is None:

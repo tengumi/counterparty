@@ -1,5 +1,7 @@
 """Repository and Unit of Work behaviour against a real PostgreSQL."""
 
+import asyncio
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest
@@ -18,7 +20,7 @@ from counterparty_storage import (
     create_session_factory,
     unit_of_work,
 )
-from counterparty_storage.reports.models import Company, ReportSnapshot
+from counterparty_storage.reports.models import Company, CompanyProfile, ReportSnapshot
 from counterparty_storage.repositories.workspace import Reservation, ReservationOutcome
 from counterparty_storage.unit_of_work import AsyncUnitOfWork
 from counterparty_storage.workspace.enums import CounterpartyRole, WorkflowStatus
@@ -138,6 +140,26 @@ async def test_projects_are_listed_by_activity(uow: AsyncUnitOfWork, owner_id: U
     assert first.id in {project.id for project in listed}
 
 
+async def test_project_list_filters_owner_and_literal_title(
+    session: AsyncSession, uow: AsyncUnitOfWork, owner_id: UUID
+) -> None:
+    """List filtering stays tenant scoped and treats search metacharacters literally."""
+    another = User(id=uuid4(), email=f"{uuid4()}@example.test", display_name="Another")
+    session.add(another)
+    await session.flush()
+    expected = await _project(uow, owner_id, "Поставка 100% хлопка")
+    await _project(uow, owner_id, "Поставка хлопка")
+    await _project(uow, another.id, "Поставка 100% шерсти")
+
+    listed = await uow.projects.list_recent(
+        owner_id=owner_id,
+        title_contains="100%",
+        limit=10,
+    )
+
+    assert [project.id for project in listed] == [expected.id]
+
+
 async def test_a_company_is_pinned_to_the_snapshot_it_is_judged_on(
     uow: AsyncUnitOfWork, owner_id: UUID, snapshot: tuple[UUID, UUID]
 ) -> None:
@@ -233,6 +255,50 @@ async def test_a_removed_company_can_be_added_again(
     again = await uow.project_companies.add(scope, company_id=company_id, report_id=report_id)
     assert again.created
     assert len(await uow.project_companies.list_active(scope)) == 1
+
+
+async def test_active_compositions_are_loaded_in_a_batch_with_pinned_profiles(
+    session: AsyncSession,
+    uow: AsyncUnitOfWork,
+    owner_id: UUID,
+    snapshot: tuple[UUID, UUID],
+) -> None:
+    """Batch reads keep each membership on its pinned snapshot, not the latest one."""
+    company_id, pinned_report_id = snapshot
+    session.add(CompanyProfile(report_id=pinned_report_id, short_name="Pinned name"))
+    first = await _project(uow, owner_id, "First")
+    empty = await _project(uow, owner_id, "Empty")
+    await uow.project_companies.add(
+        uow.scope.project(first.id), company_id=company_id, report_id=pinned_report_id
+    )
+
+    pinned = await session.get(ReportSnapshot, pinned_report_id)
+    assert pinned is not None
+    newer = ReportSnapshot(
+        id=uuid4(),
+        company_id=company_id,
+        batch_id=pinned.batch_id,
+        source_record_id="newer",
+        source_record_jsonb={"version": 2},
+        source_report_at=datetime(2026, 9, 6, tzinfo=UTC),
+        hash=uuid4().hex + uuid4().hex[:32],
+        raw_jsonb={},
+        ingestion_status=pinned.ingestion_status,
+    )
+    session.add(newer)
+    await session.flush()
+    session.add(CompanyProfile(report_id=newer.id, short_name="Newer name"))
+    await session.flush()
+
+    grouped = await uow.project_companies.list_active_for_projects([first.id, empty.id])
+
+    assert grouped[empty.id] == []
+    assert len(grouped[first.id]) == 1
+    record = grouped[first.id][0]
+    assert record.membership.report_id == pinned_report_id
+    assert record.company.id == company_id
+    assert record.profile is not None
+    assert record.profile.short_name == "Pinned name"
 
 
 async def test_the_report_corpus_cannot_be_deleted_while_a_project_pins_it(
@@ -331,6 +397,127 @@ async def test_a_retry_that_arrives_mid_flight_is_told_so(uow: AsyncUnitOfWork) 
     second = await reserve()
     assert second.outcome is ReservationOutcome.IN_FLIGHT
     assert second.resource_id is None
+
+
+async def test_stale_in_flight_takeover_requires_an_explicit_policy(
+    session: AsyncSession, uow: AsyncUnitOfWork
+) -> None:
+    """Age alone changes nothing unless recovery opts into a stale threshold."""
+    request_id = uuid4()
+
+    async def reserve(*, stale_after: timedelta | None = None) -> Reservation:
+        return await uow.idempotency.reserve(
+            scope="projects.create",
+            client_request_id=request_id,
+            request_fingerprint="9" * 64,
+            resource_kind="project",
+            stale_after=stale_after,
+        )
+
+    await reserve()
+    await session.execute(
+        text(
+            "UPDATE workspace.idempotency_keys"
+            " SET created_at = clock_timestamp() - interval '2 hours'"
+            " WHERE tenant_id = :tenant AND client_request_id = :request"
+        ),
+        {"tenant": uow.scope.tenant_id, "request": request_id},
+    )
+
+    assert (await reserve()).outcome is ReservationOutcome.IN_FLIGHT
+    reclaimed = await reserve(stale_after=timedelta(hours=1))
+    assert reclaimed.outcome is ReservationOutcome.STARTED
+    assert (await reserve()).outcome is ReservationOutcome.IN_FLIGHT
+
+
+async def test_only_one_worker_can_take_over_a_stale_reservation(engine: AsyncEngine) -> None:
+    """The stale update is conditional, so concurrent recovery has one winner."""
+    factory = create_session_factory(engine)
+    tenant = Tenant(id=uuid4(), slug=f"stale-{uuid4().hex[:8]}", title="Stale")
+    scope = TenantScope(tenant_id=tenant.id)
+    request_id = uuid4()
+    async with factory() as setup:
+        setup.add(tenant)
+        await setup.commit()
+        async with unit_of_work(factory, scope) as initial:
+            await initial.idempotency.reserve(
+                scope="projects.create",
+                client_request_id=request_id,
+                request_fingerprint="6" * 64,
+                resource_kind="project",
+            )
+            await initial.commit()
+        await setup.execute(
+            text(
+                "UPDATE workspace.idempotency_keys"
+                " SET created_at = clock_timestamp() - interval '2 hours'"
+                " WHERE tenant_id = :tenant AND client_request_id = :request"
+            ),
+            {"tenant": tenant.id, "request": request_id},
+        )
+        await setup.commit()
+
+    async def reclaim() -> ReservationOutcome:
+        async with unit_of_work(factory, scope) as unit:
+            reservation = await unit.idempotency.reserve(
+                scope="projects.create",
+                client_request_id=request_id,
+                request_fingerprint="6" * 64,
+                resource_kind="project",
+                stale_after=timedelta(hours=1),
+            )
+            await unit.commit()
+            return reservation.outcome
+
+    try:
+        outcomes = await asyncio.gather(reclaim(), reclaim())
+        assert sorted(outcomes) == [ReservationOutcome.IN_FLIGHT, ReservationOutcome.STARTED]
+    finally:
+        async with factory() as cleanup:
+            await cleanup.execute(
+                text("DELETE FROM workspace.idempotency_keys WHERE tenant_id = :tenant"),
+                {"tenant": tenant.id},
+            )
+            await cleanup.execute(
+                text("DELETE FROM workspace.tenants WHERE id = :tenant"), {"tenant": tenant.id}
+            )
+            await cleanup.commit()
+
+
+async def test_release_only_removes_an_unfinished_reservation(
+    uow: AsyncUnitOfWork, owner_id: UUID
+) -> None:
+    """A failed attempt can retry, while a completed replay cannot be erased."""
+    failed_id = uuid4()
+    await uow.idempotency.reserve(
+        scope="projects.create",
+        client_request_id=failed_id,
+        request_fingerprint="7" * 64,
+        resource_kind="project",
+    )
+    assert await uow.idempotency.release(scope="projects.create", client_request_id=failed_id)
+    retry = await uow.idempotency.reserve(
+        scope="projects.create",
+        client_request_id=failed_id,
+        request_fingerprint="7" * 64,
+        resource_kind="project",
+    )
+    assert retry.outcome is ReservationOutcome.STARTED
+
+    completed_id = uuid4()
+    await uow.idempotency.reserve(
+        scope="projects.create",
+        client_request_id=completed_id,
+        request_fingerprint="8" * 64,
+        resource_kind="project",
+    )
+    project = await _project(uow, owner_id)
+    await uow.idempotency.complete(
+        scope="projects.create", client_request_id=completed_id, resource_id=project.id
+    )
+    assert not await uow.idempotency.release(
+        scope="projects.create", client_request_id=completed_id
+    )
 
 
 async def test_reusing_a_request_id_for_another_payload_is_refused(
@@ -493,3 +680,33 @@ async def test_the_reports_repositories_are_read_only(
     assert latest.id == report_id
     for repository in (uow.companies, uow.report_snapshots):
         assert not [name for name in dir(repository) if name in {"add", "create", "delete"}]
+
+
+async def test_company_search_uses_latest_local_profile_and_stable_cursor(
+    session: AsyncSession, uow: AsyncUnitOfWork, new_snapshot: SnapshotFactory
+) -> None:
+    """Search is local, literal, case insensitive, and ordered by INN plus id."""
+    first_company, first_report = await new_snapshot("770000000001")
+    second_company, second_report = await new_snapshot("770000000002")
+    session.add_all(
+        [
+            CompanyProfile(report_id=first_report, short_name="100% Ромашка"),
+            CompanyProfile(report_id=second_report, short_name="Ромашка"),
+        ]
+    )
+    await session.flush()
+
+    literal = await uow.companies.search(query="100%", limit=10)
+    assert [row.company.id for row in literal] == [first_company]
+    assert literal[0].report is not None and literal[0].report.id == first_report
+    assert literal[0].profile is not None
+
+    first_page = await uow.companies.search(query="ромашка", limit=1)
+    assert [row.company.id for row in first_page] == [first_company]
+    second_page = await uow.companies.search(
+        query="РОМАШКА",
+        after_inn=first_page[0].company.inn,
+        after_id=first_page[0].company.id,
+        limit=10,
+    )
+    assert [row.company.id for row in second_page] == [second_company]

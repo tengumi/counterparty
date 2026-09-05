@@ -1,9 +1,10 @@
 """Async repositories over the ``reports`` and ``workspace`` schemas."""
 
-from .reports import CompanyReadRepository, ReportSnapshotReadRepository
+from .reports import CompanyReadRepository, CompanySearchResult, ReportSnapshotReadRepository
 from .workspace import (
     CompanyAddition,
     IdempotencyRepository,
+    ProjectCompanyRecord,
     ProjectCompanyRepository,
     ProjectRepository,
     Reservation,
@@ -14,7 +15,9 @@ from .workspace import (
 __all__ = [
     "CompanyAddition",
     "CompanyReadRepository",
+    "CompanySearchResult",
     "IdempotencyRepository",
+    "ProjectCompanyRecord",
     "ProjectCompanyRepository",
     "ProjectRepository",
     "ReportSnapshotReadRepository",
