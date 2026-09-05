@@ -28,7 +28,7 @@ export function ChecksPage() {
     onSuccess: ({ project }, variables) => {
       pending.current = null;
       queryClient.setQueryData(workspaceKeys.project(project.id), project);
-      void queryClient.invalidateQueries({ queryKey: workspaceKeys.all });
+      void queryClient.invalidateQueries({ queryKey: workspaceKeys.all, exact: true });
       const handoff: TaskHandoff = { draft: variables.task };
       navigate(`/checks/${project.id}/chats/${project.default_thread_id}`, { state: handoff });
     },

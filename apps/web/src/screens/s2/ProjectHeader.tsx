@@ -60,8 +60,9 @@ export function ProjectHeader(props: Props) {
       <span aria-hidden="true" className={styles.divider} />
       {editing ? (
         <Input
-          aria-label="Название проверки"
           block={true}
+          label="Название проверки"
+          labelView="outer"
           onChange={(_event, payload) => setTitle(payload.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') saveTitle();

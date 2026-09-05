@@ -12,7 +12,7 @@ export function WorkspaceQueryProvider({
 }) {
   const [client] = useState(() => {
     const next = new QueryClient({
-      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      defaultOptions: { queries: { retry: false, staleTime: 30_000 }, mutations: { retry: false } },
     });
     if (initialProjects) {
       next.setQueryData(workspaceKeys.all, initialProjects);

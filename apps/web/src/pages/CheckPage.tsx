@@ -72,7 +72,7 @@ function ProjectScreen({ apiProject, project, threadId }: { apiProject: ApiProje
 
   const updateProject = (next: ApiProject) => {
     queryClient.setQueryData(workspaceKeys.project(project.id), next);
-    void queryClient.invalidateQueries({ queryKey: workspaceKeys.all });
+    void queryClient.invalidateQueries({ queryKey: workspaceKeys.all, exact: true });
   };
   const rename = useMutation({
     mutationFn: (title: string) => renameProject(project.id, title),
