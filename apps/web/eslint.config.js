@@ -17,4 +17,5 @@ export default tseslint.config(
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   },
+  { files: ['qa/**/*.ts'], languageOptions: { globals: globals.node } },
 );

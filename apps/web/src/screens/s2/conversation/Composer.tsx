@@ -7,6 +7,7 @@
  */
 
 import type { KeyboardEvent, RefObject } from 'react';
+import { ArrowUpMIcon } from '@alfalab/icons-glyph/ArrowUpMIcon';
 import { Button } from '@alfalab/core-components/button';
 import styles from './Conversation.module.css';
 
@@ -60,7 +61,7 @@ export function Composer({
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && !window.matchMedia('(max-width: 640px)').matches) {
       event.preventDefault();
       send();
     }
@@ -71,7 +72,6 @@ export function Composer({
       <textarea
         aria-label="Сообщение помощнику"
         className={styles.input}
-        disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}
         placeholder={placeholder}
@@ -95,13 +95,15 @@ export function Composer({
             </Button>
           ) : null}
           <Button
+            aria-label="Отправить"
+            className={styles.send}
             disabled={!canSend}
             loading={status === 'sending'}
             onClick={send}
             size={40}
             view="primary"
           >
-            Отправить
+            <ArrowUpMIcon aria-hidden={true} />
           </Button>
         </div>
       </div>
@@ -112,13 +114,16 @@ export function Composer({
 /** S2-12: one permanent boundary note under the composer. */
 export function AssistantBoundary() {
   return (
-    <details className={styles.disclaimer}>
-      <summary>AI может ошибаться. Проверяйте основания; решение принимаете вы</summary>
-      <p className={styles.disclaimerText}>
-        Помощник отвечает по сведениям отчёта, вашим условиям и загруженным документам. Он не
-        видит других данных банка и не принимает решение за вас: каждое утверждение можно открыть
-        и проверить в материалах проверки.
-      </p>
-    </details>
+    <div className={styles.disclaimer}>
+      <p>AI может ошибаться. Проверяйте основания; решение принимаете вы</p>
+      <details>
+        <summary>Как работает помощник</summary>
+        <p className={styles.disclaimerText}>
+          Помощник отвечает по сведениям отчёта, вашим условиям и загруженным документам. Он не
+          видит других данных банка и не принимает решение за вас: каждое утверждение можно открыть
+          и проверить в материалах проверки.
+        </p>
+      </details>
+    </div>
   );
 }

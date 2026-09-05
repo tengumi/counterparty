@@ -89,6 +89,8 @@ describe('S2 materials panel navigation', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Обсудить' }));
 
+    expect(screen.queryByRole('complementary', { name: 'Материалы проверки' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Сообщение помощнику')).toHaveFocus();
     expect(screen.getByLabelText('Сообщение помощнику')).toHaveValue(
       'Капитал и резервы, 2025 · Компания А · 2025 год, годовая отчётность',
     );
@@ -145,13 +147,26 @@ describe('S2 materials panel navigation', () => {
     );
   });
 
+  it('closes with Escape and restores the chosen material when reopened', async () => {
+    const user = userEvent.setup();
+    openCheck(DEMO);
+    const source = screen.getByRole('button', { name: 'Основание 3: Дата регистрации' });
+    await user.click(source);
+    expect(screen.getByRole('heading', { name: 'Основание 3' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(source).toHaveFocus();
+    expect(screen.queryByRole('complementary', { name: 'Материалы проверки' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Материалы' }));
+    expect(screen.getByRole('heading', { name: 'Основание 3' })).toBeVisible();
+  });
+
   it('returns focus to whatever opened the panel when it is closed', async () => {
     const user = userEvent.setup();
     openCheck(DEMO);
 
     const trigger = screen.getByRole('button', { name: 'Материалы' });
     await user.click(trigger);
-    await user.click(screen.getByRole('button', { name: 'Закрыть' }));
+    await user.click(screen.getByRole('button', { name: 'Назад к разговору — закрыть материалы' }));
 
     expect(screen.queryByRole('complementary', { name: 'Материалы проверки' })).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();

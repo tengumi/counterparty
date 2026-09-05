@@ -7,7 +7,7 @@
  * the Agent Service transport and is only mounted for the chat that has one.
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AgentChat } from '../../chat/AgentChat';
 import {
@@ -17,7 +17,7 @@ import {
 import type { ConversationActions } from './conversation/ConversationFeed';
 import { AssistantBoundary, Composer } from './conversation/Composer';
 import { useAutoScroll } from './conversation/useAutoScroll';
-import { parseNonEmptyString, usePersistentState, useRestoredScroll } from './persisted';
+import { parseNonEmptyString, parseNumber, readStored, usePersistentState, useRestoredScroll } from './persisted';
 import type { ChatSummary, ProjectDetail } from '../../mocks/types';
 import { getConversation } from '../../mocks/workspace';
 import styles from './S2.module.css';
@@ -54,8 +54,9 @@ export function ChatSurface({
   const feedRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [hasSavedScroll] = useState(() => readStored(scrollKey, parseNumber) !== null);
   const saveScroll = useRestoredScroll(scrollKey, feedRef);
-  const trackScroll = useAutoScroll(feedRef, contentRef);
+  const trackScroll = useAutoScroll(feedRef, contentRef, !hasSavedScroll);
 
   const blocks = getConversation(chat.id);
   const isLive = project.isDemo && chat.id === project.lastThreadId;

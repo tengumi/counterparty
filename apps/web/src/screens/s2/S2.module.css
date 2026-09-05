@@ -1,7 +1,8 @@
-.screen { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.screen { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); min-height: 0; overflow: hidden; position: relative; }
+.screen[data-panel-open="true"] { grid-template-columns: minmax(0, 1fr) 400px; }
 
 /* S2-01 header */
-.header { flex: none; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 20px; border-bottom: 1px solid #e7e8eb; }
+.header { grid-column: 1; min-width: 0; flex: none; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 20px; border-bottom: 1px solid #e7e8eb; }
 .back { flex: none; white-space: nowrap; color: rgba(4, 4, 19, .55); }
 .divider { flex: none; width: 1px; height: 20px; background: #e7e8eb; }
 .projectTitle { font-size: 14px; line-height: 20px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
@@ -12,7 +13,7 @@
 .headerActions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: none; position: relative; }
 
 /* S2-13/S2-14 chat switcher */
-.switcher { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border: 1px solid #e7e8eb; border-radius: 8px; background: none; cursor: pointer; max-width: 220px; }
+.switcher { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 10px; border: 1px solid #e7e8eb; border-radius: 8px; background: none; cursor: pointer; max-width: 220px; }
 .switcherLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .switcherWrap { position: relative; display: flex; }
 .popover { position: absolute; top: 40px; right: 0; width: 280px; padding: 6px; background: #fff; border: 1px solid #e7e8eb; border-radius: 12px; box-shadow: 0 8px 24px rgba(9, 12, 37, .12); z-index: 5; }
@@ -26,7 +27,7 @@
 .newChat { width: 100%; text-align: left; border: 0; border-radius: 8px; padding: 8px 10px; margin-top: 2px; background: none; cursor: pointer; color: #2a77ef; }
 
 /* S2-02 company context strip */
-.companies { flex: none; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 20px; border-bottom: 1px solid #e7e8eb; color: rgba(4, 4, 19, .55); overflow-x: auto; }
+.companies { grid-column: 1; min-width: 0; flex: none; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 20px; border-bottom: 1px solid #e7e8eb; color: rgba(4, 4, 19, .55); overflow-x: auto; }
 .companyName { flex: 0 1 auto; min-width: 0; max-width: 360px; border: 0; background: none; padding: 0; cursor: pointer; color: rgba(3, 3, 6, .88); text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .demoTag { flex: none; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); border: 1px solid #e7e8eb; border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
 .moreCompanies { flex: none; color: rgba(5, 8, 29, .38); white-space: nowrap; }
@@ -36,9 +37,9 @@
 .projectStatus { margin-left: auto; flex: none; padding-left: 12px; }
 
 /* layout */
-.body { flex: 1; min-height: 0; display: flex; position: relative; }
-.conversation { flex: 1; min-width: 0; overflow: auto; }
-.conversationInner { max-width: 760px; margin: 0 auto; padding: 28px 24px 32px; display: flex; flex-direction: column; gap: 24px; }
+.body { grid-column: 1; min-width: 0; flex: 1; min-height: 0; display: flex; position: relative; }
+.conversation { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.conversationInner { max-width: 760px; margin: 0 auto; padding: 28px 24px 8px; display: flex; flex-direction: column; gap: 24px; }
 .card { border: 1px solid #e7e8eb; border-radius: 14px; padding: 16px 18px; }
 .card h2 { margin: 0 0 8px; font-size: 16px; line-height: 24px; }
 .card p { margin: 0 0 8px; }
@@ -47,33 +48,12 @@
 .draft { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* P1 shell: 400 px beside the conversation, overlay under 1000 px */
-.panel { flex: none; width: 400px; border-left: 1px solid #e7e8eb; background: #fff; display: flex; flex-direction: column; overflow: auto; }
-.panelHeader { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 8px 12px 8px 20px; border-bottom: 1px solid #e7e8eb; }
-.panelTitle { margin: 0; font-size: 16px; line-height: 24px; font-weight: 600; }
+.panel { grid-column: 2; grid-row: 1 / 4; min-height: 0; flex: none; width: 400px; border-left: 1px solid #e7e8eb; background: #fff; display: flex; flex-direction: column; overflow: hidden; }
+.panelHeader { flex: none; flex-wrap: wrap; display: flex; align-items: center; gap: 8px; min-height: 56px; padding: 6px 12px 6px 20px; border-bottom: 1px solid #e7e8eb; }
+.panelTitle { flex: 1; min-width: 0; overflow-wrap: anywhere; margin: 0; font-size: 16px; line-height: 24px; font-weight: 600; }
 .panelClose { margin-left: auto; }
-.panelBody { padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
+.panelBody { min-height: 0; overflow: auto; padding: 16px 20px 32px; display: flex; flex-direction: column; gap: 8px; }
 .panelGroup { border: 1px solid #e7e8eb; border-radius: 10px; padding: 12px 14px; }
-
-@media (max-width: 1100px) {
-  .screen { overflow: visible; }
-  .conversation { overflow: visible; }
-}
-@media (max-width: 1000px) {
-  .panel { position: absolute; inset: 0 0 0 auto; width: min(400px, 100%); box-shadow: -8px 0 24px rgba(9, 12, 37, .12); z-index: 4; }
-}
-@media (max-width: 640px) {
-  .header { flex-wrap: wrap; row-gap: 4px; padding: 8px 16px; }
-  .divider { display: none; }
-  .projectTitle { order: -1; flex-basis: 100%; white-space: normal; }
-  .headerActions { position: static; }
-  .switcherWrap { position: static; }
-  .switcher { max-width: 160px; }
-  .popover { position: fixed; inset: 0; width: auto; border: 0; border-radius: 0; padding: 12px; overflow: auto; }
-  .chatList { max-height: none; }
-  .companies { padding: 6px 16px; }
-  .conversationInner { padding: 20px 16px 24px; }
-  .panel { position: fixed; inset: 0; width: 100%; z-index: 6; }
-}
 
 /* WEB-04 conversation column: the feed scrolls, the composer stays put */
 .feedScroll { flex: 1; min-height: 0; overflow: auto; }
@@ -83,18 +63,19 @@
 
 /* WEB-05 materials panel */
 .panelGroups { display: flex; flex-direction: column; }
+.group h3 { margin: 0; font: inherit; }
 .group { border-bottom: 1px solid #e7e8eb; padding: 12px 0; }
 .group:last-child { border-bottom: 0; }
-.groupHeader { width: 100%; display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 6px 0; cursor: pointer; text-align: left; color: inherit; font: inherit; }
+.groupHeader { min-height: 44px; width: 100%; display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 6px 0; cursor: pointer; text-align: left; color: inherit; font: inherit; }
 .groupTitle { flex: 1; font-size: 14px; line-height: 20px; font-weight: 500; }
-.groupCount { flex: none; color: rgba(5, 8, 29, .38); font-size: 13px; line-height: 18px; }
+.groupCount { max-width: 48%; text-align: right; color: rgba(5, 8, 29, .38); font-size: 13px; line-height: 18px; }
 .groupBody { display: flex; flex-direction: column; margin-top: 6px; }
 .row { display: flex; gap: 10px; align-items: baseline; padding: 8px 0; border-top: 1px solid #f1f2f4; text-align: left; }
 .rowButton { width: 100%; border: 0; background: none; cursor: pointer; color: inherit; font: inherit; }
 .rowMain { flex: 1; min-width: 0; }
-.rowName { display: block; line-height: 20px; }
-.rowMeta { display: block; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); }
-.rowSide { flex: none; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); }
+.rowName { overflow-wrap: anywhere; display: block; line-height: 20px; }
+.rowMeta { overflow-wrap: anywhere; display: block; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); }
+.rowSide { max-width: 40%; text-align: right; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); }
 .companyManageRow { display: flex; align-items: center; gap: 8px; }
 .companyManageRow .rowButton { flex: 1; min-width: 0; }
 .companyEditor { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
@@ -103,18 +84,18 @@
 .termLabel { width: 96px; flex: none; font-size: 13px; line-height: 18px; color: rgba(4, 4, 19, .55); }
 .unknown { color: rgba(5, 8, 29, .38); }
 .detail { display: flex; flex-direction: column; gap: 12px; }
-.detailValue { margin: 0; font-size: 18px; line-height: 26px; }
-.detailList { margin: 0; display: grid; grid-template-columns: 96px 1fr; gap: 6px 12px; font-size: 13px; line-height: 18px; }
-.detailList dt { color: rgba(4, 4, 19, .55); }
-.detailList dd { margin: 0; }
+.detailValue { margin: 0; font-size: 20px; line-height: 28px; font-weight: 500; overflow-wrap: anywhere; }
+.detailTitle { margin: 0; font-size: 16px; line-height: 24px; }
+.detailList { margin: 0; display: grid; grid-template-columns: 108px minmax(0, 1fr); column-gap: 12px; margin-top: 8px; border-bottom: 1px solid #e7e8eb; font-size: 13px; line-height: 18px; }
+.detailList dt { padding: 10px 0; border-top: 1px solid #e7e8eb; color: rgba(4, 4, 19, .55); }
+.detailList dd { margin: 0; padding: 10px 0; border-top: 1px solid #e7e8eb; overflow-wrap: anywhere; }
 .panelBack { flex: none; }
 .recorded { font-size: 13px; line-height: 18px; color: #1f8c4d; }
 .proposal { font-size: 13px; line-height: 18px; color: rgba(5, 8, 29, .38); }
 
-/* Company report (WEB-06). Colours here mark states, not verdicts; the exact
-   look is aligned with the design baseline in WEB-07. */
+/* Company report. Signal colours retain the supplied external values. */
 .signals { display: flex; flex-direction: column; gap: 10px; }
-.signal { display: flex; gap: 10px; align-items: flex-start; border: 1px solid #e7e8eb; border-radius: 12px; padding: 12px 14px; }
+.signal { position: relative; display: flex; gap: 10px; align-items: flex-start; border: 1px solid #e7e8eb; border-radius: 12px; padding: 12px 14px; }
 .signalDot { width: 8px; height: 8px; border-radius: 50%; flex: none; margin-top: 6px; }
 .signalBody { flex: 1; min-width: 0; }
 .signalValue { display: block; line-height: 20px; }
@@ -125,6 +106,62 @@
 .tone_neutral { background: rgba(5, 8, 29, .38); }
 .sectionHeading { margin: 0; font: inherit; }
 .factLabel { flex: 1; min-width: 0; font-size: 13px; line-height: 18px; color: rgba(4, 4, 19, .55); }
-.factActions { flex: none; display: flex; gap: 4px; align-items: baseline; }
+.factRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 2px 12px; padding: 10px 0; border-top: 1px solid #f1f2f4; }
+.factActions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; align-items: baseline; }
+.factActions button { padding: 0 4px; }
 .detailActions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .visuallyHidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+.panelBackdrop { display: none; }
+.panelBack { flex-basis: 100%; }
+.panelCloseMobile { display: none; }
+.groupHeader::after { content: ''; flex: none; width: 7px; height: 7px; margin: -4px 3px 0 2px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); color: rgba(5, 8, 29, .38); }
+.groupHeader[aria-expanded='true']::after { transform: rotate(225deg); margin-top: 4px; }
+.panelBody p { margin-top: 0; }
+.signalAction { align-self: flex-start; }
+.headerAction { white-space: nowrap; }
+.projectTitleButton { text-align: left; }
+.titleEditor { flex: 1; min-width: 0; }
+
+@container workspace (max-width: 999px) {
+  .screen[data-panel-open='true'] { grid-template-columns: minmax(0, 1fr); }
+  .panel { position: absolute; inset: 0 0 0 auto; width: min(400px, 100%); box-shadow: -8px 0 24px rgba(9, 12, 37, .12); z-index: 4; }
+  .panelBackdrop { display: block; position: absolute; inset: 0; z-index: 3; border: 0; background: rgba(9, 12, 37, .16); }
+}
+@media (max-width: 1100px) {
+  .screen[data-panel-open='true'] { grid-template-columns: minmax(0, 1fr); }
+  .panel { position: absolute; inset: 0 0 0 auto; width: min(400px, 100%); box-shadow: -8px 0 24px rgba(9, 12, 37, .12); z-index: 4; }
+  .panelBackdrop { display: block; position: absolute; inset: 0; z-index: 3; border: 0; background: rgba(9, 12, 37, .16); }
+}
+@media (max-width: 640px) {
+  .header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 8px 16px; }
+  .divider { display: none; }
+  .projectTitleButton, .titleEditor { grid-column: 1 / -1; grid-row: 2; min-height: 44px; padding: 0; }
+  .saveState, .saveError { grid-column: 2; grid-row: 1; font-size: 12px; }
+  .headerActions { grid-column: 1 / -1; width: 100%; justify-content: space-between; position: static; }
+  .switcherWrap { position: static; min-width: 0; }
+  .switcher { min-height: 44px; max-width: 210px; }
+  .popover { position: fixed; inset: 0; width: auto; border: 0; border-radius: 0; padding: 16px; overflow: auto; z-index: 6; }
+  .chatList { max-height: none; }
+  .companies { gap: 8px; padding: 4px 16px; flex-wrap: wrap; overflow: visible; }
+  .companyName { max-width: 100%; flex: 1 1 180px; min-height: 44px; }
+  .projectStatus { padding-left: 0; }
+  .companyAction { min-height: 44px; }
+  .conversationInner { padding: 20px 16px 8px; }
+  .dock { padding: 8px 16px max(12px, env(safe-area-inset-bottom)); }
+  .panel { position: fixed; inset: 0; width: 100%; z-index: 6; box-shadow: none; }
+  .panelCloseDesktop { display: none; }
+  .panelCloseMobile { display: inline; }
+  .panelTitle { font-size: 16px; }
+  .panelClose { order: -1; margin-left: 0; }
+  .panelBack { order: 2; }
+  .factActions button, .panel button, .headerActions button, .chatItem, .newChat { min-height: 44px; }
+  .group { padding: 8px 0; }
+}
+
+.groupBody[hidden] { display: none; }
+
+/* Keep the compact typography while making every control easy to activate. */
+.back { display: inline-flex; align-items: center; min-height: 44px; }
+.projectTitleButton, .companyName, .companyAction, .retryLink,
+.headerActions button, .panel button, .chatItem, .newChat { min-height: 44px; }

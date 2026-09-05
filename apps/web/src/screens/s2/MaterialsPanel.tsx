@@ -18,6 +18,7 @@ import { findEvidence, getMaterials } from '../../mocks/workspace';
 import { getCompanyReport } from '../../mocks/reports';
 import { CompanyReport } from './CompanyReport';
 import type { MaterialsGroup, MaterialsState, MaterialsView } from './materialsView';
+import { parseNumber, readStored, writeStored } from './persisted';
 import { currentView, groupTitles } from './materialsView';
 import styles from './S2.module.css';
 
@@ -85,13 +86,20 @@ function CompanyRow({ company, current, onOpen }: { company: CompanyRef; current
 }
 
 export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, companyChange }: Props) {
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [companyDraft, setCompanyDraft] = useState('');
   const view = currentView(state);
   const materials = getMaterials(project.id);
+  const scrollKey = `materials-scroll:${project.id}:${JSON.stringify(view)}`;
 
   useEffect(() => {
-    headingRef.current?.focus();
+    if (bodyRef.current) bodyRef.current.scrollTop = readStored(scrollKey, parseNumber) ?? 0;
+  }, [scrollKey]);
+
+  useEffect(() => {
+    headingRef.current?.focus({ preventScroll: true });
   }, [view.kind]);
 
   const push = (next: MaterialsView) => onChange({ ...state, stack: [...state.stack, next] });
@@ -133,7 +141,34 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, c
   };
 
   return (
-    <aside aria-label="Материалы проверки" className={styles.panel}>
+    <aside
+      aria-label="Материалы проверки"
+      className={styles.panel}
+      ref={panelRef}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.stopPropagation();
+          onClose();
+        }
+        if (event.key !== 'Tab' || !panelRef.current) return;
+        // Overlay panels keep keyboard focus on the visible material. A docked
+        // desktop panel still allows normal navigation back to the conversation.
+        const position = window.getComputedStyle(panelRef.current).position;
+        if (position !== 'absolute' && position !== 'fixed') return;
+        const controls = [...panelRef.current.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), a[href], input:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
+        )].filter((element) => !element.closest('[hidden]') && element.getClientRects().length > 0);
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (event.shiftKey && (event.target === first || event.target === headingRef.current)) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && event.target === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }}
+    >
       <div className={styles.panelHeader}>
         {state.stack.length > 1 ? (
           <span className={styles.panelBack}>
@@ -146,13 +181,14 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, c
           {titles[view.kind]}
         </h2>
         <span className={styles.panelClose}>
-          <Button onClick={onClose} size={40} view="secondary">
-            Закрыть
+          <Button aria-label="Назад к разговору — закрыть материалы" onClick={onClose} size={40} view="text">
+            <span className={styles.panelCloseDesktop}>Закрыть</span>
+            <span className={styles.panelCloseMobile}>Назад</span>
           </Button>
         </span>
       </div>
 
-      <div className={styles.panelBody}>
+      <div className={styles.panelBody} ref={bodyRef} onScroll={() => writeStored(scrollKey, bodyRef.current?.scrollTop ?? 0)}>
         {view.kind === 'list' ? (
           <div className={styles.panelGroups}>
             <Group
@@ -307,6 +343,7 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, c
             <CompanyReport
               onDiscuss={onDiscuss}
               onOpenEvidence={(evidenceId) => push({ kind: 'evidence', evidenceId })}
+              projectId={project.id}
               report={report}
             />
           )
@@ -318,8 +355,8 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, c
               <p className={styles.muted}>Основание недоступно: сведения не загружены.</p>
             ) : (
               <>
-                <p className={styles.rowMeta}>{evidence.title}</p>
                 <p className={styles.detailValue}>{evidence.value}</p>
+                <p className={styles.detailTitle}>{evidence.title}</p>
                 <dl className={styles.detailList}>
                   <dt>Компания</dt>
                   <dd>{evidence.companyName}</dd>

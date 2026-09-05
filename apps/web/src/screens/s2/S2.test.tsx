@@ -112,7 +112,7 @@ describe('S2 company context strip', () => {
     expect(panel).toBeVisible();
     expect(screen.getByRole('heading', { name: /Условия/ })).toBeVisible();
 
-    await user.click(screen.getByRole('button', { name: 'Закрыть' }));
+    await user.click(screen.getByRole('button', { name: 'Назад к разговору — закрыть материалы' }));
     expect(screen.queryByRole('complementary', { name: 'Материалы проверки' })).not.toBeInTheDocument();
   });
 });
