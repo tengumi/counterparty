@@ -120,6 +120,7 @@ from .reports import (
     ReportSection,
     RiskSignal,
     SectionAvailabilityView,
+    ZskAssessment,
 )
 from .values import (
     MAX_FISCAL_YEAR,
@@ -255,6 +256,7 @@ __all__ = [
     "WordBlockLocator",
     "WorkflowStatus",
     "YearPolicy",
+    "ZskAssessment",
     "__version__",
     "decimal_to_string",
     "parse_calendar_date",
