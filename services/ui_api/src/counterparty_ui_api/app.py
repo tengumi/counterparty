@@ -1,25 +1,35 @@
 """FastAPI composition root for the UI backend.
 
-The process-local collaborators — settings, the session store and the ownership
-directory — are built once here and injected through ``app.state``. A test may
-pass its own; a handler never constructs one, so no request can end up talking
-to a store that skipped the checks.
+The process-local collaborators — settings, the session store, the database and
+the ownership directory — are built once here and injected through
+``app.state``. A test may pass its own; a handler never constructs one, so no
+request can end up talking to a store that skipped the checks.
+
+The database is opened by the lifespan, not at import time, and only when the
+configuration names one. A process without a database still serves health and
+sessions; a project request then refuses with ``dependency_unavailable``
+instead of answering as though the workspace were empty.
 """
 
 import uuid
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 
 from fastapi import FastAPI, Request
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import Response
 
 from .auth import router as auth_router
+from .companies import directory_router as company_directory_router
+from .companies import router as project_companies_router
 from .config import Settings
+from .database import SessionFactory, open_database
 from .errors import install_error_handlers
 from .health import router as health_router
+from .projects import router as projects_router
+from .provisioning import ensure_demo_identities
 from .sessions import InMemorySessionStore, SessionStore
-from .workspace import InMemoryProjectDirectory, ProjectDirectory
+from .workspace import ProjectDirectory
 
 __all__ = ["app", "create_app", "lifespan"]
 
@@ -29,11 +39,19 @@ REQUEST_ID_HEADER = "x-request-id"
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Manage process-local resources owned by the service."""
-    app.state.ready = True
-    try:
-        yield
-    finally:
-        app.state.ready = False
+    settings: Settings = app.state.settings
+    async with AsyncExitStack() as resources:
+        if app.state.session_factory is None and settings.database_url is not None:
+            factory = await resources.enter_async_context(
+                open_database(settings.database_url, pool_size=settings.database_pool_size)
+            )
+            app.state.session_factory = factory
+            await ensure_demo_identities(factory, settings)
+        app.state.ready = True
+        try:
+            yield
+        finally:
+            app.state.ready = False
 
 
 def create_app(
@@ -41,6 +59,7 @@ def create_app(
     settings: Settings | None = None,
     session_store: SessionStore | None = None,
     project_directory: ProjectDirectory | None = None,
+    session_factory: SessionFactory | None = None,
 ) -> FastAPI:
     """Build the UI API application and register its public routes.
 
@@ -48,8 +67,10 @@ def create_app(
         settings: Server-side configuration; read from the environment when
             omitted.
         session_store: Where sessions live; process-local when omitted.
-        project_directory: Ownership source for projects and threads;
-            process-local when omitted.
+        project_directory: Ownership source for projects and threads; read from
+            the workspace schema when omitted.
+        session_factory: An already opened database; the lifespan opens one
+            from the settings when omitted.
 
     Returns:
         The configured application.
@@ -63,9 +84,8 @@ def create_app(
     application.state.session_store = (
         session_store if session_store is not None else InMemorySessionStore()
     )
-    application.state.project_directory = (
-        project_directory if project_directory is not None else InMemoryProjectDirectory()
-    )
+    application.state.project_directory = project_directory
+    application.state.session_factory = session_factory
 
     @application.middleware("http")
     async def assign_request_id(request: Request, call_next: RequestResponseEndpoint) -> Response:
@@ -83,6 +103,9 @@ def create_app(
     install_error_handlers(application)
     application.include_router(health_router)
     application.include_router(auth_router)
+    application.include_router(projects_router)
+    application.include_router(company_directory_router)
+    application.include_router(project_companies_router)
     return application
 
 
