@@ -350,6 +350,23 @@ class ProjectCompanyRecord:
 class ProjectCompanyRepository(_TenantScoped):
     """The counterparties currently under review inside a project."""
 
+    async def has_historical_report(self, scope: ProjectScope, report_id: UUID) -> bool:
+        """Keep pinned sources reachable after company removal within a live project."""
+        self._assert_same_tenant(scope)
+        await ProjectRepository(self._session, TenantScope(self.tenant_id)).require(
+            scope.project_id
+        )
+        statement = (
+            select(ProjectCompany.id)
+            .where(
+                ProjectCompany.tenant_id == self.tenant_id,
+                ProjectCompany.project_id == scope.project_id,
+                ProjectCompany.report_id == report_id,
+            )
+            .limit(1)
+        )
+        return (await self._session.execute(statement)).scalar_one_or_none() is not None
+
     async def list_active(self, scope: ProjectScope) -> list[ProjectCompany]:
         """Return the current composition, in slot order."""
         self._assert_same_tenant(scope)
