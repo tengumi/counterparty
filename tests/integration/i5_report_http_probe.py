@@ -9,6 +9,7 @@ import json
 import os
 import socket
 from datetime import UTC, datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -135,6 +136,56 @@ async def main() -> None:
                 profile["registration_date"].replace("Z", "+00:00")
             ) == datetime.fromisoformat(raw_date.replace("Z", "+00:00")).astimezone(UTC)
             checks += 3
+            financials = (
+                await api.get(
+                    f"/api/v1/reports/{report_id}/sections/financials",
+                    params={"limit": 100},
+                )
+            ).json()
+            assert financials["report_id"] == report_id
+            assert financials["page"]["has_more"] is False
+            oldest = min(financials["records"], key=lambda row: row["year"])
+            assert oldest["year"] < max(row["year"] for row in financials["records"])
+            amount = next(
+                fact
+                for fact in oldest["additional_facts"]
+                if fact["availability"] == "available"
+            )
+            assert amount["availability"] == "available"
+            assert amount["period"] == oldest["year"]
+            assert all(
+                amount["evidence_refs"][0] not in fact["evidence_refs"]
+                for fact in overview["facts"]
+            )
+            checks += 1
+            old_amount_url = evidence_path(project["id"], amount["evidence_refs"][0])
+            response = await api.get(old_amount_url)
+            assert response.status_code == 200
+            old_amount = response.json()
+            raw_amount = old_amount["value"]
+            if isinstance(raw_amount, dict):
+                assert len(raw_amount) == 1
+                numeric_type, raw_amount = next(iter(raw_amount.items()))
+                assert numeric_type in {"$numberDecimal", "$numberLong", "$numberInt"}
+            assert Decimal(str(raw_amount)) == Decimal(amount["value"])
+            assert old_amount["availability"] == amount["availability"]
+            assert old_amount["report"] == overview["report"]
+            assert old_amount["evidence"]["id"] == amount["evidence_refs"][0]
+            assert old_amount["evidence"]["period"] == oldest["year"]
+            checks += 1
+            response = await api.get(
+                evidence_path(project["id"], oldest["evidence_refs"][0])
+            )
+            assert response.status_code == 200
+            old_period = response.json()
+            raw_year = old_period["value"]["common"]["year"]
+            if isinstance(raw_year, dict):
+                assert len(raw_year) == 1
+                raw_year = next(iter(raw_year.values()))
+            assert int(raw_year) == oldest["year"]
+            assert old_period["report"] == overview["report"]
+            assert old_period["evidence"]["period"] == oldest["year"]
+            checks += 1
             for forged in [
                 f"report:{report_id}:/",
                 f"report:{report_id}:/baseInfo/notIssued",
@@ -172,6 +223,8 @@ async def main() -> None:
             assert removed.status_code == 200
             assert (await api.get(evidence_url)).json() == original
             checks += 1
+            assert (await api.get(old_amount_url)).json() == old_amount
+            checks += 1
             assert (
                 await api.get(section_url, params={"active": "true"})
             ).status_code == 422
@@ -202,6 +255,8 @@ async def main() -> None:
         json.dumps(
             {
                 "rest_http_checks": checks,
+                "old_financial_period": oldest["year"],
+                "additional_fact_key": amount["key"],
                 "listener_cleaned_up": True,
                 "project_delete_endpoint": "pending_405",
             }
