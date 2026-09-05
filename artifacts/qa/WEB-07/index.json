@@ -1,0 +1,72 @@
+{
+  "scope": "WEB-07",
+  "verdict": "pass_with_limitations",
+  "manifests": [
+    {
+      "path": "manifest-all.json",
+      "sourceSHA": "b13cc175eee3766df271b6485d34542ba0987347",
+      "captures": 27,
+      "passed": 90,
+      "failed": 4,
+      "status": "first_pass_failures_resolved_by_follow_ups"
+    },
+    {
+      "path": "follow-up/manifest-tablet-s2.json",
+      "sourceSHA": "6942d5a001c8a345fe92d21aebdf5441a775fa65",
+      "captures": 4,
+      "passed": 26,
+      "failed": 0,
+      "status": "pass"
+    },
+    {
+      "path": "follow-up/manifest-availability.json",
+      "sourceSHA": "6942d5a001c8a345fe92d21aebdf5441a775fa65",
+      "captures": 3,
+      "passed": 13,
+      "failed": 0,
+      "status": "pass"
+    }
+  ],
+  "resolvedFirstPassFailures": [
+    {
+      "viewport": "tablet",
+      "checks": [
+        "P1 width follows breakpoint",
+        "S2/panels/draft/scroll/focus"
+      ],
+      "resolution": "H1 overlay grid-area fix; all tablet S2/panel/draft/scroll/evidence checks pass",
+      "manifest": "follow-up/manifest-tablet-s2.json"
+    },
+    {
+      "viewport": "mobile, desktop",
+      "checks": [
+        "Деятельность и разрешения: source state remains distinct"
+      ],
+      "resolution": "H2 assertion scoped to the expanded section instead of an earlier hidden duplicate; source states pass",
+      "manifest": "follow-up/manifest-availability.json"
+    }
+  ],
+  "replacementCaptures": [
+    {
+      "previous": "typed-fixtures/tablet/s2-conversation.png",
+      "current": "follow-up/typed-fixtures/tablet/s2-conversation.png"
+    },
+    {
+      "previous": "typed-fixtures/tablet/materials.png",
+      "current": "follow-up/typed-fixtures/tablet/materials.png"
+    },
+    {
+      "previous": "typed-fixtures/mobile/s2-conversation.png",
+      "current": "follow-up/typed-fixtures/mobile/s2-conversation.png"
+    }
+  ],
+  "provenance": "Each capture retains the sourceSHA of its own manifest. First-pass files are historical evidence and are not relabelled as newer-source captures.",
+  "independentReview": "H3: pass with limitations; no open WEB-07 blockers",
+  "limitations": [
+    "Typed fixture screenshots verify WEB-07 presentation only; report/materials/conversation data remains mock and does not close WEB-08/09.",
+    "Text zoom check doubles computed font sizes to emulate 200% text-only zoom; OS virtual keyboard and native Chrome zoom are not emulated.",
+    "Design reference is the unchanged HTML with its own support.js and pinned unpkg CDN dependencies; its narrow-screen shell differs from Specs 07 responsive requirements.",
+    "Document source screen is the existing honest preview placeholder, not document reading acceptance.",
+    "Live CRUD uses real REST and server-generated UUIDs in a disposable demo database; it does not validate live report/agent screens."
+  ]
+}
