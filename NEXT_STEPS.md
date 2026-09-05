@@ -20,6 +20,10 @@
   `packages/contracts` собрать нельзя. Dockerfile остаются внутри сервисов.
 - Каждый сервисный venv собирается сразу по финальному пути `/app/.venv`:
   перенос готового venv между путями ломает console scripts.
+- Решение пользователя: `packages/domain` объявляет `counterparty-contracts`
+  локальной зависимостью и переиспользует `Availability`, `EvidenceKind` и
+  `EvidenceRef` вместо дублирования. Транзитивный pydantic в domain допустим —
+  ограничение domain относится к I/O, а не к зависимостям.
 - Дизайнерский HTML принят как UI baseline и не должен редактироваться.
 - Mock JSON утверждён и используется напрямую из
   `artifacts/contractors_audit.snapshot.json`.
