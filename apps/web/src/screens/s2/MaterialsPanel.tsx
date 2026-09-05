@@ -8,8 +8,10 @@
  * why the stack is now three deep at most — list → element → source.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@alfalab/core-components/button';
+import { Textarea } from '@alfalab/core-components/textarea';
+import type { AddCompanyResult } from '../../api/contracts';
 import type { CompanyRef, ProjectDetail } from '../../mocks/types';
 import { documentStateLabels } from '../../mocks/types';
 import { findEvidence, getMaterials } from '../../mocks/workspace';
@@ -26,6 +28,13 @@ interface Props {
   readonly onClose: () => void;
   /** Puts a removable context chip into the composer (07 S2-08). */
   readonly onDiscuss: (text: string) => void;
+  readonly companyChange?: {
+    readonly busy: boolean;
+    readonly error: string | null;
+    readonly results: readonly AddCompanyResult[];
+    readonly onAdd: (inns: readonly string[]) => void;
+    readonly onRemove: (companyId: string) => void;
+  };
 }
 
 function Group({
@@ -75,8 +84,9 @@ function CompanyRow({ company, current, onOpen }: { company: CompanyRef; current
   );
 }
 
-export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss }: Props) {
+export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss, companyChange }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const [companyDraft, setCompanyDraft] = useState('');
   const view = currentView(state);
   const materials = getMaterials(project.id);
 
@@ -152,16 +162,62 @@ export function MaterialsPanel({ project, state, onChange, onClose, onDiscuss }:
               onToggle={() => toggle('companies')}
             >
               {project.companies.map((item) => (
-                <CompanyRow
-                  company={item}
-                  current={item.id === project.companies[0]?.id}
-                  key={item.id}
-                  onOpen={() => push({ kind: 'company', companyId: item.id })}
-                />
+                <div className={styles.companyManageRow} key={item.id}>
+                  <CompanyRow
+                    company={item}
+                    current={item.id === project.companies[0]?.id}
+                    onOpen={() => push({ kind: 'company', companyId: item.id })}
+                  />
+                  {companyChange ? (
+                    <Button
+                      disabled={companyChange.busy}
+                      onClick={() => companyChange.onRemove(item.id)}
+                      size={32}
+                      view="text"
+                    >
+                      Удалить
+                    </Button>
+                  ) : null}
+                </div>
               ))}
-              <p className={styles.muted}>
-                Добавление компаний появится вместе с поиском по демонстрационной базе.
-              </p>
+              {companyChange ? (
+                <div className={styles.companyEditor}>
+                  <Textarea
+                    aria-label="ИНН компаний"
+                    autosize={true}
+                    block={true}
+                    minRows={2}
+                    onChange={(_event, payload) => setCompanyDraft(payload.value)}
+                    placeholder="ИНН, по одному или через запятую"
+                    value={companyDraft}
+                  />
+                  <Button
+                    disabled={companyChange.busy || companyDraft.trim().length === 0 || project.companies.length >= 20}
+                    onClick={() => {
+                      const inns = companyDraft.split(/[\s,;]+/).map((item) => item.trim()).filter(Boolean);
+                      companyChange.onAdd(inns);
+                    }}
+                    size={40}
+                    view="outlined"
+                  >
+                    {companyChange.busy ? 'Сохраняем…' : 'Добавить компании'}
+                  </Button>
+                  {companyChange.error ? <p className={styles.companyError} role="alert">{companyChange.error}</p> : null}
+                  {companyChange.results.length > 0 ? (
+                    <ul className={styles.companyResults} aria-label="Результат добавления">
+                      {companyChange.results.map((result, index) => (
+                        <li key={`${result.requested.inn ?? result.requested.company_id}-${index}`}>
+                          {result.requested.inn ?? result.requested.company_id}: {
+                            result.outcome === 'added' ? 'добавлена' :
+                            result.outcome === 'already_present' ? 'уже есть' :
+                            result.outcome === 'not_found' ? 'нет в доступной базе' : 'нет доступного отчёта'
+                          }
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              ) : null}
             </Group>
 
             <Group

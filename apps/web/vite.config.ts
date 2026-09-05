@@ -5,7 +5,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     // The Agent Service RPC is same-origin in production; proxy it during dev.
-    proxy: { '/rpc/agent': { target: 'http://localhost:8000', changeOrigin: true } },
+    proxy: {
+      '/api/v1': { target: 'http://localhost:8000', changeOrigin: true },
+      '/rpc/agent': { target: 'http://localhost:8000', changeOrigin: true },
+    },
   },
   test: {
     environment: 'jsdom',

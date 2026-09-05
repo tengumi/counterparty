@@ -12,10 +12,18 @@ import { Textarea } from '@alfalab/core-components/textarea';
 import { examplePrompts } from '../../mocks/workspace';
 import styles from './S1.module.css';
 
-export function TaskComposer({ onSubmit }: { onSubmit: (task: string) => void }) {
+export function TaskComposer({
+  onSubmit,
+  loading = false,
+  error = null,
+}: {
+  onSubmit: (task: string) => void;
+  loading?: boolean;
+  error?: string | null;
+}) {
   const [draft, setDraft] = useState('');
   const fieldId = useId();
-  const canSend = draft.trim().length > 0;
+  const canSend = draft.trim().length > 0 && !loading;
 
   const send = () => {
     if (canSend) onSubmit(draft.trim());
@@ -48,10 +56,11 @@ export function TaskComposer({ onSubmit }: { onSubmit: (task: string) => void })
         <div className={styles.composerActions}>
           <p className={styles.hint}>Enter отправляет, Shift+Enter переносит строку</p>
           <Button disabled={!canSend} onClick={send} size={40} view="primary">
-            Отправить
+            {loading ? 'Создаём…' : 'Отправить'}
           </Button>
         </div>
       </div>
+      {error ? <p className={styles.submitError} role="alert">{error}</p> : null}
       <div className={styles.examples}>
         {examplePrompts.map((example) => (
           <Button

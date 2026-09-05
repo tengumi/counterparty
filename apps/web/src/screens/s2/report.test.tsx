@@ -11,6 +11,8 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { CheckPage } from '../../pages/CheckPage';
+import { WorkspaceQueryProvider } from '../../api/QueryProvider';
+import { apiProjects } from '../../test/setup';
 import { getCompanyReport } from '../../mocks/reports';
 import { findEvidence } from '../../mocks/workspace';
 import { describeBankRisk, describeZsk, resolveFact } from './reportView';
@@ -23,10 +25,12 @@ const NO_REPORT = '/checks/inn-project/chats/inn-thread';
 function openCheck(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route element={<CheckPage />} path="/checks/:projectId" />
-        <Route element={<CheckPage />} path="/checks/:projectId/chats/:threadId" />
-      </Routes>
+      <WorkspaceQueryProvider initialProjects={apiProjects}>
+        <Routes>
+          <Route element={<CheckPage />} path="/checks/:projectId" />
+          <Route element={<CheckPage />} path="/checks/:projectId/chats/:threadId" />
+        </Routes>
+      </WorkspaceQueryProvider>
     </MemoryRouter>,
   );
 }

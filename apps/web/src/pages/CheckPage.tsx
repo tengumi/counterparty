@@ -8,7 +8,13 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
+import { Button } from '@alfalab/core-components/button';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { addCompanies, getProject, removeCompany, renameProject, WorkspaceApiError } from '../api/client';
+import type { AddCompanyResult, ApiProject } from '../api/contracts';
+import { requestErrorMessage } from '../api/messages';
+import { projectDetail, withCompanies, workspaceKeys } from '../api/workspace';
 import { ChatSurface } from '../screens/s2/ChatSurface';
 import { CompanyContextStrip } from '../screens/s2/CompanyContextStrip';
 import { MaterialsPanel } from '../screens/s2/MaterialsPanel';
@@ -18,7 +24,7 @@ import { parseMaterialsState, initialMaterials } from '../screens/s2/materialsVi
 import type { MaterialsState, MaterialsView } from '../screens/s2/materialsView';
 import { usePersistentState } from '../screens/s2/persisted';
 import type { ChatSummary, ProjectDetail } from '../mocks/types';
-import { findProject, newChat } from '../mocks/workspace';
+import { newChat } from '../mocks/workspace';
 import styles from '../screens/s2/S2.module.css';
 
 function ProjectNotFound() {
@@ -42,10 +48,12 @@ function ChatNotFound() {
   );
 }
 
-function ProjectScreen({ project, threadId }: { project: ProjectDetail; threadId?: string }) {
+function ProjectScreen({ apiProject, project, threadId }: { apiProject: ApiProject; project: ProjectDetail; threadId?: string }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const [chats, setChats] = useState<readonly ChatSummary[]>(project.chats);
+  const [companyResults, setCompanyResults] = useState<readonly AddCompanyResult[]>([]);
   const [materials, setMaterials] = usePersistentState<MaterialsState>(
     `materials:${project.id}`,
     initialMaterials,
@@ -61,6 +69,26 @@ function ProjectScreen({ project, threadId }: { project: ProjectDetail; threadId
 
   const activeChatId = threadId ?? project.lastThreadId;
   const activeChat = chats.find((chat) => chat.id === activeChatId);
+
+  const updateProject = (next: ApiProject) => {
+    queryClient.setQueryData(workspaceKeys.project(project.id), next);
+    void queryClient.invalidateQueries({ queryKey: workspaceKeys.all, exact: true });
+  };
+  const rename = useMutation({
+    mutationFn: (title: string) => renameProject(project.id, title),
+    onSuccess: updateProject,
+  });
+  const add = useMutation({
+    mutationFn: (inns: readonly string[]) => addCompanies(project.id, inns, apiProject.context_version),
+    onSuccess: (response) => {
+      setCompanyResults(response.results);
+      updateProject(withCompanies(apiProject, response));
+    },
+  });
+  const remove = useMutation({
+    mutationFn: (companyId: string) => removeCompany(project.id, companyId, apiProject.context_version),
+    onSuccess: (response) => updateProject(withCompanies(apiProject, response)),
+  });
 
   const openMaterials = (view: MaterialsView) => {
     // Focus returns to whatever opened the panel (07 §12).
@@ -98,7 +126,10 @@ function ProjectScreen({ project, threadId }: { project: ProjectDetail; threadId
         onToggleMaterials={() =>
           materials.open ? closeMaterials() : openMaterials({ kind: 'list' })
         }
-        saveState={project.saveState}
+        onRename={(title) => rename.mutate(title)}
+        onRetryRename={rename.variables ? () => rename.mutate(rename.variables) : undefined}
+        saveError={rename.error ? requestErrorMessage(rename.error) : null}
+        saveState={rename.isPending ? 'saving' : rename.isError ? 'error' : project.saveState}
         title={project.title}
       />
       <CompanyContextStrip
@@ -128,6 +159,13 @@ function ProjectScreen({ project, threadId }: { project: ProjectDetail; threadId
         )}
         {materials.open ? (
           <MaterialsPanel
+            companyChange={{
+              busy: add.isPending || remove.isPending,
+              error: add.error ? requestErrorMessage(add.error) : remove.error ? requestErrorMessage(remove.error) : null,
+              results: companyResults,
+              onAdd: (inns) => add.mutate(inns),
+              onRemove: (companyId) => remove.mutate(companyId),
+            }}
             onChange={setMaterials}
             onClose={closeMaterials}
             onDiscuss={(text) => insertDraft.current?.(text)}
@@ -142,8 +180,30 @@ function ProjectScreen({ project, threadId }: { project: ProjectDetail; threadId
 
 export function CheckPage() {
   const { projectId, threadId } = useParams();
-  const project = findProject(projectId);
+  const projectQuery = useQuery({
+    enabled: projectId !== undefined,
+    queryKey: workspaceKeys.project(projectId ?? ''),
+    queryFn: () => getProject(projectId as string),
+    retry: false,
+  });
 
-  if (!project) return <ProjectNotFound />;
-  return <ProjectScreen key={project.id} project={project} threadId={threadId} />;
+  if (projectQuery.isPending) {
+    return <section className={styles.conversationInner} role="status">Загружаем проверку…</section>;
+  }
+  if (projectQuery.isError) {
+    if (projectQuery.error instanceof WorkspaceApiError && projectQuery.error.status === 404) {
+      return <ProjectNotFound />;
+    }
+    return (
+      <section className={styles.conversationInner} role="alert">
+        <h1>Сведения проверки недоступны</h1>
+        <p>{requestErrorMessage(projectQuery.error)}</p>
+        <p className={styles.muted}>Это не означает, что рисков или сохранённых данных нет.</p>
+        <Button onClick={() => void projectQuery.refetch()} size={40} view="outlined">Повторить</Button>
+        <Link to="/checks">Все проверки</Link>
+      </section>
+    );
+  }
+  const project = projectDetail(projectQuery.data);
+  return <ProjectScreen apiProject={projectQuery.data} key={project.id} project={project} threadId={threadId} />;
 }
