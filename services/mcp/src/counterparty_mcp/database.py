@@ -16,18 +16,12 @@ from counterparty_contracts import (
 from counterparty_domain.report_reads import ReportReadData, build_company_overview
 from counterparty_domain.report_sections import build_report_section
 from counterparty_storage import create_database_engine, create_session_factory
-from counterparty_storage.reports.models import (
-    Company,
-    CompanyProfile,
-    CompanyStatus,
-    FinancialStatement,
-    ImportWarning,
-    ReportsBase,
-    ReportSnapshot,
-    SectionAvailability,
-    ZskAssessment,
+from counterparty_storage.reports.models import ImportWarning, ReportsBase
+from counterparty_storage.repositories.reports import (
+    CompanyReadRepository,
+    ReportSnapshotReadRepository,
 )
-from sqlalchemy import select, text
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .config import Settings
@@ -66,19 +60,14 @@ class PostgreSQLReportReader:
         async with self.read_session() as session:
             report_id: UUID | None = request.report_id
             if report_id is None:
-                report_id = (
-                    await session.execute(
-                        select(ReportSnapshot.id)
-                        .join(Company, Company.id == ReportSnapshot.company_id)
-                        .where(Company.inn == request.inn)
-                        .order_by(
-                            ReportSnapshot.source_report_at.desc(),
-                            ReportSnapshot.ingested_at.desc(),
-                            ReportSnapshot.id.desc(),
-                        )
-                        .limit(1)
-                    )
-                ).scalar_one_or_none()
+                assert request.inn is not None
+                company = await CompanyReadRepository(session).get_by_inn(request.inn)
+                snapshot = (
+                    await ReportSnapshotReadRepository(session).latest_for_company(company.id)
+                    if company is not None
+                    else None
+                )
+                report_id = snapshot.id if snapshot is not None else None
             if report_id is None:
                 return None
             data = await self._load(session, report_id)
@@ -91,38 +80,11 @@ class PostgreSQLReportReader:
         return build_report_section(data, request) if data is not None else None
 
     async def _load(self, session: AsyncSession, report_id: UUID) -> ReportReadData | None:
-        base_row = (
-            await session.execute(
-                select(ReportSnapshot, Company, CompanyProfile, CompanyStatus, ZskAssessment)
-                .join(Company, Company.id == ReportSnapshot.company_id)
-                .outerjoin(CompanyProfile, CompanyProfile.report_id == ReportSnapshot.id)
-                .outerjoin(CompanyStatus, CompanyStatus.report_id == ReportSnapshot.id)
-                .outerjoin(ZskAssessment, ZskAssessment.report_id == ReportSnapshot.id)
-                .where(ReportSnapshot.id == report_id)
-            )
-        ).one_or_none()
-        if base_row is None:
+        bundles = await ReportSnapshotReadRepository(session).get_read_bundles([report_id])
+        if not bundles:
             return None
-        snapshot, company, profile, status, zsk = base_row
-        sections = (
-            await session.execute(
-                select(SectionAvailability).where(SectionAvailability.report_id == report_id)
-            )
-        ).scalars()
-        finances = (
-            await session.execute(
-                select(FinancialStatement)
-                .where(FinancialStatement.report_id == report_id)
-                .order_by(FinancialStatement.year, FinancialStatement.ordinal)
-            )
-        ).scalars()
-        warnings = (
-            await session.execute(
-                select(ImportWarning)
-                .where(ImportWarning.report_id == report_id)
-                .order_by(ImportWarning.created_at, ImportWarning.id)
-            )
-        ).scalars()
+        bundle = bundles[0]
+        snapshot, company = bundle.snapshot, bundle.company
         return ReportReadData(
             report_id=snapshot.id,
             company_id=company.id,
@@ -132,12 +94,12 @@ class PostgreSQLReportReader:
             ingested_at=snapshot.ingested_at,
             raw=snapshot.raw_jsonb,
             ingestion_status=snapshot.ingestion_status.value,
-            profile=_columns(profile),
-            status=_columns(status),
-            zsk=_columns(zsk),
-            financials=[_columns(item) for item in finances],
-            sections={item.section: _columns(item) for item in sections},
-            warnings=[_warning(item) for item in warnings],
+            profile=_columns(bundle.profile),
+            status=_columns(bundle.status),
+            zsk=_columns(bundle.zsk),
+            financials=[_columns(item) for item in bundle.financials],
+            sections={item.section: _columns(item) for item in bundle.sections},
+            warnings=[_warning(item) for item in bundle.warnings],
         )
 
     async def aclose(self) -> None:
