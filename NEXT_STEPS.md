@@ -414,18 +414,32 @@ evidence REST, но в API-01…05 они не входили и ещё не р�
 
 | Task | Статус | Ownership / результат |
 |---|---|---|
-| I1 / API-06 | queued | `services/ui_api/**`, при необходимости чистые read projections в `packages/domain/**`; sections и project-scoped evidence |
-| I2 / MCP-01/02 | queued | `services/mcp/**`; authenticated read-only tools с pinned report, фильтрами и cursor |
-| I3 / F0-07 | queued | `services/agent/**`, checkpoint deploy/migration в `migrations/**`; штатный saver, scope и restart/interrupted proof |
+| I1 / API-06 | in progress | `services/ui_api/**`, чистые общие read projections в `packages/domain/**`, ReportEvidence DTO в contracts; sections и project-scoped evidence |
+| I2 / MCP-01/02 | in progress | `services/mcp/**`; authenticated read-only tools с pinned report, фильтрами и cursor |
+| I3 / F0-07 | in progress | `services/agent/**`, `migrations/**`, минимальный AgentRun model/repo в storage workspace; штатный saver, scope и restart/interrupted proof |
 | I4 / WEB-08 | waiting I1 | `apps/web/**`; REST overview/report/evidence/materials/comparison, без mock fallback |
 | I5 / independent verification | waiting integration | независимые HTTP/MCP/restart проверки и один финальный browser flow |
 
-I1–I3 стартуют параллельно от одного baseline. Contracts и storage остаются
-read-only до конкретного запроса на расширение ownership; domain имеет только
-writer I1, migrations — только I3. I4 стартует после API-06, с отдельной веткой и
+I1–I3 стартуют параллельно от baseline `1173476`. Contracts/domain имеют только
+writer I1; storage workspace/migrations — только I3, остальные storage файлы
+read-only до конкретного запроса. I4 стартует после API-06, с отдельной веткой и
 worktree; I5 проверяет общий срез независимо. UI baseline H сохраняется; новое
 визуальное выравнивание не требуется. Browser/screenshots — только в конце I.
 Root обновляет статусы здесь; WORK_PLAN done — после пользовательского review I.
+
+Интеграционные решения discovery I:
+
+- Уточнён недостающий ReportEvidence response в Specs10: разрешённая ссылка,
+  identity снимка, availability, исходный JSON-фрагмент и warnings. I1 реализует
+  DTO и проверки; scope только report_field, документные/derived источники позже.
+- I1 выносит pure read projections в domain, I2 использует их с reports-only
+  adapter; MCP не импортирует UI API. Пагинация обозначает truncation существующим
+  `result_truncated` warning и `PageInfo`, без дополнительного протокола.
+- MCP использует штатную token verification с `reports:read`, серверный digest
+  токена и fail-closed config. Секреты не попадают во frontend/логи.
+- Для F0-07 нужен минимальный durable AgentRun в storage. Recovery обязан
+  различать restart и живой соседний worker; ограничения spike должны быть
+  принудительно проверяемыми. Полная run registry/projection остаётся AG-04.
 
 ## Волна C — интеграционные риски и первый data/domain слой
 

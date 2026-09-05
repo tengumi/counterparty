@@ -36,6 +36,17 @@
 
 Для report_field нужны report_id/source_path; для document_fragment — document_id/fragment_id; для user_message — message_id; для derived — input_refs/rule_version. Ссылка проверяется сервером, модель не получает право создавать произвольный URL. Если нет внешней первичной ссылки, UI пишет «Предоставленный отчёт».
 
+### ReportEvidence
+
+Ответ чтения отчётного основания содержит `schema_version`, `evidence: EvidenceRef`,
+`report: ReportIdentity`, `availability`, `value: JSON/null`, `warnings[]`. `value`
+содержит исходный фрагмент по разрешённой report_field-ссылке; ноль, пустой
+контейнер, null и отсутствие данных не подменяют друг друга. `report.id` совпадает
+с `evidence.report_id`. Сервер проверяет историческую принадлежность закреплённого
+снимка проекту, разрешимость ссылки и ограничение размера; произвольный JSON
+Pointer не становится основанием только из-за передачи в URL. Документные и
+вычисленные основания расширяются в своих задачах, не маскируются под report_field.
+
 ### FactValue
 
 `{key, label, value, value_type, unit?, currency?, period?, availability, evidence_refs[], warnings[]}`.
@@ -133,7 +144,7 @@ UserDecision: `{id,outcome,company_ids[],rationale,conditions[],based_on_artifac
 | GET /projects/{p}/documents/{d}/content | — | Авторизованный оригинал, корректный content type |
 | GET /projects/{p}/documents/{d}/fragments | page?, cursor?, limit? | Page<Fragment> |
 | DELETE /projects/{p}/documents/{d} | — | Удаление и пометка зависимых выводов |
-| GET /projects/{p}/evidence/{ref} | — | Разрешённый факт/фрагмент, место возврата задаёт UI |
+| GET /projects/{p}/evidence/{ref} | — | Для report_field — ReportEvidence; место возврата задаёт UI, ref кодируется как URL path |
 | GET /projects/{p}/artifacts | kind?, latest? | AnalysisArtifact[]/последние версии |
 | GET /projects/{p}/decisions | — | UserDecision[] |
 | POST /projects/{p}/decisions | outcome,rationale,conditions,company_ids,versions | 201 UserDecision |
