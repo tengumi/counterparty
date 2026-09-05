@@ -5,7 +5,9 @@ from sqlalchemy import CheckConstraint, ForeignKeyConstraint, Index, Table
 from counterparty_storage import MANAGED_SCHEMAS, WORKSPACE_SCHEMA, metadata
 from counterparty_storage.workspace import (
     MAX_PROJECT_COMPANIES,
+    ArtifactFreshness,
     CounterpartyRole,
+    DecisionOutcome,
     IdempotencyState,
     ThreadStatus,
     WorkflowStatus,
@@ -20,6 +22,8 @@ WORKSPACE_VERTICAL = {
     "project_companies",
     "idempotency_keys",
     "agent_runs",
+    "user_decisions",
+    "analysis_artifacts",
 }
 
 
@@ -50,6 +54,17 @@ def test_enum_values_match_the_public_contract() -> None:
         "unknown",
     ]
     assert [state.value for state in IdempotencyState] == ["in_flight", "completed"]
+    assert [outcome.value for outcome in DecisionOutcome] == [
+        "ready",
+        "ready_with_conditions",
+        "not_ready",
+        "need_more_info",
+    ]
+    assert [freshness.value for freshness in ArtifactFreshness] == [
+        "current",
+        "outdated",
+        "source_removed",
+    ]
 
 
 def test_project_columns_match_the_rest_contract() -> None:

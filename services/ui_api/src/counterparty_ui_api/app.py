@@ -23,7 +23,9 @@ from .auth import router as auth_router
 from .companies import directory_router as company_directory_router
 from .companies import router as project_companies_router
 from .config import Settings
+from .conversation import router as conversation_router
 from .database import SessionFactory, open_database
+from .decisions import router as decisions_router
 from .errors import install_error_handlers
 from .health import router as health_router
 from .projects import router as projects_router
@@ -110,6 +112,8 @@ def create_app(
     application.include_router(project_companies_router)
     application.include_router(reports_router)
     application.include_router(report_details_router)
+    application.include_router(decisions_router)
+    application.include_router(conversation_router)
     return application
 
 

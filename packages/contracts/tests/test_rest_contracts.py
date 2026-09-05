@@ -11,7 +11,9 @@ from counterparty_contracts import (
     AddCompaniesRequest,
     AddCompanyItem,
     AddCompanyResult,
+    AnalysisArtifact,
     ArtifactFreshness,
+    ArtifactGround,
     ArtifactId,
     ArtifactPreview,
     ClientRequestId,
@@ -312,6 +314,46 @@ def test_artifact_reference_pins_the_version_it_read() -> None:
 def test_decision_without_an_artifact_is_valid() -> None:
     """The user may record a decision when no AI conclusion exists."""
     assert decision().based_on_artifact_id is None
+
+
+def analysis_artifact(**overrides: object) -> AnalysisArtifact:
+    """Build one immutable AI artifact version, overriding single fields."""
+    payload: dict[str, object] = {
+        "id": str(ArtifactId(uuid4())),
+        "version": 1,
+        "project_id": str(PROJECT_ID),
+        "based_on_context_version": 3,
+        "report_ids": [str(ReportId(uuid4()))],
+        "question": "Можно ли платить аванс 80%?",
+        "summary": "Риск умеренный при обеспечении",
+        "grounds": [{"text": "Действующих производств нет", "refs": ["report/x#/proceedings"]}],
+        "unknowns": ["Нет свежей бухгалтерской отчётности"],
+        "next_actions": ["Запросить баланс за последний период"],
+        "evidence_refs": ["report/x#/finance"],
+        "freshness": ArtifactFreshness.CURRENT,
+        "created_at": NOW,
+    }
+    payload.update(overrides)
+    return AnalysisArtifact.model_validate(payload)
+
+
+def test_analysis_artifact_carries_typed_grounds_and_freshness() -> None:
+    """A ground is a claim with its refs; freshness qualifies the version."""
+    artifact = analysis_artifact()
+    assert artifact.grounds == [
+        ArtifactGround(text="Действующих производств нет", refs=["report/x#/proceedings"])
+    ]
+    assert artifact.freshness is ArtifactFreshness.CURRENT
+    assert artifact.created_by_run_id is None
+    assert artifact.source_thread_id is None
+
+
+def test_analysis_artifact_version_is_positive_and_closed() -> None:
+    """Version 0 is not a version, and an unknown field is refused."""
+    with pytest.raises(ValidationError):
+        analysis_artifact(version=0)
+    with pytest.raises(ValidationError):
+        analysis_artifact(unexpected="value")
 
 
 def test_create_decision_request_does_not_accept_an_author() -> None:

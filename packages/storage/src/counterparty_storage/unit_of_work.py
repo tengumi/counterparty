@@ -22,12 +22,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .access import TenantScope
 from .repositories import (
+    AgentRunReadRepository,
+    AnalysisArtifactRepository,
     CompanyReadRepository,
     IdempotencyRepository,
     ProjectCompanyRepository,
     ProjectRepository,
     ReportSnapshotReadRepository,
     ThreadRepository,
+    UserDecisionRepository,
 )
 
 __all__ = ["AsyncUnitOfWork"]
@@ -44,6 +47,11 @@ class AsyncUnitOfWork:
         self.threads = ThreadRepository(session, scope)
         self.project_companies = ProjectCompanyRepository(session, scope)
         self.idempotency = IdempotencyRepository(session, scope)
+        self.decisions = UserDecisionRepository(session, scope)
+        self.artifacts = AnalysisArtifactRepository(session, scope)
+        self.agent_runs = AgentRunReadRepository(session, scope)
+        """Read-only run lifecycle for the UI; the agent writes runs elsewhere."""
+
         self.companies = CompanyReadRepository(session)
         """The shared report corpus, read-only: workspace work never edits it."""
 

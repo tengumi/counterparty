@@ -521,9 +521,28 @@ J влит. Что дал каждый срез и его известная д�
 
 Порядок работы (последовательно, главным агентом):
 
-1. **UI API эндпоинты Specs 10 §5** — `GET /projects/{p}/threads/{t}/conversation`,
-   `GET/POST /projects/{p}/decisions`, `GET /projects/{p}/artifacts`. Их нет.
-   Методы репозиториев + тесты; модели `workspace` уже есть.
+1. **UI API эндпоинты Specs 10 §5** — ✅ сделано 06.09.2026. Добавлены
+   `GET/POST /projects/{p}/decisions`, `GET /projects/{p}/artifacts`,
+   `GET /projects/{p}/threads/{t}/conversation`.
+   - Миграция `0006`: `workspace.user_decisions` (версионирование через
+     `supersedes_id`, автор — `RESTRICT` FK на `users`, никогда не
+     перезаписывается) и `workspace.analysis_artifacts` (immutable по
+     `(id, version)`). Обе привязаны к проекту по `(id, tenant_id)`; ui_api
+     получает доступ через whole-schema default privileges из `0004`.
+   - Storage: `UserDecisionRepository`, `AnalysisArtifactRepository`,
+     read-only `AgentRunReadRepository` в `AsyncUnitOfWork`
+     (`uow.decisions/artifacts/agent_runs`). `created_at` этих таблиц —
+     `clock_timestamp()`, чтобы записи одной транзакции сохраняли порядок.
+   - Contracts: новые `AnalysisArtifact` + `ArtifactGround`,
+     `ThreadConversationState` (= `PublicAgentState` + `active_run_id`).
+   - Conversation endpoint не держит третью копию conversation state:
+     messages/activities пусты (проекция принадлежит agent service), а `run`/
+     `active_run_id` читаются из `agent_runs` как reconnect-цель. Полную
+     проекцию наполнит AG-04.
+   - Границы: decision цитирует artifact-версию только если она есть в проекте
+     (иначе 404); `context_version` в теле — записывается, не guard;
+     `workflow_status` проекта не трогается. Проверки: contracts 144,
+     storage 88, migrations 19, ui_api 70 — все зелёные на живом PostgreSQL.
 2. **AG-04** — `transport/runs.py::RunRegistry` сейчас явно in-memory spike
    (`persistence.py`). Персист run в `workspace` (таблица `AgentRun` из I3 есть),
    reconnect после рестарта, cancel, публичная проекция по RPC. Перед проектом

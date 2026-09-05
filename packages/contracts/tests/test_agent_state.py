@@ -32,6 +32,7 @@ from counterparty_contracts import (
     RunStatus,
     SaveStatus,
     TextBlock,
+    ThreadConversationState,
     ThreadId,
 )
 
@@ -85,6 +86,53 @@ def _pending(**overrides: Any) -> PendingCommand:
 def test_state_defaults_to_unsaved() -> None:
     """Persistence is confirmed by the server, never assumed by the stream."""
     assert _state().save_status is SaveStatus.UNSAVED
+
+
+def _run(**overrides: Any) -> RunInfo:
+    """Build a public run info, overriding single fields."""
+    payload: dict[str, Any] = {
+        "id": RUN_ID,
+        "thread_id": THREAD_ID,
+        "project_id": PROJECT_ID,
+        "status": RunStatus.RUNNING,
+        "started_at": NOW,
+        "based_on_context_version": 0,
+        "last_public_revision": 2,
+    }
+    payload.update(overrides)
+    return RunInfo.model_validate(payload)
+
+
+def test_thread_conversation_state_carries_an_active_run_id() -> None:
+    """The REST read is the projection plus the run the UI reconnects to."""
+    empty = ThreadConversationState(
+        project_id=PROJECT_ID, thread_id=THREAD_ID, revision=0, context_version=0
+    )
+    assert empty.active_run_id is None
+    assert empty.messages == []
+
+    live = ThreadConversationState(
+        project_id=PROJECT_ID,
+        thread_id=THREAD_ID,
+        revision=2,
+        context_version=0,
+        run=_run(),
+        active_run_id=RUN_ID,
+    )
+    assert live.active_run_id == RUN_ID
+
+
+def test_thread_conversation_active_run_id_must_match_the_published_run() -> None:
+    """A reconnect target that is not the published run is a contradiction."""
+    with pytest.raises(ValidationError, match="active_run_id must name the published run"):
+        ThreadConversationState(
+            project_id=PROJECT_ID,
+            thread_id=THREAD_ID,
+            revision=2,
+            context_version=0,
+            run=_run(),
+            active_run_id=RunId(uuid4()),
+        )
 
 
 def test_block_type_outside_the_whitelist_is_refused() -> None:

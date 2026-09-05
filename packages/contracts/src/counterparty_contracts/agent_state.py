@@ -75,6 +75,7 @@ __all__ = [
     "SkillInvocation",
     "SubscribeRequest",
     "TextBlock",
+    "ThreadConversationState",
 ]
 
 
@@ -338,6 +339,29 @@ class PublicAgentState(ContractModel):
         for command in self.pending_commands:
             if command.thread_id != self.thread_id:
                 raise ValueError("a pending command of another thread is not publishable here")
+        return self
+
+
+class ThreadConversationState(PublicAgentState):
+    """The stored projection of one thread, read over REST when a chat opens.
+
+    It is the same public projection a run streams, plus ``active_run_id``: the
+    run still executing on the server, which the client reconnects to instead of
+    re-sending the message that started it. ``None`` means no run is live, not
+    that the history is empty.
+    """
+
+    active_run_id: RunId | None = None
+
+    @model_validator(mode="after")
+    def validate_active_run(self) -> Self:
+        """Keep ``active_run_id`` consistent with the published run."""
+        if (
+            self.active_run_id is not None
+            and self.run is not None
+            and self.run.id != self.active_run_id
+        ):
+            raise ValueError("active_run_id must name the published run")
         return self
 
 

@@ -1,9 +1,18 @@
 """Mapped entities of the ``workspace`` schema: user work and its ownership."""
 
-from .enums import AgentRunStatus, CounterpartyRole, IdempotencyState, ThreadStatus, WorkflowStatus
+from .enums import (
+    AgentRunStatus,
+    ArtifactFreshness,
+    CounterpartyRole,
+    DecisionOutcome,
+    IdempotencyState,
+    ThreadStatus,
+    WorkflowStatus,
+)
 from .models import (
     MAX_PROJECT_COMPANIES,
     AgentRun,
+    AnalysisArtifact,
     IdempotencyKey,
     Membership,
     Project,
@@ -11,13 +20,17 @@ from .models import (
     Tenant,
     Thread,
     User,
+    UserDecision,
 )
 
 __all__ = [
     "MAX_PROJECT_COMPANIES",
     "AgentRun",
     "AgentRunStatus",
+    "AnalysisArtifact",
+    "ArtifactFreshness",
     "CounterpartyRole",
+    "DecisionOutcome",
     "IdempotencyKey",
     "IdempotencyState",
     "Membership",
@@ -27,5 +40,6 @@ __all__ = [
     "Thread",
     "ThreadStatus",
     "User",
+    "UserDecision",
     "WorkflowStatus",
 ]

@@ -3,7 +3,9 @@
 from .reports import CompanyReadRepository, CompanySearchResult, ReportSnapshotReadRepository
 from .workspace import (
     AgentRunOwner,
+    AgentRunReadRepository,
     AgentRunRepository,
+    AnalysisArtifactRepository,
     CompanyAddition,
     IdempotencyRepository,
     ProjectCompanyRecord,
@@ -12,12 +14,15 @@ from .workspace import (
     Reservation,
     ReservationOutcome,
     ThreadRepository,
+    UserDecisionRepository,
     agent_run_owner,
 )
 
 __all__ = [
     "AgentRunOwner",
+    "AgentRunReadRepository",
     "AgentRunRepository",
+    "AnalysisArtifactRepository",
     "CompanyAddition",
     "CompanyReadRepository",
     "CompanySearchResult",
@@ -29,5 +34,6 @@ __all__ = [
     "Reservation",
     "ReservationOutcome",
     "ThreadRepository",
+    "UserDecisionRepository",
     "agent_run_owner",
 ]

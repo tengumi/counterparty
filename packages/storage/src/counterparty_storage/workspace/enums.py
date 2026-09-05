@@ -47,6 +47,27 @@ class IdempotencyState(StrEnum):
     COMPLETED = "completed"
 
 
+class DecisionOutcome(StrEnum):
+    """The variant the user recorded. Values match the public DecisionOutcome."""
+
+    READY = "ready"
+    READY_WITH_CONDITIONS = "ready_with_conditions"
+    NOT_READY = "not_ready"
+    NEED_MORE_INFO = "need_more_info"
+
+
+class ArtifactFreshness(StrEnum):
+    """Whether the context an artifact was drawn from still holds.
+
+    Values match the public ArtifactFreshness. It qualifies a stored conclusion;
+    it never edits one.
+    """
+
+    CURRENT = "current"
+    OUTDATED = "outdated"
+    SOURCE_REMOVED = "source_removed"
+
+
 class AgentRunStatus(StrEnum):
     """Durable execution status; values match the existing public RunStatus."""
 

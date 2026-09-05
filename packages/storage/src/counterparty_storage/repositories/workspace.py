@@ -32,7 +32,9 @@ from ..errors import (
 from ..reports.models import Company, CompanyProfile
 from ..workspace.enums import (
     AgentRunStatus,
+    ArtifactFreshness,
     CounterpartyRole,
+    DecisionOutcome,
     IdempotencyState,
     ThreadStatus,
     WorkflowStatus,
@@ -40,13 +42,17 @@ from ..workspace.enums import (
 from ..workspace.models import (
     MAX_PROJECT_COMPANIES,
     AgentRun,
+    AnalysisArtifact,
     IdempotencyKey,
     Project,
     ProjectCompany,
     Thread,
+    UserDecision,
 )
 
 __all__ = [
+    "AgentRunReadRepository",
+    "AnalysisArtifactRepository",
     "CompanyAddition",
     "IdempotencyRepository",
     "ProjectCompanyRecord",
@@ -55,6 +61,7 @@ __all__ = [
     "Reservation",
     "ReservationOutcome",
     "ThreadRepository",
+    "UserDecisionRepository",
 ]
 
 
@@ -334,6 +341,198 @@ class ThreadRepository(_TenantScoped):
             .returning(Thread)
         )
         return (await self._session.execute(statement)).scalar_one()
+
+
+class UserDecisionRepository(_TenantScoped):
+    """Decisions a person recorded inside the projects of one tenant.
+
+    A decision is independent of any AI artifact and is never overwritten:
+    revising one inserts a new row that points back with ``supersedes_id``.
+    """
+
+    async def list_for_project(self, scope: ProjectScope) -> list[UserDecision]:
+        """Return the project's decisions, newest first."""
+        self._assert_same_tenant(scope)
+        statement = (
+            select(UserDecision)
+            .where(
+                UserDecision.tenant_id == self.tenant_id,
+                UserDecision.project_id == scope.project_id,
+            )
+            .order_by(UserDecision.created_at.desc(), UserDecision.id.desc())
+        )
+        return list((await self._session.execute(statement)).scalars())
+
+    async def get(self, scope: ProjectScope, decision_id: UUID) -> UserDecision | None:
+        """Return one decision of this project, or ``None``."""
+        self._assert_same_tenant(scope)
+        statement = select(UserDecision).where(
+            UserDecision.tenant_id == self.tenant_id,
+            UserDecision.project_id == scope.project_id,
+            UserDecision.id == decision_id,
+        )
+        return (await self._session.execute(statement)).scalar_one_or_none()
+
+    async def record(
+        self,
+        scope: ProjectScope,
+        *,
+        author_user_id: UUID,
+        outcome: DecisionOutcome,
+        rationale: str,
+        conditions: Sequence[str],
+        company_ids: Sequence[UUID],
+        context_version: int,
+        evidence_refs: Sequence[str],
+        based_on_artifact_id: UUID | None = None,
+        based_on_artifact_version: int | None = None,
+        supersedes_id: UUID | None = None,
+    ) -> UserDecision:
+        """Insert one decision. The author is the caller, not a body field.
+
+        The project must still accept writes; the identifiers are stored as
+        given, so a decision may name a counterparty that has since left the
+        composition.
+        """
+        self._assert_same_tenant(scope)
+        await ProjectRepository(self._session, TenantScope(self.tenant_id)).require_writable(
+            scope.project_id
+        )
+        decision = UserDecision(
+            id=uuid4(),
+            tenant_id=self.tenant_id,
+            project_id=scope.project_id,
+            outcome=outcome,
+            company_ids=[str(company_id) for company_id in company_ids],
+            rationale=rationale,
+            conditions=list(conditions),
+            based_on_artifact_id=based_on_artifact_id,
+            based_on_artifact_version=based_on_artifact_version,
+            context_version=context_version,
+            evidence_refs=list(evidence_refs),
+            author_user_id=author_user_id,
+            supersedes_id=supersedes_id,
+        )
+        self._session.add(decision)
+        await self._session.flush()
+        return decision
+
+
+class AnalysisArtifactRepository(_TenantScoped):
+    """Immutable AI conclusions stored per project of one tenant.
+
+    Nothing in this service writes them yet; the agent creates them once it can
+    reason for a project. Reads are here so the product can show them the moment
+    they exist.
+    """
+
+    async def list_for_project(
+        self, scope: ProjectScope, *, latest_only: bool = False
+    ) -> list[AnalysisArtifact]:
+        """Return the project's artifacts, newest first.
+
+        With ``latest_only`` only the highest ``version`` of each artifact id is
+        returned, which is what the UI shows by default.
+        """
+        self._assert_same_tenant(scope)
+        statement = select(AnalysisArtifact).where(
+            AnalysisArtifact.tenant_id == self.tenant_id,
+            AnalysisArtifact.project_id == scope.project_id,
+        )
+        if latest_only:
+            statement = statement.distinct(AnalysisArtifact.id).order_by(
+                AnalysisArtifact.id, AnalysisArtifact.version.desc()
+            )
+            rows = list((await self._session.execute(statement)).scalars())
+            rows.sort(key=lambda row: (row.created_at, row.id), reverse=True)
+            return rows
+        statement = statement.order_by(
+            AnalysisArtifact.created_at.desc(),
+            AnalysisArtifact.id.desc(),
+            AnalysisArtifact.version.desc(),
+        )
+        return list((await self._session.execute(statement)).scalars())
+
+    async def get_version(
+        self, scope: ProjectScope, *, artifact_id: UUID, version: int
+    ) -> AnalysisArtifact | None:
+        """Return one immutable artifact version of this project, or ``None``."""
+        self._assert_same_tenant(scope)
+        statement = select(AnalysisArtifact).where(
+            AnalysisArtifact.tenant_id == self.tenant_id,
+            AnalysisArtifact.project_id == scope.project_id,
+            AnalysisArtifact.id == artifact_id,
+            AnalysisArtifact.version == version,
+        )
+        return (await self._session.execute(statement)).scalar_one_or_none()
+
+    async def add_version(
+        self,
+        scope: ProjectScope,
+        *,
+        artifact_id: UUID,
+        version: int,
+        based_on_context_version: int,
+        question: str,
+        summary: str,
+        freshness: ArtifactFreshness = ArtifactFreshness.CURRENT,
+        report_ids: Sequence[UUID] = (),
+        grounds: Sequence[dict[str, Any]] = (),
+        unknowns: Sequence[str] = (),
+        next_actions: Sequence[str] = (),
+        evidence_refs: Sequence[str] = (),
+        created_by_run_id: UUID | None = None,
+        source_thread_id: UUID | None = None,
+    ) -> AnalysisArtifact:
+        """Insert one immutable artifact version. An existing pair is refused."""
+        self._assert_same_tenant(scope)
+        await ProjectRepository(self._session, TenantScope(self.tenant_id)).require_writable(
+            scope.project_id
+        )
+        artifact = AnalysisArtifact(
+            id=artifact_id,
+            version=version,
+            tenant_id=self.tenant_id,
+            project_id=scope.project_id,
+            based_on_context_version=based_on_context_version,
+            report_ids=[str(report_id) for report_id in report_ids],
+            question=question,
+            summary=summary,
+            grounds=list(grounds),
+            unknowns=list(unknowns),
+            next_actions=list(next_actions),
+            evidence_refs=list(evidence_refs),
+            freshness=freshness,
+            created_by_run_id=created_by_run_id,
+            source_thread_id=source_thread_id,
+        )
+        self._session.add(artifact)
+        await self._session.flush()
+        return artifact
+
+
+class AgentRunReadRepository(_TenantScoped):
+    """Read-only view of run lifecycle for the UI, scoped to one tenant.
+
+    The durable run records are written by the agent process on its own owner
+    connection (:class:`AgentRunOwner`). The UI only needs to read the current
+    run of a thread to offer a reconnect, so this stays a plain scoped select.
+    """
+
+    async def latest_for_thread(self, scope: ProjectScope, thread_id: UUID) -> AgentRun | None:
+        """Return the most recent run of one thread of this project, if any."""
+        self._assert_same_tenant(scope)
+        statement = (
+            select(AgentRun)
+            .where(
+                AgentRun.tenant_id == self.tenant_id,
+                AgentRun.project_id == scope.project_id,
+                AgentRun.thread_id == thread_id,
+            )
+            .order_by(AgentRun.started_at.desc(), AgentRun.id.desc())
+            .limit(1)
+        )
+        return (await self._session.execute(statement)).scalar_one_or_none()
 
 
 @dataclass(frozen=True, slots=True)

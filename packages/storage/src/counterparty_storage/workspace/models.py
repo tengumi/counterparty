@@ -1,10 +1,14 @@
 """Mapped tables of the ``workspace`` schema.
 
-Scope of this revision is the composition of a counterparty check: who owns it
+The schema holds the composition of a counterparty check: who owns it
 (``tenants``, ``users``, ``memberships``), the check itself (``projects``), the
 counterparties under review (``project_companies``), the chats inside it
 (``threads``) and the request-id reservations that make a repeated write
-harmless (``idempotency_keys``).
+harmless (``idempotency_keys``). It also holds what the work produces: durable
+run lifecycle (``agent_runs``), the AI conclusions drawn for a project
+(``analysis_artifacts``, immutable per ``(id, version)``) and the decisions a
+person recorded (``user_decisions``, versioned through ``supersedes_id`` and
+never overwritten).
 
 Rules encoded here rather than left to application discipline:
 
@@ -48,7 +52,15 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from ..base import Base
 from ..schemas import WORKSPACE_SCHEMA
-from .enums import AgentRunStatus, CounterpartyRole, IdempotencyState, ThreadStatus, WorkflowStatus
+from .enums import (
+    AgentRunStatus,
+    ArtifactFreshness,
+    CounterpartyRole,
+    DecisionOutcome,
+    IdempotencyState,
+    ThreadStatus,
+    WorkflowStatus,
+)
 
 MAX_PROJECT_COMPANIES: Final = 20
 """Counterparties one project may compare, matching the REST contract. A batch
@@ -78,6 +90,20 @@ _COUNTERPARTY_ROLE = Enum(
 _IDEMPOTENCY_STATE = Enum(
     IdempotencyState,
     name="idempotency_state",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda enum: [member.value for member in enum],
+)
+_DECISION_OUTCOME = Enum(
+    DecisionOutcome,
+    name="decision_outcome",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda enum: [member.value for member in enum],
+)
+_ARTIFACT_FRESHNESS = Enum(
+    ArtifactFreshness,
+    name="artifact_freshness",
     native_enum=False,
     create_constraint=True,
     values_callable=lambda enum: [member.value for member in enum],
@@ -432,3 +458,113 @@ Index(
         ]
     ),
 )
+
+
+class UserDecision(WorkspaceBase):
+    """The decision a person recorded about a project, with their own grounds.
+
+    It is an independent, versioned entity: it neither replaces nor is replaced
+    by an AI artifact, and it may be recorded without one. ``supersedes_id``
+    points at the decision this one revises; the older row is kept. The list
+    columns hold JSON arrays of identifiers exactly as the public DTO carries
+    them, so a row maps onto :class:`~counterparty_contracts.UserDecision`
+    without translation.
+    """
+
+    __tablename__ = "user_decisions"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["project_id", "tenant_id"],
+            [f"{_PROJECTS}.id", f"{_PROJECTS}.tenant_id"],
+            name="fk_user_decisions_project_id_tenant_id",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint("context_version >= 0", name="context_version_non_negative"),
+        CheckConstraint(
+            "based_on_artifact_version IS NULL OR based_on_artifact_version >= 1",
+            name="artifact_version_positive",
+        ),
+        CheckConstraint(
+            "(based_on_artifact_id IS NULL) = (based_on_artifact_version IS NULL)",
+            name="artifact_reference_pins_version",
+        ),
+        Index("ix_user_decisions_project_id_created_at", "project_id", "created_at"),
+        {"schema": WORKSPACE_SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = _pk()
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    project_id: Mapped[uuid.UUID] = mapped_column()
+    outcome: Mapped[DecisionOutcome] = mapped_column(_DECISION_OUTCOME)
+    company_ids: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    rationale: Mapped[str] = mapped_column(Text)
+    conditions: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    """Concrete conditions or missing facts, never a generic disclaimer."""
+
+    based_on_artifact_id: Mapped[uuid.UUID | None] = mapped_column()
+    based_on_artifact_version: Mapped[int | None] = mapped_column(Integer)
+    context_version: Mapped[int] = mapped_column(Integer)
+    """The deal context this decision was taken against; recorded, not a guard."""
+
+    evidence_refs: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    author_user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(f"{WORKSPACE_SCHEMA}.users.id", ondelete="RESTRICT")
+    )
+    """Taken from the authenticated caller; never from a request body."""
+
+    supersedes_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey(
+            f"{WORKSPACE_SCHEMA}.user_decisions.id",
+            ondelete="RESTRICT",
+            name="fk_user_decisions_supersedes_id",
+        )
+    )
+    created_at: Mapped[datetime] = mapped_column(server_default=func.clock_timestamp())
+    """``clock_timestamp()`` rather than ``now()``: two decisions recorded in one
+    transaction must still order, so ``created_at`` alone is a stable sort."""
+
+
+class AnalysisArtifact(WorkspaceBase):
+    """One immutable version of an AI conclusion drawn for a project.
+
+    Identity is ``(id, version)``: a later analysis is a new row, never an edit
+    of an existing one, so an answer that was already shown stays readable
+    unchanged. ``freshness`` qualifies the row without rewriting it. The list
+    columns hold JSON arrays shaped exactly as
+    :class:`~counterparty_contracts.AnalysisArtifact` carries them.
+    """
+
+    __tablename__ = "analysis_artifacts"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["project_id", "tenant_id"],
+            [f"{_PROJECTS}.id", f"{_PROJECTS}.tenant_id"],
+            name="fk_analysis_artifacts_project_id_tenant_id",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint("version >= 1", name="version_positive"),
+        CheckConstraint("based_on_context_version >= 0", name="context_version_non_negative"),
+        Index("ix_analysis_artifacts_project_id_created_at", "project_id", "created_at"),
+        {"schema": WORKSPACE_SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    version: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column()
+    project_id: Mapped[uuid.UUID] = mapped_column()
+    based_on_context_version: Mapped[int] = mapped_column(Integer)
+    report_ids: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    question: Mapped[str] = mapped_column(Text)
+    summary: Mapped[str] = mapped_column(Text)
+    grounds: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    """Each ground is ``{"text": str, "refs": [str, ...]}``."""
+
+    unknowns: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    next_actions: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    evidence_refs: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    freshness: Mapped[ArtifactFreshness] = mapped_column(_ARTIFACT_FRESHNESS)
+    created_by_run_id: Mapped[uuid.UUID | None] = mapped_column()
+    source_thread_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(server_default=func.clock_timestamp())
+    """``clock_timestamp()`` rather than ``now()``: successive versions written in
+    one transaction must still order by ``created_at``."""

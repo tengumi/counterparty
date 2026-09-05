@@ -37,6 +37,7 @@ from .identifiers import (
     EvidenceRefId,
     ProjectId,
     ReportId,
+    RunId,
     ThreadId,
     UserId,
 )
@@ -48,7 +49,9 @@ __all__ = [
     "AddCompaniesResponse",
     "AddCompanyItem",
     "AddCompanyResult",
+    "AnalysisArtifact",
     "ArtifactAttachment",
+    "ArtifactGround",
     "ArtifactPreview",
     "CompanySummary",
     "CreateDecisionRequest",
@@ -108,6 +111,45 @@ class ArtifactAttachment(ContractModel):
     artifact_id: ArtifactId
     version: int = Field(ge=1)
     section_id: NonEmptyString | None = None
+
+
+class ArtifactGround(ContractModel):
+    """One stated ground of an AI conclusion: the claim and what backs it."""
+
+    text: NonEmptyString
+    refs: list[EvidenceRefId] = Field(default_factory=list)
+
+
+class AnalysisArtifact(ContractModel):
+    """One immutable version of an AI conclusion drawn for a project.
+
+    A version is never rewritten: a later analysis is a new version, and an
+    older one stays readable exactly as it was sent. The artifact stands on its
+    own ``evidence_refs`` and is not itself a source fact. ``freshness`` says
+    whether the context it was drawn from still holds; it does not edit the
+    conclusion.
+    """
+
+    schema_version: SchemaVersion = "0.1"
+    id: ArtifactId
+    version: int = Field(ge=1)
+    project_id: ProjectId
+    based_on_context_version: int = Field(ge=0)
+    """Project context the conclusion was drawn from; never rewritten later."""
+
+    report_ids: list[ReportId] = Field(default_factory=list)
+    question: NonEmptyString
+    summary: NonEmptyString
+    grounds: list[ArtifactGround] = Field(default_factory=list)
+    unknowns: list[NonEmptyString] = Field(default_factory=list)
+    """Concrete missing facts, never a generic disclaimer."""
+
+    next_actions: list[NonEmptyString] = Field(default_factory=list)
+    evidence_refs: list[EvidenceRefId] = Field(default_factory=list)
+    freshness: ArtifactFreshness
+    created_by_run_id: RunId | None = None
+    source_thread_id: ThreadId | None = None
+    created_at: UtcDatetime
 
 
 class CompanySummary(ContractModel):
