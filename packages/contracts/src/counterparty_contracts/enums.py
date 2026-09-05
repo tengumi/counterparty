@@ -297,3 +297,103 @@ class WarningCode(StrEnum):
 
     RESULT_TRUNCATED = "result_truncated"
     """The response hit a server size or record limit and is continued elsewhere."""
+
+
+class MessageRole(StrEnum):
+    """Who a public conversation message belongs to.
+
+    ``system_notice`` is the service speaking about the run itself; it is never
+    presented as the assistant's own answer.
+    """
+
+    USER = "user"
+    ASSISTANT = "assistant"
+    SYSTEM_NOTICE = "system_notice"
+
+
+class MessageStatus(StrEnum):
+    """Delivery state of one public message.
+
+    ``partial`` keeps what was already produced; it is not a completed answer
+    and must not be read as one.
+    """
+
+    PENDING = "pending"
+    STREAMING = "streaming"
+    COMPLETE = "complete"
+    PARTIAL = "partial"
+    ERROR = "error"
+
+
+class ActivityKind(StrEnum):
+    """What the agent is publicly doing.
+
+    This is the safe public label of an action, not a mirror of low-level
+    callbacks: no prompt, raw tool argument or reasoning is published.
+    """
+
+    READING_REPORT = "reading_report"
+    READING_DOCUMENT = "reading_document"
+    COMPARING = "comparing"
+    CALCULATING = "calculating"
+    UPDATING_ANALYSIS = "updating_analysis"
+    SKILL_INVOCATION = "skill_invocation"
+
+
+class ActivityStatus(StrEnum):
+    """Lifecycle of one published activity."""
+
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class SaveStatus(StrEnum):
+    """Whether the server confirmed that the projection is persisted.
+
+    ``saved`` is set by the server after the write, never optimistically by the
+    stream.
+    """
+
+    UNSAVED = "unsaved"
+    SAVING = "saving"
+    SAVED = "saved"
+
+
+class PendingCommandStatus(StrEnum):
+    """Lifecycle of a follow-up accepted while a run is working.
+
+    ``applied`` means the message was added to the conversation context at a
+    safe boundary and persisted. It does not mean the answer is finished.
+    """
+
+    ACCEPTED = "accepted"
+    QUEUED = "queued"
+    APPLYING = "applying"
+    APPLIED = "applied"
+    CANCELLED = "cancelled"
+    FAILED = "failed"
+
+
+class SkillInvocationStatus(StrEnum):
+    """Lifecycle of one skill execution published to the UI."""
+
+    LOADING = "loading"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    CACHED = "cached"
+
+
+class McpStatus(StrEnum):
+    """Business outcome of one MCP tool call.
+
+    A protocol failure is not one of these: a transport error never arrives as
+    ``ok`` with empty data, and empty data never means "no risk".
+    """
+
+    OK = "ok"
+    PARTIAL = "partial"
+    NOT_FOUND = "not_found"
+    UNAVAILABLE = "unavailable"
