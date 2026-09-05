@@ -116,3 +116,78 @@ def test_absent_and_empty_sections_are_not_confirmed_zero(
     assert result.availability is expected
     assert result.warnings
     assert result.total_records == (0 if expected is Availability.PRESENT_EMPTY else None)
+
+
+def test_source_timestamp_keeps_offset_instant() -> None:
+    """A late UTC instant from a positive offset must never become another date."""
+    data = report_data({"foundersInfo": {"dateFrom": {"$date": "2024-01-15T00:00:00+03:00"}}})
+    section = build_report_section(
+        data,
+        GetReportSectionInput(
+            report_id=ReportId(data.report_id), section=ReportSectionName.FOUNDERS
+        ),
+    )
+    assert section.facts[0].value_type.value == "string"
+    assert section.facts[0].value == "2024-01-14T21:00:00+00:00"
+
+
+def test_status_arbitration_uses_actual_source_keys_and_raw_status() -> None:
+    """The source misspelling and pf/df keys must not turn known amounts missing."""
+    from counterparty_contracts import PartyRole
+
+    data = report_data(
+        {
+            "arbitrationByStatus": {
+                "plaintiffArbitration": {
+                    "plaintiffArbitrationFinished": {"pfCount": 1, "pfAmount": 957189}
+                },
+                "defandantArbitration": {
+                    "defandantArbitrationPending": {"dpCount": 0, "dpAmount": 0}
+                },
+            }
+        }
+    )
+    request = GetReportSectionInput(
+        report_id=ReportId(data.report_id),
+        section=ReportSectionName.ARBITRATION,
+        filters=ReportSectionFilters(role=PartyRole.DEFENDANT, status_raw="Pending"),
+    )
+    result = build_report_section(data, request)
+    assert len(result.records) == 1
+    record = result.records[0]
+    assert record.kind == "arbitration_aggregate"
+    assert record.count.value == 0 and record.amount.value == "0"
+    assert record.amount.evidence_refs[0].endswith("/defandantArbitrationPending/dpAmount")
+
+
+def test_malformed_source_record_is_invalid_not_empty() -> None:
+    """Unreadable array elements cannot silently disappear from a section."""
+    data = report_data({"licenses": [False]})
+    result = build_report_section(
+        data,
+        GetReportSectionInput(
+            report_id=ReportId(data.report_id), section=ReportSectionName.LICENSES
+        ),
+    )
+    assert result.availability is Availability.INVALID
+    assert result.total_records is None
+    assert result.warnings[0].code.value == "parse_failed"
+
+
+def test_empty_status_aggregate_is_not_missing_or_zero() -> None:
+    """An explicitly empty source status aggregate retains present_empty facts."""
+    data = report_data(
+        {"arbitrationByStatus": {"plaintiffArbitration": {"plaintiffArbitrationFinished": {}}}}
+    )
+    result = build_report_section(
+        data,
+        GetReportSectionInput(
+            report_id=ReportId(data.report_id), section=ReportSectionName.ARBITRATION
+        ),
+    )
+    record = result.records[0]
+    assert record.kind == "arbitration_aggregate"
+    assert record.count.availability is Availability.PRESENT_EMPTY
+    assert record.amount.value is None
+    assert record.count.evidence_refs == record.evidence_refs
+    assert result.warnings[0].code.value == "partial_data"
