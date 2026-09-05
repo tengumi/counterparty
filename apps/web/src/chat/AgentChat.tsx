@@ -77,16 +77,16 @@ function LiveMessages() {
       components={{
         UserMessage: () => (
           <div className={styles.user}>
-            <p className={styles.bubble}>
+            <div className={styles.bubble}>
               <MessagePrimitive.Parts />
-            </p>
+            </div>
           </div>
         ),
         AssistantMessage: () => (
           <div className={styles.answer}>
-            <p className={styles.answerText}>
+            <div className={styles.answerText}>
               <MessagePrimitive.Parts />
-            </p>
+            </div>
           </div>
         ),
       }}
@@ -236,7 +236,7 @@ export function AgentChat({
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
-      <ThreadPrimitive.Root className={styles.feed}>
+      <ThreadPrimitive.Root className={layout ? styles.threadRoot : styles.feed}>
         {layout ? layout(feed, composer) : (
           <>
             {feed}

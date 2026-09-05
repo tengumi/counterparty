@@ -1,4 +1,4 @@
-/* S2 conversation blocks (07 §5). Pixel alignment with the baseline is WEB-07. */
+/* S2 conversation blocks (07 §5), aligned with the accepted HTML. */
 
 .feed { display: flex; flex-direction: column; gap: 24px; }
 .block { display: flex; flex-direction: column; }
@@ -13,8 +13,8 @@
 .user { align-self: flex-end; max-width: 84%; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .chip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #e7e8eb; border-radius: 8px; padding: 5px 10px; font-size: 13px; line-height: 18px; color: rgba(4, 4, 19, .55); }
 .bubble { background: rgba(15, 25, 55, .06); border-radius: 14px; padding: 10px 14px; font-size: 16px; line-height: 24px; white-space: pre-wrap; overflow-wrap: anywhere; }
-.file { display: flex; align-items: center; gap: 10px; border: 1px solid #e7e8eb; border-radius: 12px; padding: 10px 12px; min-width: 240px; }
-.fileName { display: block; line-height: 20px; }
+.file { max-width: 100%; display: flex; align-items: center; gap: 10px; border: 1px solid #e7e8eb; border-radius: 12px; padding: 10px 12px; min-width: min(280px, 100%); }
+.fileName { overflow-wrap: anywhere; display: block; line-height: 20px; }
 .fileState { display: block; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); }
 
 /* notice */
@@ -56,17 +56,44 @@
 .empty p { margin: 0 0 6px; }
 
 /* S2-10 composer */
-.composer { border: 1px solid #e7e8eb; border-radius: 16px; padding: 12px 12px 10px 14px; background: #fff; display: flex; flex-direction: column; gap: 8px; }
+.composer { box-shadow: 0 1px 2px rgba(9, 12, 37, .04); border: 1px solid #e7e8eb; border-radius: 16px; padding: 12px 12px 10px 14px; background: #fff; display: flex; flex-direction: column; gap: 8px; }
 .composer[data-status='error'] { border-color: #d91d0b; }
 .composerRow { display: flex; align-items: center; gap: 8px; }
 .composerHint { flex: 1; min-width: 0; margin: 0; font-size: 13px; line-height: 18px; color: rgba(4, 4, 19, .55); }
 .composerActions { flex: none; display: flex; align-items: center; gap: 8px; }
 .composerError { margin: 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; line-height: 18px; color: #d91d0b; }
 .disclaimer { margin: 10px 0 0; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); }
-.disclaimer summary { cursor: pointer; }
+.disclaimer p { margin: 0; }
+.disclaimer { text-align: center; }
+.disclaimer summary { cursor: pointer; color: #2a77ef; list-style: none; display: inline-block; }
+.disclaimer summary::-webkit-details-marker { display: none; }
 .disclaimerText { margin: 6px 0 0; }
 .input { width: 100%; border: 0; outline: none; resize: none; background: none; font: inherit; font-size: 16px; line-height: 24px; min-height: 48px; max-height: 160px; display: block; padding: 0; }
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* layout of the conversation column */
-.threadRoot { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.threadRoot { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+
+.composer:focus-within { border-color: #2a77ef; }
+.send { min-height: 44px; width: 44px; min-width: 44px; padding: 0; border-radius: 10px; }
+.evidence { position: relative; }
+.evidence::after { content: ''; position: absolute; width: 44px; height: 44px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+@media (max-width: 640px) {
+  .user { max-width: 92%; }
+  .file { flex-wrap: wrap; }
+  .chip { max-width: 100%; overflow-wrap: anywhere; }
+  .composerRow { flex-wrap: wrap; }
+  .composerHint { flex-basis: 100%; font-size: 12px; line-height: 16px; }
+  .composerActions { margin-left: auto; }
+  .composerActions button, .options button, .confirmationActions button { min-height: 44px; }
+  .conclusion { padding: 16px; }
+  .point > :last-child { min-width: 0; overflow-wrap: anywhere; }
+  .step { flex-wrap: wrap; gap: 4px; }
+  .stepSource { flex-basis: 100%; }
+}
+
+.bubble p, .answerText p { margin: 0; }
+.steps[hidden] { display: none; }
+
+.resume button, .activity button, .options button, .conclusion button,
+.confirmationActions button, .composerActions button { min-height: 44px; }

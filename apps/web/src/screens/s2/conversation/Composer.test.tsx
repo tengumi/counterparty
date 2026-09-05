@@ -51,6 +51,23 @@ describe('S2 composer states', () => {
     expect(onSend).toHaveBeenCalledWith('Можно ли платить авансом?');
   });
 
+  it('keeps Enter as a newline on mobile and sends with the button', async () => {
+    const media = vi.spyOn(window, 'matchMedia');
+    media.mockReturnValue({ ...window.matchMedia(''), matches: true });
+    try {
+      const user = userEvent.setup();
+      const onSend = vi.fn();
+      show('idle', 'Уточнение', { onSend });
+      await user.click(screen.getByLabelText('Сообщение помощнику'));
+      await user.keyboard('{Enter}');
+      expect(onSend).not.toHaveBeenCalled();
+      await user.click(screen.getByRole('button', { name: 'Отправить' }));
+      expect(onSend).toHaveBeenCalledWith('Уточнение');
+    } finally {
+      media.mockRestore();
+    }
+  });
+
   it('offers exactly one way to stop a run in progress', async () => {
     const user = userEvent.setup();
     const onStop = vi.fn();
@@ -83,7 +100,7 @@ describe('S2 composer states', () => {
   it('says why a chat cannot send instead of showing a dead button', () => {
     show('unavailable', 'Черновик', { unavailableReason: 'Сервер этой проверки не подключён.' });
 
-    expect(screen.getByLabelText('Сообщение помощнику')).toBeDisabled();
+    expect(screen.getByLabelText('Сообщение помощнику')).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Отправить' })).toBeDisabled();
     expect(screen.getByRole('status')).toHaveTextContent('Сервер этой проверки не подключён.');
   });
@@ -126,7 +143,7 @@ describe('S2 assistant boundary', () => {
     expect(screen.getByText(/AI может ошибаться/)).toBeVisible();
     expect(screen.getByText(/не принимает решение за вас/)).not.toBeVisible();
 
-    await user.click(screen.getByText(/AI может ошибаться/));
+    await user.click(screen.getByText('Как работает помощник'));
     expect(screen.getByText(/не принимает решение за вас/)).toBeVisible();
   });
 });

@@ -27,11 +27,17 @@
 .submitError { margin: 8px 0 0; color: #d91d0b; font-size: 13px; line-height: 18px; }
 
 @media (max-width: 1100px) {
-  .scroll { overflow: visible; }
   .screen { padding-top: 48px; }
 }
 @media (max-width: 640px) {
   .screen { padding: 32px 20px 48px; }
   .meta { flex-direction: column; align-items: flex-end; gap: 2px; }
   .listLabel { margin-top: 40px; }
+}
+
+.example { border-radius: 99px; font-weight: 400; }
+.send { min-height: 44px; width: 44px; min-width: 44px; padding: 0; border-radius: 10px; }
+@media (max-width: 640px) {
+  .hint { display: none; }
+  .composerActions { justify-content: flex-end; }
 }

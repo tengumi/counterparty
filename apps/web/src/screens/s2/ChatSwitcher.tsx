@@ -21,12 +21,14 @@ interface Props {
 export function ChatSwitcher({ chats, activeChatId, onSelect, onCreate }: Props) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listId = useId();
   const active = chats.find((chat) => chat.id === activeChatId);
 
   useEffect(() => {
     if (!open) return;
+    popoverRef.current?.querySelector<HTMLButtonElement>('button[aria-current="true"]')?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       setOpen(false);
@@ -53,7 +55,7 @@ export function ChatSwitcher({ chats, activeChatId, onSelect, onCreate }: Props)
       <button
         aria-controls={open ? listId : undefined}
         aria-expanded={open}
-        aria-haspopup="menu"
+        aria-haspopup="dialog"
         className={styles.switcher}
         onClick={() => setOpen((value) => !value)}
         ref={triggerRef}
@@ -63,7 +65,26 @@ export function ChatSwitcher({ chats, activeChatId, onSelect, onCreate }: Props)
         <span aria-hidden="true">▾</span>
       </button>
       {open ? (
-        <div className={styles.popover} id={listId}>
+        <div
+          aria-label="Чаты проверки"
+          className={styles.popover}
+          id={listId}
+          ref={popoverRef}
+          role="dialog"
+          onKeyDown={(event) => {
+            if (event.key !== 'Tab') return;
+            const buttons = popoverRef.current?.querySelectorAll<HTMLButtonElement>('button');
+            const first = buttons?.[0];
+            const last = buttons?.[buttons.length - 1];
+            if (event.shiftKey && event.target === first) {
+              event.preventDefault();
+              last?.focus();
+            } else if (!event.shiftKey && event.target === last) {
+              event.preventDefault();
+              first?.focus();
+            }
+          }}
+        >
           <p className={styles.popoverTitle}>Чаты проверки</p>
           <ul className={styles.chatList}>
             {chats.map((chat) => (

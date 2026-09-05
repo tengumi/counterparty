@@ -7,6 +7,7 @@
 
 import { useId, useState } from 'react';
 import type { KeyboardEvent } from 'react';
+import { ArrowUpMIcon } from '@alfalab/icons-glyph/ArrowUpMIcon';
 import { Button } from '@alfalab/core-components/button';
 import { Textarea } from '@alfalab/core-components/textarea';
 import { examplePrompts } from '../../mocks/workspace';
@@ -30,7 +31,7 @@ export function TaskComposer({
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && !window.matchMedia('(max-width: 640px)').matches) {
       event.preventDefault();
       send();
     }
@@ -55,8 +56,8 @@ export function TaskComposer({
         />
         <div className={styles.composerActions}>
           <p className={styles.hint}>Enter отправляет, Shift+Enter переносит строку</p>
-          <Button disabled={!canSend} onClick={send} size={40} view="primary">
-            {loading ? 'Создаём…' : 'Отправить'}
+          <Button aria-label={loading ? 'Создаём…' : 'Отправить'} className={styles.send} disabled={!canSend} loading={loading} onClick={send} size={40} view="primary">
+            <ArrowUpMIcon aria-hidden={true} />
           </Button>
         </div>
       </div>
