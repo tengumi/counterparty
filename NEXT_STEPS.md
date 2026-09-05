@@ -417,13 +417,14 @@ evidence REST, но в API-01…05 они не входили и ещё не р�
 | I1 / API-06 | in progress | `services/ui_api/**`, чистые общие read projections в `packages/domain/**`, ReportEvidence DTO в contracts; sections и project-scoped evidence |
 | I2 / MCP-01/02 | in progress | `services/mcp/**`; authenticated read-only tools с pinned report, фильтрами и cursor |
 | I3 / F0-07 | in progress | `services/agent/**`, `migrations/**`, минимальный AgentRun model/repo в storage workspace; штатный saver, scope и restart/interrupted proof |
-| I4 / WEB-08 | waiting I1 | `apps/web/**`; REST overview/report/evidence/materials/comparison, без mock fallback |
-| I5 / independent verification | waiting integration | независимые HTTP/MCP/restart проверки и один финальный browser flow |
+| I4 / WEB-08 | waiting I1 | `apps/web/src/**`; REST overview/report/evidence/materials/comparison, без mock fallback |
+| I5 / API-agent verification | waiting integration | независимые HTTP и checkpoint/restart проверки; исполнитель I2 после сдачи MCP |
+| I6 / MCP-web verification | waiting integration | независимый MCP review и финальный live browser flow; исполнитель I3 после сдачи F0-07, QA harness/artifacts |
 
 I1–I3 стартуют параллельно от baseline `1173476`. Contracts/domain имеют только
 writer I1; storage workspace/migrations — только I3, остальные storage файлы
 read-only до конкретного запроса. I4 стартует после API-06, с отдельной веткой и
-worktree; I5 проверяет общий срез независимо. UI baseline H сохраняется; новое
+worktree; I5/I6 проверяют чужую реализацию независимо. UI baseline H сохраняется; новое
 визуальное выравнивание не требуется. Browser/screenshots — только в конце I.
 Root обновляет статусы здесь; WORK_PLAN done — после пользовательского review I.
 
