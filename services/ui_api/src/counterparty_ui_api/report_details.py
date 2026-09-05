@@ -16,10 +16,8 @@ from counterparty_contracts import (
 from counterparty_domain.report_evidence import build_report_evidence
 from counterparty_domain.report_reads import resolve_report_evidence_id
 from counterparty_domain.report_sections import build_report_section
-from counterparty_storage.workspace.models import ProjectCompany
 from fastapi import APIRouter, Path, Query
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
-from sqlalchemy import select
 
 from .dependencies import ScopedProject, TenantWork
 from .errors import ApiError
@@ -81,16 +79,10 @@ async def get_project_evidence(
     report_id, _ = locator
     # Historical membership is intentional: removing a company does not erase
     # the sources used by an older artifact or decision in the same project.
-    permitted = await uow.session.scalar(
-        select(ProjectCompany.id)
-        .where(
-            ProjectCompany.tenant_id == UUID(str(scope.tenant_id)),
-            ProjectCompany.project_id == UUID(str(scope.project_id)),
-            ProjectCompany.report_id == report_id,
-        )
-        .limit(1)
+    permitted = await uow.project_companies.has_historical_report(
+        uow.scope.project(UUID(str(scope.project_id))), report_id
     )
-    if permitted is None:
+    if not permitted:
         raise ApiError(ErrorCode.NOT_FOUND, "evidence not found")
     loaded = await load_report_data(uow, [report_id])
     if not loaded:
