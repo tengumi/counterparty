@@ -19,6 +19,7 @@
     "@alfalab/core-components-config": "1.1.0",
     "@alfalab/core-components-stack-context": "1.0.1",
     "@alfalab/icons-glyph": "2.289.0",
+    "@assistant-ui/react": "0.15.18",
     "@tanstack/react-query": "5.102.8",
     "react": "19.2.8",
     "react-dom": "19.2.8",
