@@ -414,13 +414,13 @@ evidence REST, но в API-01…05 они не входили и ещё не р�
 
 | Task | Статус | Ownership / результат |
 |---|---|---|
-| I1 / API-06 | integrated, verifying | shared projection/ReportEvidence и storage bundle, REST sections/evidence; contracts140/domain119/API60 и полный corpus100×17 прошли у исполнителя |
-| I2 / MCP-01/02 | integrated, verifying | authenticated read-only tools,31 tests,5 imported snapshots×17sections через HTTP/5555 refs; Docker build не проверен |
-| I3 / F0-07 | integrated, verifying | native saver в workspace,AgentRun+fenced owner,restart proof; agent20/storage81/migrations19 у исполнителя; Docker build не проверен |
-| I4 / WEB-08 | in progress | `apps/web/src/**`; живые report/evidence/companies/comparison; оставшиеся DOC/terms/analysis явно unavailable |
-| I5 / API-agent verification | in progress | независимые HTTP и checkpoint/restart проверки на интегрированном4dee1b2; бывший исполнитель I2 |
-| I6 / MCP-web verification | in progress | независимый MCP review; подготовка финального browser flow, ожидание I4; бывший исполнитель I3 |
-| I7 / checkpoint write fencing | in progress | `services/agent/**` и owner boundary в storage; исправляет доказанный I5 stale saver write после потери owner connection; автор I3, затем I5 replay |
+| I1 / API-06 | ready for review | REST sections/evidence, shared projections и repository bundle; 100×17 разделов, 14035 refs; независимые HTTP-проверки пройдены |
+| I2 / MCP-01/02 | ready for review | authenticated read-only tools; независимо 31 tests, 5555 refs, parity 100 overviews/96 pages; Docker build не проверен |
+| I3 / F0-07 | ready for review | native saver в workspace, AgentRun и restart; исправление I7 независимо подтверждено; Docker build не проверен |
+| I4 / WEB-08 report slice | integrated, browser pending | live report/evidence/comparison; 92 web tests, lint/typecheck/build; DOC/terms/analysis unavailable |
+| I5 / API-agent verification | passed with limitations | `eff2c64`; baseline 441, targeted agent22/storage83/migrations19/domain122, 21 HTTP checks, fencing и framework roundtrip |
+| I6 / MCP-web verification | final browser preparation | MCP/parity passed; финальный сценарий на живом API, desktop/mobile и tablet bounds |
+| I7 / checkpoint write fencing | ready for review | `6377532`; saver использует owner connection, stale graph/aput/aput_writes/delete отвергнуты; I5 подтвердил продолжение новым процессом |
 
 I1–I3 стартуют параллельно от baseline `1173476`. Contracts/domain и storage
 `repositories/reports.py` имеют только writer I1; storage workspace/migrations —
@@ -452,12 +452,17 @@ Root обновляет статусы здесь; WORK_PLAN done — после
 - Реальные проекты не получают mock terms/documents/analysis/decisions:
   соответствующие будущие API/DOC/AG возможности показываются как unavailable.
   В I проверяется живая отчётная часть материалов; это не полный gate волны 2.
-- Независимый I5 на `4dee1b2`: 441 backend tests passed, но дополнительный probe
-  `6798d00` доказал stale checkpoint write после потери owner connection. Run
-  repository отказал старому владельцу, отдельный saver сохранил value42 после
-  recovery. F0-07 пока не проходит независимый gate. I7 исправляет атомарную
-  границу checkpoint writes; I6 приостановлен на время fix, его независимый MCP
-  replay уже прошёл 31/31 и 5555 refs. UI I4 продолжает работу параллельно.
+- Независимый I5 обнаружил stale checkpoint write после потери owner connection.
+  I7 исправил границу записи: штатный saver работает на той же физической
+  connection, что и owner lock. Повтор I5 отвергает все старые пути записи,
+  сохраняет исходный CheckpointTuple и подтверждает продолжение новым процессом.
+  Один worker на БД обязателен; protected `_cursor` hook привязан к locked
+  langgraph-checkpoint-postgres 3.1.2. Runtime RPC остаётся in-memory до AG-04.
+- I4 исправил потерю периода финансового evidence, включая дополнительные поля
+  старых лет вне overview. Domain122 и независимые 21 HTTP-проверка прошли.
+- Demo PostgreSQL мигрирован до 0005; штатные checkpoint tables развёрнуты
+  отдельной deploy-командой. Финальный browser ещё не запущен; API/Vite поднимаются
+  после интеграции I6 runner. Исходный mock и HTML не менялись.
 
 ## Волна C — интеграционные риски и первый data/domain слой
 
