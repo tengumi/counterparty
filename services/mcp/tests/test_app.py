@@ -8,6 +8,7 @@ from conftest import REPORT_ID, TEST_TOKEN, FixtureReader
 from fastapi import FastAPI
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
+from fastmcp.utilities.logging import get_logger
 
 from counterparty_mcp.app import create_app
 from counterparty_mcp.config import Settings
@@ -162,3 +163,30 @@ async def test_unknown_inn_and_unconfigured_store_are_distinct(settings: Setting
         assert result.structured_content is not None
         assert result.structured_content["errors"][0]["code"] == expected
         assert result.structured_content["data"] is None
+
+
+async def test_library_validation_diagnostics_do_not_log_input_values(
+    reader: FixtureReader,
+    settings: Settings,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Even invalid unknown filters cannot place arbitrary sensitive text in logs."""
+    application = create_app(settings, reader=reader)
+    logger = get_logger("fastmcp.server.server")
+    logger.addHandler(caplog.handler)
+    try:
+        async with Client(application.state.mcp) as client:
+            result = await client.call_tool(
+                "get_report_section",
+                {
+                    "report_id": str(REPORT_ID),
+                    "section": "activities",
+                    "filters": {"secret": "sensitive-input-sentinel"},
+                },
+                raise_on_error=False,
+            )
+    finally:
+        logger.removeHandler(caplog.handler)
+    assert result.is_error
+    assert "Report tool argument validation failed" in caplog.text
+    assert "sensitive-input-sentinel" not in caplog.text

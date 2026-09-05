@@ -27,6 +27,7 @@ from .auth import ServiceTokenVerifier
 from .config import Settings
 from .reader import ReportReader
 from .runtime import ServiceResources
+from .telemetry import protect_library_validation_logs
 
 _ANNOTATIONS = ToolAnnotations(
     readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False
@@ -36,6 +37,7 @@ _ANNOTATIONS = ToolAnnotations(
 def create_app(settings: Settings | None = None, *, reader: ReportReader | None = None) -> FastAPI:
     """Compose a process; resources open only inside the application lifespan."""
     settings = settings or Settings.from_env()
+    protect_library_validation_logs()
     resources = ServiceResources(settings, reader)
     server = FastMCP(
         "Counterparty Reports",

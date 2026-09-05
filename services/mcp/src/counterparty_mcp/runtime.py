@@ -73,11 +73,22 @@ class ServiceResources:
                 code=ErrorCode.VALIDATION_ERROR,
                 message="The cursor is invalid or belongs to another report, section or filter.",
             )
-        except SQLAlchemyError:
+        except SQLAlchemyError as error:
+            if getattr(getattr(error, "orig", None), "sqlstate", None) == "57014":
+                return None, ToolError(
+                    code=ErrorCode.TIMEOUT, message="Report read timed out.", retryable=True
+                )
             return None, ToolError(
                 code=ErrorCode.DEPENDENCY_UNAVAILABLE,
                 message="The imported reports store is unavailable.",
                 retryable=True,
+            )
+
+        except Exception as error:
+            _LOG.warning("report_read_failed error_type=%s", type(error).__name__)
+            return None, ToolError(
+                code=ErrorCode.INTERNAL_ERROR,
+                message="The report read could not be completed.",
             )
 
     def _unavailable(self) -> ToolError:
@@ -153,7 +164,7 @@ class ServiceResources:
             data = await self.reader.section(current)
             if data is None or _size(_section_envelope(data)) <= self.settings.max_response_bytes:
                 return data
-            if current.limit == 1 or len(data.records) <= 1:
+            if current.limit == 1 or max(len(data.records), len(data.facts)) <= 1:
                 return data
             current = current.model_copy(update={"limit": max(1, current.limit // 2)})
 

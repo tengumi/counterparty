@@ -5,6 +5,7 @@ import asyncio
 import pytest
 from conftest import REPORT_ID, FixtureReader
 from counterparty_contracts import GetCompanyOverviewInput, GetReportSectionInput, ReportSectionName
+from psycopg.errors import QueryCanceled
 from sqlalchemy.exc import OperationalError
 
 from counterparty_mcp.config import Settings
@@ -15,6 +16,8 @@ from counterparty_mcp.runtime import ServiceResources
     ("error", "expected"),
     [
         (TimeoutError(), "timeout"),
+        (RuntimeError("private source secret"), "internal_error"),
+        (OperationalError("synthetic timeout", None, QueryCanceled()), "timeout"),
         (
             OperationalError("secret SQL", None, Exception("credential secret")),
             "dependency_unavailable",
@@ -91,3 +94,21 @@ async def test_single_oversized_record_has_safe_limit_error(reader: FixtureReade
     assert result.data is None
     assert result.errors[0].code == "limit_exceeded"
     assert len(result.model_dump_json()) < 4096
+
+
+async def test_byte_budget_pages_fact_only_sections(reader: FixtureReader) -> None:
+    """Fact-only sections shrink and continue just like pages of typed records."""
+    reader.record_text = "z" * 1000
+    reader.facts_only = True
+    resources = ServiceResources(Settings(max_response_bytes=4096), reader)
+    request = GetReportSectionInput(report_id=REPORT_ID, section=ReportSectionName.CONTACTS)
+    first = await resources.section(request)
+    assert first.data is not None and first.data.page.next_cursor is not None
+    assert not first.data.records and 0 < len(first.data.facts) < 20
+    assert len(first.model_dump_json().encode()) <= 4096
+    second = await resources.section(
+        request.model_copy(update={"cursor": first.data.page.next_cursor})
+    )
+    assert second.data is not None and second.data.facts
+    assert len(second.model_dump_json().encode()) <= 4096
+    assert first.data.facts[-1].key != second.data.facts[0].key

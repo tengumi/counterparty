@@ -15,12 +15,14 @@ from counterparty_contracts import (
     CompanyOverview,
     CompanyStatusView,
     DisplayLevel,
+    FactValue,
     GetCompanyOverviewInput,
     GetReportSectionInput,
     PageInfo,
     ReportId,
     ReportIdentity,
     ReportSection,
+    ValueType,
     ZskAssessment,
 )
 
@@ -48,6 +50,7 @@ class FixtureReader:
         self.error: Exception | None = None
         self.record_text = "Synthetic activity"
         self.record_count = 105
+        self.facts_only = False
         self.active_reads = 0
         self.max_active_reads = 0
 
@@ -98,7 +101,22 @@ class FixtureReader:
                     evidence_refs=[f"report:{REPORT_ID}:/kindsOfActivityInfo/activities/{index}"],
                 )
                 for index in range(offset, end)
-            ],
+            ]
+            if not self.facts_only
+            else [],
+            facts=[
+                FactValue(
+                    key=f"contact-{index}",
+                    label="Contact",
+                    value=self.record_text,
+                    value_type=ValueType.STRING,
+                    availability=Availability.AVAILABLE,
+                    evidence_refs=[f"report:{REPORT_ID}:/contacts/{index}"],
+                )
+                for index in range(offset, end)
+            ]
+            if self.facts_only
+            else [],
             page=PageInfo(
                 limit=request.limit,
                 has_more=end < self.record_count,
