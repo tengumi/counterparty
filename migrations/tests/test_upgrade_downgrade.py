@@ -5,7 +5,14 @@ from alembic.config import Config
 from counterparty_storage import REPORTS_SCHEMA, WORKSPACE_SCHEMA, metadata
 from sqlalchemy import Engine, inspect, text
 
-EXPECTED_TABLES = {table.name for table in metadata.sorted_tables}
+
+def _expected(schema: str) -> set[str]:
+    """Tables the mapped models place in one schema."""
+    return {table.name for table in metadata.sorted_tables if table.schema == schema}
+
+
+EXPECTED_REPORTS = _expected(REPORTS_SCHEMA)
+EXPECTED_WORKSPACE = _expected(WORKSPACE_SCHEMA)
 
 
 def _schemas(engine: Engine) -> set[str]:
@@ -14,16 +21,16 @@ def _schemas(engine: Engine) -> set[str]:
         return {row[0] for row in rows}
 
 
-def test_upgrade_creates_both_schemas_and_the_first_vertical(
+def test_upgrade_creates_both_schemas_and_their_tables(
     alembic_config: Config, engine: Engine
 ) -> None:
-    """Upgrading to head builds exactly the mapped tables inside the reports schema."""
+    """Upgrading to head builds exactly the mapped tables of both schemas."""
     command.upgrade(alembic_config, "head")
     try:
         assert {REPORTS_SCHEMA, WORKSPACE_SCHEMA} <= _schemas(engine)
         inspector = inspect(engine)
-        assert set(inspector.get_table_names(schema=REPORTS_SCHEMA)) == EXPECTED_TABLES
-        assert inspector.get_table_names(schema=WORKSPACE_SCHEMA) == []
+        assert set(inspector.get_table_names(schema=REPORTS_SCHEMA)) == EXPECTED_REPORTS
+        assert set(inspector.get_table_names(schema=WORKSPACE_SCHEMA)) == EXPECTED_WORKSPACE
     finally:
         command.downgrade(alembic_config, "base")
 
@@ -47,7 +54,9 @@ def test_upgrade_is_repeatable_after_a_downgrade(alembic_config: Config, engine:
     command.downgrade(alembic_config, "base")
     command.upgrade(alembic_config, "head")
     try:
-        assert set(inspect(engine).get_table_names(schema=REPORTS_SCHEMA)) == EXPECTED_TABLES
+        inspector = inspect(engine)
+        assert set(inspector.get_table_names(schema=REPORTS_SCHEMA)) == EXPECTED_REPORTS
+        assert set(inspector.get_table_names(schema=WORKSPACE_SCHEMA)) == EXPECTED_WORKSPACE
     finally:
         command.downgrade(alembic_config, "base")
 

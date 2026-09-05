@@ -28,15 +28,16 @@ def _table(name: str) -> Table:
 
 
 def test_first_vertical_tables_are_mapped() -> None:
-    """The mapped tables are exactly the agreed first vertical."""
-    assert {table.name for table in metadata.sorted_tables} == FIRST_VERTICAL
+    """The mapped report tables are exactly the agreed first vertical."""
+    mapped = {table.name for table in metadata.sorted_tables if table.schema == REPORTS_SCHEMA}
+    assert mapped == FIRST_VERTICAL
 
 
-def test_every_table_lives_in_the_reports_schema() -> None:
-    """No table leaks into ``public`` or into an unmanaged schema."""
+def test_no_table_leaks_out_of_the_managed_schemas() -> None:
+    """No table lands in ``public`` or in a schema owned by a framework."""
     schemas = {table.schema for table in metadata.sorted_tables}
-    assert schemas == {REPORTS_SCHEMA}
     assert schemas <= MANAGED_SCHEMAS
+    assert REPORTS_SCHEMA in schemas
 
 
 def test_child_rows_carry_report_id_and_source_path() -> None:
