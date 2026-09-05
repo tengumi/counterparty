@@ -491,7 +491,9 @@ def _matches(record: ReportRecord | FactValue, request: GetReportSectionInput) -
 
 def _scope(request: GetReportSectionInput) -> str:
     payload = request.model_dump(mode="json", exclude={"cursor", "limit"}, exclude_none=True)
-    if request.filters is not None and request.filters.years is not None:
+    if request.filters is None or not request.filters.applied_names():
+        payload.pop("filters", None)
+    elif request.filters.years is not None:
         payload["filters"]["years"] = sorted(request.filters.years)
     return hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
