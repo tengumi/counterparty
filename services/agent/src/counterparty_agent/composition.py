@@ -4,13 +4,16 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from dataclasses import dataclass
 
+from counterparty_storage.repositories import AgentRunOwner
 from fastapi import FastAPI
 
 from .checkpointing import Checkpointer, postgres_checkpointer
 from .config import AgentSettings
+from .persistence import postgres_run_owner
 from .transport import RunRegistry, deterministic_agent
 
 CheckpointerFactory = Callable[[str], AbstractAsyncContextManager[Checkpointer]]
+RunOwnerFactory = Callable[[str], AbstractAsyncContextManager[AgentRunOwner | None]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -19,11 +22,13 @@ class AgentResources:
 
     checkpointer: Checkpointer | None
     runs: RunRegistry
+    run_owner: AgentRunOwner | None = None
 
 
 def create_lifespan(
     settings: AgentSettings,
     checkpointer_factory: CheckpointerFactory = postgres_checkpointer,
+    run_owner_factory: RunOwnerFactory = postgres_run_owner,
 ) -> Callable[[FastAPI], AbstractAsyncContextManager[None]]:
     """Build a FastAPI lifespan with injectable external-resource factories."""
 
@@ -37,8 +42,15 @@ def create_lifespan(
                 yield
                 return
 
-            async with checkpointer_factory(dsn.get_secret_value()) as checkpointer:
-                app.state.resources = AgentResources(checkpointer=checkpointer, runs=runs)
+            async with (
+                run_owner_factory(dsn.get_secret_value()) as owner,
+                checkpointer_factory(dsn.get_secret_value()) as checkpointer,
+            ):
+                app.state.resources = AgentResources(
+                    checkpointer=checkpointer,
+                    runs=runs,
+                    run_owner=owner,
+                )
                 yield
 
     return lifespan

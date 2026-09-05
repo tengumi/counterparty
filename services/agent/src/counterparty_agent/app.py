@@ -5,8 +5,10 @@ from typing import Annotated
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-from .composition import CheckpointerFactory, create_lifespan
+from .checkpointing import postgres_checkpointer
+from .composition import CheckpointerFactory, RunOwnerFactory, create_lifespan
 from .config import AgentSettings
+from .persistence import postgres_run_owner
 from .transport import create_transport_router
 
 
@@ -22,13 +24,14 @@ def create_app(
     settings: AgentSettings | None = None,
     *,
     checkpointer_factory: CheckpointerFactory | None = None,
+    run_owner_factory: RunOwnerFactory | None = None,
 ) -> FastAPI:
     """Create an app without opening network or database resources at import time."""
     resolved_settings = settings or AgentSettings()
-    lifespan = (
-        create_lifespan(resolved_settings)
-        if checkpointer_factory is None
-        else create_lifespan(resolved_settings, checkpointer_factory)
+    lifespan = create_lifespan(
+        resolved_settings,
+        checkpointer_factory or postgres_checkpointer,
+        run_owner_factory or postgres_run_owner,
     )
     app = FastAPI(title="Counterparty Agent", version="0.1.0", lifespan=lifespan)
     app.include_router(create_transport_router())
