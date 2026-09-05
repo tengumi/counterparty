@@ -255,6 +255,8 @@ async def main() -> None:
         json.dumps(
             {
                 "rest_http_checks": checks,
+                "old_financial_period": oldest["year"],
+                "additional_fact_key": amount["key"],
                 "listener_cleaned_up": True,
                 "project_delete_endpoint": "pending_405",
             }
