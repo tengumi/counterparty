@@ -144,6 +144,20 @@ async def test_each_tool_call_streams_its_own_activity_line() -> None:
     assert settled == {"0": "completed", "1": "completed"}
 
 
+def test_a_citation_that_opens_a_line_is_moved_to_its_end() -> None:
+    """A leading ``[evidence:X], fact`` becomes ``fact [evidence:X]``."""
+    from counterparty_agent.harness.runner import _tidy_answer
+
+    raw = "[evidence:report:r1:/finReports/0/common/profit], loss for 2025 was -28M."
+    assert (
+        _tidy_answer(raw)
+        == "loss for 2025 was -28M. [evidence:report:r1:/finReports/0/common/profit]"
+    )
+    # A line that already ends with its citation is untouched.
+    good = "Equity is negative [evidence:report:r1:/finReports/0/liabilities/capitals]."
+    assert _tidy_answer(good) == good
+
+
 async def test_a_turn_with_no_tool_calls_shows_no_activity_trail(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

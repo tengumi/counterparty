@@ -214,7 +214,9 @@ services:
       AGENT_MODEL_BASE_URL: ${AGENT_MODEL_BASE_URL:-}
       AGENT_MODEL_API_KEY: ${AGENT_MODEL_API_KEY:-${APIKEY:-}}
       AGENT_MODEL_MAX_TOKENS: ${AGENT_MODEL_MAX_TOKENS:-4096}
+      AGENT_MAX_TOOL_CALLS: ${AGENT_MAX_TOOL_CALLS:-12}
       AGENT_RUN_TIMEOUT_SECONDS: ${AGENT_RUN_TIMEOUT_SECONDS:-120}
+      AGENT_CLIENT_PROFILE_JSON: ${AGENT_CLIENT_PROFILE_JSON:-}
     # One worker per database: the checkpointer expects a single writer.
     command: ["uvicorn", "counterparty_agent.app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
     ports:

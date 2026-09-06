@@ -260,7 +260,7 @@ def create_harness_runner(
                 stream=stream,
             )
             return
-        ctx.append_text(text_path, result.answer)
+        ctx.append_text(text_path, _tidy_answer(result.answer))
         _finish(
             ctx,
             status=RunStatus.COMPLETED,
@@ -271,6 +271,28 @@ def create_harness_runner(
         )
 
     return run
+
+
+_LEADING_REFS = re.compile(r"^\s*((?:\[evidence:[^\]]+\]\s*,?\s*)+)")
+
+
+def _tidy_answer(text: str) -> str:
+    """Move an evidence citation that opens a line to the end of that line.
+
+    Models sometimes emit ``[evidence:X], <fact>`` instead of ``<fact> [evidence:X]``.
+    The citation still resolves and the UI still renders a chip, but a leading
+    chip reads backwards; put it back where it belongs.
+    """
+    lines: list[str] = []
+    for line in text.splitlines():
+        match = _LEADING_REFS.match(line)
+        rest = line[match.end() :].strip().rstrip(",").strip() if match else ""
+        if match and rest:
+            refs = " ".join(re.findall(r"\[evidence:[^\]]+\]", match.group(1)))
+            lines.append(f"{rest} {refs}")
+        else:
+            lines.append(line)
+    return "\n".join(lines)
 
 
 def _started_at(ctx: RunContext) -> str:
