@@ -32,6 +32,7 @@ _COOKIE_NAME_ENV = "UI_API_SESSION_COOKIE"
 _COOKIE_SECURE_ENV = "UI_API_SESSION_COOKIE_SECURE"
 _DEMO_AUTH_ENV = "UI_API_DEMO_AUTH"
 _INTERNAL_TOKEN_ENV = "UI_API_INTERNAL_TOKEN"
+_AGENT_URL_ENV = "UI_API_AGENT_URL"
 
 _DEFAULT_DEMO_USERS: dict[str, dict[str, str]] = {
     "demo-analyst": {
@@ -89,6 +90,10 @@ class Settings(BaseModel):
     """Shared secret for session-less internal endpoints (the agent add-company
     call). ``None`` leaves those endpoints refusing every request."""
 
+    agent_url: str | None = None
+    """Base URL of the agent service, for the report-screen summary call.
+    ``None`` makes the summary endpoint report the feature as unavailable."""
+
     @classmethod
     def from_env(cls, environ: dict[str, str] | None = None) -> Self:
         """Build settings from the process environment.
@@ -121,6 +126,7 @@ class Settings(BaseModel):
                 "database_url": env.get(DATABASE_URL_ENV) or None,
                 "database_pool_size": int(env.get(_POOL_SIZE_ENV, 5)),
                 "internal_token": env.get(_INTERNAL_TOKEN_ENV) or None,
+                "agent_url": env.get(_AGENT_URL_ENV) or None,
             }
         )
 

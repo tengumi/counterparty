@@ -1,6 +1,6 @@
 import { Button } from '@alfalab/core-components/button';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { getOverview, getSection, reportKeys } from '../../api/reports';
+import { getOverview, getReportSummary, getSection, reportKeys } from '../../api/reports';
 import type {
   DiscussionContext,
   ReportWarning,
@@ -186,6 +186,63 @@ const groups: readonly { id: string; title: string; sections: readonly SectionNa
   { id: 'experience', title: 'Опыт, разрешения и проверки', sections: ['procurements', 'licenses', 'inspections'] },
   { id: 'other', title: 'Связи и другие сведения', sections: ['related_companies', 'branches', 'contacts', 'risk_signals', 'zsk'] },
 ];
+/**
+ * The task-aware orientation block at the top of the report (mockup pReport).
+ *
+ * It is the assistant's read of this report *for the user's task* — explicitly
+ * not a bank rating. It loads lazily and stays silent if the assistant can't
+ * build it: the raw sections below are the report either way.
+ */
+function ReportSummaryBlock({
+  projectId,
+  reportId,
+  onDiscuss,
+}: {
+  projectId: string;
+  reportId: string;
+  onDiscuss: (text: string) => void;
+}) {
+  const query = useQuery({
+    queryKey: [...reportKeys.project(projectId), reportId, 'summary'],
+    queryFn: () => getReportSummary(projectId, reportId),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  if (query.isPending) {
+    return (
+      <div className={reportStyles.summary}>
+        <p className={reportStyles.summaryTitle}>На что обратить внимание</p>
+        <p className={reportStyles.summaryLoading} role="status">
+          Помощник читает отчёт под вашу задачу…
+        </p>
+      </div>
+    );
+  }
+  if (query.isError || query.data.bullets.length === 0) return null;
+  const { bullets, caveat } = query.data;
+  return (
+    <div className={reportStyles.summary}>
+      <p className={reportStyles.summaryTitle}>На что обратить внимание</p>
+      <ul className={reportStyles.summaryList}>
+        {bullets.map((bullet, index) => (
+          <li className={reportStyles.summaryItem} key={index} data-tone={bullet.tone}>
+            <span aria-hidden="true" className={reportStyles.summaryDot} data-tone={bullet.tone} />
+            <span className={reportStyles.summaryText}>{bullet.text}</span>
+            <button
+              className={reportStyles.summaryDiscuss}
+              onClick={() => onDiscuss(`Про пункт из отчёта: «${bullet.text}» — что это значит для сделки?`)}
+              type="button"
+            >
+              Обсудить
+            </button>
+          </li>
+        ))}
+      </ul>
+      {caveat ? <p className={reportStyles.summaryCaveat}>{caveat}</p> : null}
+    </div>
+  );
+}
+
 export function LiveCompanyReport({
   projectId,
   reportId,
@@ -195,7 +252,7 @@ export function LiveCompanyReport({
   projectId: string;
   reportId: string;
   onEvidence: (ref: string) => void;
-  onDiscuss: (context: DiscussionContext) => void;
+  onDiscuss: (context: string | DiscussionContext) => void;
 }) {
   const query = useQuery({
     queryKey: reportKeys.overview(projectId, reportId),
@@ -211,6 +268,7 @@ export function LiveCompanyReport({
         <h2>{report.company.short_name}</h2>
         <span>ИНН {report.company.inn} · срез {sourceDate(report.report.source_report_at)}</span>
       </div>
+      <ReportSummaryBlock projectId={projectId} reportId={reportId} onDiscuss={onDiscuss} />
       <ReportOverview report={report} onEvidence={onEvidence} />
       <div className={reportStyles.sections}>
         {groups.map((group) => (

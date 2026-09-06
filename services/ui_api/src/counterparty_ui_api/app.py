@@ -34,6 +34,7 @@ from .routes import (
     projects_router,
     report_details_router,
     reports_router,
+    summary_router,
 )
 from .sessions import InMemorySessionStore, SessionStore
 from .workspace import ProjectDirectory
@@ -118,6 +119,7 @@ def create_app(
     application.include_router(decisions_router)
     application.include_router(conversation_router)
     application.include_router(internal_router)
+    application.include_router(summary_router)
     return application
 
 

@@ -188,6 +188,8 @@ services:
       # Shared secret for the session-less internal endpoint the agent calls to
       # pin a company by INN. Local default only; a deployment sets its own.
       UI_API_INTERNAL_TOKEN: ${UI_API_INTERNAL_TOKEN:-counterparty-local-demo-internal-token}
+      # Agent service base URL, for the report-screen "на что обратить внимание" block.
+      UI_API_AGENT_URL: http://agent:8000
     ports:
       - "${UI_API_PORT:-8000}:8000"
     healthcheck:

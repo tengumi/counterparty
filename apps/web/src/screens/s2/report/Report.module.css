@@ -69,3 +69,18 @@ button.factLabel { cursor: pointer; }
   .helpButton { width: 44px; height: 44px; }
   .textAction { min-height: 44px; }
 }
+
+/* pReport — "на что обратить внимание": the assistant's task-aware read,
+   above the raw sections. A read of the report, explicitly not a bank rating. */
+.summary { border: 1px solid #e3e4e9; border-radius: 16px; padding: 18px 20px; margin: 4px 0 20px; }
+.summaryTitle { margin: 0 0 12px; font-size: 13px; line-height: 18px; color: #80808c; }
+.summaryLoading { margin: 0; font-size: 13px; line-height: 18px; color: #9c9daa; }
+.summaryList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.summaryItem { display: grid; grid-template-columns: 8px 1fr auto; align-items: baseline; gap: 12px; }
+.summaryDot { width: 8px; height: 8px; border-radius: 50%; background: #a0a0aa; transform: translateY(6px); }
+.summaryDot[data-tone='risk'] { background: #d6242a; }
+.summaryDot[data-tone='ok'] { background: #218e4e; }
+.summaryText { min-width: 0; font-size: 14px; line-height: 21px; color: #29292c; overflow-wrap: anywhere; }
+.summaryDiscuss { flex: none; border: 0; background: none; padding: 0; font: inherit; font-size: 14px; line-height: 21px; color: #2a77ef; cursor: pointer; white-space: nowrap; }
+.summaryDiscuss:hover { color: #1c5fd0; }
+.summaryCaveat { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid #eceded; font-size: 12px; line-height: 16px; color: #9c9daa; }

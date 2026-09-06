@@ -10,6 +10,7 @@ from .internal import router as internal_router
 from .projects import router as projects_router
 from .report_details import router as report_details_router
 from .reports import router as reports_router
+from .summary import router as summary_router
 
 __all__ = [
     "auth_router",
@@ -22,4 +23,5 @@ __all__ = [
     "projects_router",
     "report_details_router",
     "reports_router",
+    "summary_router",
 ]

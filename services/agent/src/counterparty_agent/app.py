@@ -9,6 +9,7 @@ from .checkpointing import postgres_checkpointer
 from .composition import CheckpointerFactory, RunOwnerFactory, create_lifespan
 from .config import AgentSettings
 from .persistence import postgres_run_owner
+from .routes_internal import router as internal_router
 from .transport import create_transport_router
 
 
@@ -35,6 +36,7 @@ def create_app(
     )
     app = FastAPI(title="Counterparty Agent", version="0.1.0", lifespan=lifespan)
     app.include_router(create_transport_router())
+    app.include_router(internal_router)
 
     @app.get("/healthz", response_model=HealthResponse)
     async def health() -> Annotated[HealthResponse, "Liveness only"]:
