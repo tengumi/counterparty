@@ -11,13 +11,14 @@ parsing.
 """
 
 import asyncio
+import json
 import logging
 from collections.abc import Awaitable, Coroutine, Sequence
 from typing import Any, Literal
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from .config import AgentSettings
 from .harness.models import create_chat_model
@@ -86,6 +87,24 @@ class ReportSummary(BaseModel):
     )
 
 
+_SHAPE = (
+    'Верни ТОЛЬКО JSON без пояснений: {"bullets":[{"tone":"risk|ok|neutral","text":"..."}]}. '
+    "3–4 пункта."
+)
+
+
+def _parse(raw: str) -> ReportSummary:
+    """Pull the JSON object out of a plain model reply."""
+    text = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+    start = min((i for i in (text.find("{"), text.find("[")) if i != -1), default=-1)
+    if start == -1:
+        raise ValueError("no JSON in reply")
+    end = max(text.rfind("}"), text.rfind("]"))
+    payload = json.loads(text[start : end + 1])
+    bullets = payload["bullets"] if isinstance(payload, dict) else payload
+    return ReportSummary.model_validate({"bullets": bullets[:4]})
+
+
 def _tool(tools: Sequence[BaseTool], name: str) -> BaseTool | None:
     return next((tool for tool in tools if tool.name == name), None)
 
@@ -134,14 +153,16 @@ async def build_report_summary(settings: AgentSettings, *, report_id: str) -> Re
     if not context:
         raise ValueError("no report data to summarise")
     model = create_chat_model(settings, model_id=settings.summary_model_id)
-    question = f"Данные отчёта:\n{context}"
+    question = f"Данные отчёта:\n{context}\n\n{_SHAPE}"
+    # A plain call, parsed by hand: with_structured_output streams the JSON on
+    # this provider and the accumulator mangles Cyrillic ("ТЕТРА# ДОМ").
     try:
-        structured = model.with_structured_output(ReportSummary)
-        result = await structured.ainvoke(
+        reply = await model.ainvoke(
             [SystemMessage(content=_SYSTEM), HumanMessage(content=question)]
         )
     except Exception as error:
         raise ValueError(f"summary model call failed: {error}") from error
-    if not isinstance(result, ReportSummary):
-        result = ReportSummary.model_validate(result)
-    return result
+    try:
+        return _parse(str(reply.text))
+    except (json.JSONDecodeError, KeyError, ValidationError, ValueError) as error:
+        raise ValueError(f"summary reply not parseable: {error}") from error
