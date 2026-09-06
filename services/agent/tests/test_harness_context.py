@@ -6,7 +6,6 @@ from counterparty_agent.harness import (
     AgentContext,
     CompanyContext,
     build_context,
-    thread_workspace_root,
 )
 
 TENANT = UUID("22222222-2222-4222-8222-222222222222")
@@ -50,10 +49,3 @@ def test_a_thread_context_never_mentions_a_sibling_thread() -> None:
     assert "Delivery terms" in rendered
     assert "Warehouse letter" not in rendered
     assert str(THREAD_B) not in rendered
-
-
-def test_the_workspace_root_is_scoped_to_the_thread() -> None:
-    """The workspace root is scoped to the thread."""
-    rendered = context(THREAD_A, "Delivery terms").render()
-    assert thread_workspace_root(PROJECT, THREAD_A) in rendered
-    assert thread_workspace_root(PROJECT, THREAD_B) not in rendered

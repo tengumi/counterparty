@@ -36,7 +36,6 @@ from .evidence import (
     ValidationReport,
     repair_answer,
 )
-from .filesystem import scoped_permissions
 from .middleware import ActivityTraceMiddleware, EvidenceLedgerMiddleware, ToolTrace
 from .prompts import CITE_INSTRUCTION, REPAIR_INSTRUCTION
 
@@ -81,7 +80,6 @@ def create_harness(
         tools=list(tools),
         system_prompt=context.render(),
         middleware=middleware,
-        permissions=scoped_permissions(context.project.project_id, context.thread.thread_id),
         backend=StateBackend(),
         checkpointer=checkpointer,
     )

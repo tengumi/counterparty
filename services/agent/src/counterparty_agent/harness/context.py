@@ -23,7 +23,6 @@ from counterparty_storage import TenantScope, ThreadScope, unit_of_work
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from .client_profile import DEMO_CLIENT, ClientProfile
-from .filesystem import thread_workspace_root
 from .prompts import DOMAIN_NOTES, render_system_prompt
 
 
@@ -66,7 +65,6 @@ class AgentContext:
 
     project: ProjectContext
     thread: ThreadContext
-    workspace_root: str
     client: ClientProfile = field(default=DEMO_CLIENT)
     domain_notes: str = field(default=DOMAIN_NOTES)
     relevant_notes: str = ""
@@ -151,6 +149,5 @@ def build_context(
             companies=tuple(sorted(companies, key=lambda company: company.slot)),
         ),
         thread=ThreadContext(thread_id=thread_id, title=thread_title, status=thread_status),
-        workspace_root=thread_workspace_root(project_id, thread_id),
         client=client,
     )
