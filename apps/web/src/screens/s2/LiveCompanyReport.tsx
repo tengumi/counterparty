@@ -26,6 +26,19 @@ export function ReadError({ error, onRetry }: { error: unknown; onRetry: () => v
     </div>
   );
 }
+/**
+ * Internal snapshot bookkeeping the source attaches to a section — the moment
+ * the data was captured and a "CURRENT / ARCHIVE" freshness flag. Not a fact
+ * about the company, so it does not belong in the report.
+ */
+function isSnapshotMeta(fact: { key: string; value: unknown }): boolean {
+  const leaf = fact.key.split(/[./]/).at(-1) ?? '';
+  const value = String(fact.value ?? '').trim();
+  if (/^(CURRENT|ACTUAL|ARCHIVE|OUTDATED|HISTORICAL)$/i.test(value)) return true;
+  if (leaf === 'date' && /^\d{4}-\d\d-\d\dT/.test(value)) return true;
+  return false;
+}
+
 const warningMessages: Readonly<Record<string, string>> = {
   partial_data:
     'Некоторые поля не предоставлены или недоступны. Неизвестное значение не считается нулём.',
@@ -96,7 +109,7 @@ function SectionContent({
                   отсутствие событий.
                 </p>
               ) : null}
-              {page.facts.map((fact) => (
+              {page.facts.filter((fact) => !isSnapshotMeta(fact)).map((fact) => (
                 <ReportFactRow
                   key={fact.key}
                   row={factRow(fact)}
