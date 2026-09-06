@@ -12,8 +12,6 @@ on:
           - deploy
           - maintenance_on
           - maintenance_off
-  push:
-    branches: [main]
 
 concurrency:
   group: counterparty-demo
@@ -25,7 +23,7 @@ jobs:
     environment: demo
     steps:
       - uses: actions/checkout@v4
-        if: github.event_name == 'push' || inputs.action == 'deploy'
+        if: inputs.action == 'deploy'
 
       - name: Configure SSH
         env:
@@ -38,7 +36,7 @@ jobs:
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
 
       - name: Upload release
-        if: github.event_name == 'push' || inputs.action == 'deploy'
+        if: inputs.action == 'deploy'
         env:
           SSH_HOST: ${{ vars.DEMO_SSH_HOST }}
           SSH_USER: ${{ vars.DEMO_SSH_USER }}
@@ -48,7 +46,7 @@ jobs:
             ./ "$SSH_USER@$SSH_HOST:/opt/counterparty/"
 
       - name: Install environment and deploy
-        if: github.event_name == 'push' || inputs.action == 'deploy'
+        if: inputs.action == 'deploy'
         env:
           DEPLOY_ENV_B64: ${{ secrets.DEMO_ENV_B64 }}
           SSH_HOST: ${{ vars.DEMO_SSH_HOST }}
