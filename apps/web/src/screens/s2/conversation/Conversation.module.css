@@ -26,6 +26,16 @@
 .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: #2a77ef; }
 .dot[data-status='completed'] { background: #1f8c4d; }
 .dot[data-status='failed'] { background: #d91d0b; }
+.dot[data-status='running'] { animation: dotPulse 1.4s ease-in-out infinite; }
+
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(42, 119, 239, .35); }
+  50% { opacity: .45; box-shadow: 0 0 0 5px rgba(42, 119, 239, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot[data-status='running'] { animation: none; opacity: .7; }
+}
 .steps { list-style: none; margin: 0 0 0 18px; padding: 0 0 0 14px; border-left: 1px solid #e7e8eb; display: flex; flex-direction: column; gap: 8px; }
 .step { display: flex; gap: 12px; font-size: 13px; line-height: 18px; }
 .stepLabel { flex: 1; color: rgba(3, 3, 6, .88); }

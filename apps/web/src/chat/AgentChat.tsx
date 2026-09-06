@@ -106,8 +106,12 @@ function LiveActivity({ state }: { state: PublicAgentState }) {
 
   const running = state.activities.find((activity) => activity.status === 'running');
   const failed = state.activities.some((activity) => activity.status === 'failed');
-  const label = running?.label ?? (failed ? 'Часть сведений прочитать не удалось' : 'Проверка завершена');
-  const status = running ? 'running' : failed ? 'failed' : 'completed';
+  // A clean finish speaks through the answer: no «Проверка завершена» line.
+  // The trail stays only while the run works or when something went wrong.
+  if (running === undefined && !failed) return null;
+
+  const label = running?.label ?? 'Часть сведений прочитать не удалось';
+  const status = running ? 'running' : 'failed';
 
   return <ActivityBlock label={label} status={status} steps={state.activities.map(toStep)} />;
 }

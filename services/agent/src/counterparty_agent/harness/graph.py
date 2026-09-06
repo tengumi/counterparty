@@ -35,7 +35,7 @@ from .evidence import (
     validate_answer,
 )
 from .filesystem import scoped_permissions
-from .middleware import EvidenceLedgerMiddleware
+from .middleware import ActivityTraceMiddleware, EvidenceLedgerMiddleware, ToolTrace
 from .prompts import REPAIR_INSTRUCTION
 
 CompiledHarness = CompiledStateGraph[Any, Any, Any, Any]
@@ -66,13 +66,17 @@ def create_harness(
     context: AgentContext,
     ledger: RunEvidenceLedger,
     checkpointer: BaseCheckpointSaver[str] | None = None,
+    trace: ToolTrace | None = None,
 ) -> CompiledHarness:
     """Build the compiled Deep Agents graph for one thread."""
+    middleware: list[Any] = [EvidenceLedgerMiddleware(ledger)]
+    if trace is not None:
+        middleware.append(ActivityTraceMiddleware(trace))
     graph: CompiledHarness = create_deep_agent(
         model=model,
         tools=list(tools),
         system_prompt=context.render(),
-        middleware=[EvidenceLedgerMiddleware(ledger)],
+        middleware=middleware,
         permissions=scoped_permissions(context.project.project_id, context.thread.thread_id),
         backend=StateBackend(),
         checkpointer=checkpointer,

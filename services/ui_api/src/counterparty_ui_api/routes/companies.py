@@ -216,6 +216,36 @@ async def remove_company(
     )
 
 
+async def provision_one_by_inn(
+    uow: AsyncUnitOfWork, *, project_id: UUID, expected_context_version: int, inn: str
+) -> dict[str, str]:
+    """Pin one counterparty to a project by INN, bumping the deal context.
+
+    Used by the internal, session-less endpoint the agent calls. Same rules as
+    the batch endpoint for one row: a company we do not hold is ``not_found``,
+    a company with no snapshot is ``no_report``, and adding one that is already
+    in the composition is not an error. The name comes from the pinned report.
+    """
+    results = await uow.companies.search(inn=inn, limit=1)
+    hit = next((row for row in results if row.company.inn == inn), None)
+    if hit is None:
+        return {"outcome": "not_found", "name": "", "inn": inn}
+    name = (hit.profile.short_name if hit.profile is not None else None) or ""
+    snapshot = await uow.report_snapshots.latest_for_company(hit.company.id)
+    if snapshot is None:
+        return {"outcome": "no_report", "name": name, "inn": inn}
+    addition = await uow.project_companies.add(
+        uow.scope.project(project_id), company_id=hit.company.id, report_id=snapshot.id
+    )
+    if addition.created:
+        await uow.projects.bump_context_version(project_id, expected=expected_context_version)
+    return {
+        "outcome": "added" if addition.created else "already_present",
+        "name": name,
+        "inn": inn,
+    }
+
+
 async def _resolve(uow: AsyncUnitOfWork, item: AddCompanyItem) -> tuple[UUID | None, UUID | None]:
     """Resolve one requested item to a company and the snapshot to pin.
 

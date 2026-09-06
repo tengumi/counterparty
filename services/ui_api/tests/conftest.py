@@ -26,6 +26,7 @@ from counterparty_storage.reports.models import (
     ReportSnapshot,
 )
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.orm import Session
 
@@ -113,6 +114,7 @@ def settings(database_url: str) -> Settings:
         demo_users={"demo-analyst": ANALYST, "demo-partner": PARTNER, "demo-colleague": COLLEAGUE},
         session_cookie_secure=False,
         database_url=database_url,
+        internal_token=SecretStr("test-internal-token"),
     )
 
 

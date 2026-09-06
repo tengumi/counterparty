@@ -31,6 +31,8 @@ def _paths(ctx: RunContext) -> _Paths:
     msg = str(len(state.messages))
     act = str(len(state.activities))
     return _Paths(msg=msg, act=act, text=("messages", msg, "blocks", "0", "text"))
+
+
 _ANSWER_CHUNKS = (
     "Смотрю условия поставки. ",
     "Аванс 80% от 2,4 млн ₽ — это 1,92 млн ₽ до отгрузки. ",

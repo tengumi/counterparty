@@ -185,6 +185,9 @@ services:
       # Local HTTP only. The cookie stays HttpOnly and SameSite=Lax either way;
       # a deployment behind TLS leaves this unset.
       UI_API_SESSION_COOKIE_SECURE: "false"
+      # Shared secret for the session-less internal endpoint the agent calls to
+      # pin a company by INN. Local default only; a deployment sets its own.
+      UI_API_INTERNAL_TOKEN: ${UI_API_INTERNAL_TOKEN:-counterparty-local-demo-internal-token}
     ports:
       - "${UI_API_PORT:-8000}:8000"
     healthcheck:
@@ -203,6 +206,7 @@ services:
     environment:
       AGENT_POSTGRES_DSN: postgresql://${AGENT_USER:-counterparty_agent_dev}:${AGENT_PASSWORD:-counterparty_agent_dev}@postgres:5432/${POSTGRES_DB:-counterparty}
       AGENT_UI_API_URL: http://ui_api:8000
+      AGENT_UI_API_INTERNAL_TOKEN: ${UI_API_INTERNAL_TOKEN:-counterparty-local-demo-internal-token}
       AGENT_MCP_URL: http://mcp:8000/mcp
       AGENT_MCP_AUTH_TOKEN: ${AGENT_MCP_AUTH_TOKEN:-counterparty-local-demo-agent-token}
       AGENT_MODEL_PROVIDER: ${AGENT_MODEL_PROVIDER:-deterministic}

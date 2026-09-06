@@ -6,6 +6,7 @@ from .companies import router as project_companies_router
 from .conversation import router as conversation_router
 from .decisions import router as decisions_router
 from .health import router as health_router
+from .internal import router as internal_router
 from .projects import router as projects_router
 from .report_details import router as report_details_router
 from .reports import router as reports_router
@@ -16,6 +17,7 @@ __all__ = [
     "conversation_router",
     "decisions_router",
     "health_router",
+    "internal_router",
     "project_companies_router",
     "projects_router",
     "report_details_router",

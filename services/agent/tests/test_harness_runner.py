@@ -16,6 +16,7 @@ from counterparty_agent.config import AgentSettings
 from counterparty_agent.harness import runner as runner_module
 from counterparty_agent.harness.runner import ASSISTANT_MESSAGE_INDEX, create_harness_runner
 from counterparty_agent.transport import (
+    AppendItemOperation,
     AppendTextOperation,
     PublicMessage,
     Run,
@@ -112,6 +113,55 @@ async def test_the_activity_carries_the_refs_the_tools_returned() -> None:
     published = refs[-1]
     assert isinstance(published, list)
     assert PROCEEDS_REF in published
+
+
+async def test_each_tool_call_streams_its_own_activity_line() -> None:
+    """The trail is one running-then-completed activity per tool the model calls."""
+    run = make_run(f"What does the report say about {INN}?")
+    await create_harness_runner(SETTINGS)(RunContext(run))
+
+    appended = [
+        event.value
+        for event in run.events
+        if isinstance(event, AppendItemOperation) and event.path == ("activities",)
+    ]
+    from counterparty_agent.harness.prompts import TOOL_ACTIVITY
+
+    items = [item for item in appended if isinstance(item, dict)]
+    assert [item["label"] for item in items] == [
+        TOOL_ACTIVITY["get_company_overview"][1],
+        TOOL_ACTIVITY["get_report_section"][1],
+    ]
+    assert all(item["status"] == "running" for item in items)
+
+    settled = {
+        event.path[1]: event.value
+        for event in run.events
+        if isinstance(event, SetOperation)
+        and event.path[:1] == ("activities",)
+        and event.path[-1] == "status"
+    }
+    assert settled == {"0": "completed", "1": "completed"}
+
+
+async def test_a_turn_with_no_tool_calls_shows_no_activity_trail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A turn that never calls a tool leaves the activity list empty."""
+
+    @asynccontextmanager
+    async def no_tools(_settings: AgentSettings) -> AsyncIterator[Sequence[BaseTool]]:
+        yield []
+
+    monkeypatch.setattr(runner_module, "reports_toolset", no_tools)
+    run = make_run("Hi, what can you help me with?")
+    await create_harness_runner(SETTINGS)(RunContext(run))
+
+    assert not [
+        event
+        for event in run.events
+        if isinstance(event, AppendItemOperation) and event.path == ("activities",)
+    ]
 
 
 async def test_a_failing_turn_ends_with_a_safe_terminal_error(

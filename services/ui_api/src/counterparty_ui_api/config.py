@@ -11,7 +11,7 @@ import os
 from typing import Self
 
 from counterparty_contracts import TenantId, UserId
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 __all__ = ["DATABASE_URL_ENV", "DEMO_USERS_ENV", "DemoUser", "Settings"]
 
@@ -31,6 +31,7 @@ _POOL_SIZE_ENV = "UI_API_DATABASE_POOL_SIZE"
 _COOKIE_NAME_ENV = "UI_API_SESSION_COOKIE"
 _COOKIE_SECURE_ENV = "UI_API_SESSION_COOKIE_SECURE"
 _DEMO_AUTH_ENV = "UI_API_DEMO_AUTH"
+_INTERNAL_TOKEN_ENV = "UI_API_INTERNAL_TOKEN"
 
 _DEFAULT_DEMO_USERS: dict[str, dict[str, str]] = {
     "demo-analyst": {
@@ -84,6 +85,10 @@ class Settings(BaseModel):
 
     database_pool_size: int = Field(default=5, ge=1)
 
+    internal_token: SecretStr | None = None
+    """Shared secret for session-less internal endpoints (the agent add-company
+    call). ``None`` leaves those endpoints refusing every request."""
+
     @classmethod
     def from_env(cls, environ: dict[str, str] | None = None) -> Self:
         """Build settings from the process environment.
@@ -115,6 +120,7 @@ class Settings(BaseModel):
                 "session_cookie_secure": _flag(env, _COOKIE_SECURE_ENV, default=True),
                 "database_url": env.get(DATABASE_URL_ENV) or None,
                 "database_pool_size": int(env.get(_POOL_SIZE_ENV, 5)),
+                "internal_token": env.get(_INTERNAL_TOKEN_ENV) or None,
             }
         )
 

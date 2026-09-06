@@ -29,6 +29,7 @@ from .routes import (
     conversation_router,
     decisions_router,
     health_router,
+    internal_router,
     project_companies_router,
     projects_router,
     report_details_router,
@@ -116,6 +117,7 @@ def create_app(
     application.include_router(report_details_router)
     application.include_router(decisions_router)
     application.include_router(conversation_router)
+    application.include_router(internal_router)
     return application
 
 

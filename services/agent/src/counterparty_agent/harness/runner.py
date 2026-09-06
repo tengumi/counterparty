@@ -12,14 +12,17 @@ Agents graph built in :mod:`counterparty_agent.harness.graph`.
 
 import asyncio
 import logging
+import re
 from collections.abc import Awaitable, Callable
 from dataclasses import replace
 from datetime import UTC, datetime
+from itertools import count
 from uuid import UUID
 
 from counterparty_contracts import RunStatus
 from counterparty_storage import ThreadScope
 from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 
 from ..config import AgentSettings
@@ -30,14 +33,18 @@ from .graph import create_harness, run_turn
 from .knowledge import lookup, render_relevant
 from .models import create_chat_model
 from .prompts import (
-    ACTIVITY_CHECKING_CONTEXT,
-    ACTIVITY_READING_REPORT,
     ASK_TO_ADD_COMPANY,
+    DEFAULT_TOOL_ACTIVITY,
     RUN_FAILED_MESSAGE,
+    TOOL_ACTIVITY,
 )
+from .provisioning import build_add_company_tool
 from .tools import reports_toolset
 
 logger = logging.getLogger(__name__)
+
+_INN = re.compile(r"(?<![\dA-Fa-f-])(\d{10}|\d{12})(?![\dA-Fa-f-])")
+"""An INN in free text, never a digit run inside a UUID."""
 
 # The assistant message index of a run that starts from a fresh thread (one
 # user message, no prior turns). ``_assistant_paths`` generalises it.
@@ -56,6 +63,64 @@ def _assistant_paths(state: object) -> tuple[str, str, tuple[str, ...]]:
     msg_index = str(len(messages))
     act_index = str(len(activities))
     return msg_index, act_index, ("messages", msg_index, "blocks", "0", "text")
+
+
+class _ActivityStream:
+    """Publish one activity line per tool call the model makes.
+
+    Each ``begin``/``finish`` pair is a running-then-settled activity in the
+    projection. The stream owns only the ``activities`` list from ``base``
+    onward, so seeded history above it is never touched.
+    """
+
+    def __init__(self, ctx: RunContext, *, base: int) -> None:
+        self._ctx = ctx
+        self._base = base
+        self._next = count(base)
+        self._open: list[int] = []
+        self.count = 0
+
+    def begin(self, tool_name: str) -> int:
+        """Append a running activity for a starting tool call."""
+        kind, label = TOOL_ACTIVITY.get(tool_name, DEFAULT_TOOL_ACTIVITY)
+        index = next(self._next)
+        now = datetime.now(UTC).isoformat()
+        self._ctx.append_item(
+            ("activities",),
+            {
+                "id": f"activity-{index}",
+                "kind": kind,
+                "label": label,
+                "status": "running",
+                "evidence_refs": [],
+                "started_at": now,
+                "finished_at": None,
+            },
+        )
+        self._open.append(index)
+        self.count += 1
+        return index
+
+    def finish(self, handle: object, *, ok: bool) -> None:
+        """Settle the activity opened for a finished tool call."""
+        if not isinstance(handle, int):  # pragma: no cover - defensive
+            return
+        self._settle(handle, "completed" if ok else "failed")
+        if handle in self._open:
+            self._open.remove(handle)
+
+    def close(self, *, ok: bool, refs: tuple[str, ...]) -> None:
+        """Settle anything still running and attach the run's refs to the trail."""
+        for index in list(self._open):
+            self._settle(index, "completed" if ok else "failed")
+        self._open.clear()
+        if self.count and refs:
+            self._ctx.set(("activities", str(self._base), "evidence_refs"), list(refs))
+
+    def _settle(self, index: int, status: str) -> None:
+        self._ctx.set(("activities", str(index), "status"), status)
+        self._ctx.set(("activities", str(index), "finished_at"), datetime.now(UTC).isoformat())
+
 
 ContextLoader = Callable[[ThreadScope], Awaitable[AgentContext]]
 ConfigFactory = Callable[[ThreadScope], Awaitable[RunnableConfig]]
@@ -106,19 +171,10 @@ def create_harness_runner(
         state = ctx.run.initial_state
         msg_index, act_index, text_path = _assistant_paths(state)
         started = _started_at(ctx)
+        stream = _ActivityStream(ctx, base=int(act_index))
         ctx.set(("run", "status"), RunStatus.RUNNING.value)
-        ctx.append_item(
-            ("activities",),
-            {
-                "id": f"activity-{msg_index}",
-                "kind": "reading_report",
-                "label": ACTIVITY_READING_REPORT,
-                "status": "running",
-                "evidence_refs": [],
-                "started_at": started,
-                "finished_at": None,
-            },
-        )
+        # No activity is seeded: the trail is what the model's tool calls
+        # stream. A turn that answers from the dialogue alone shows none.
         ctx.append_item(
             ("messages",),
             {
@@ -137,8 +193,14 @@ def create_harness_runner(
             )
             context = await context_loader(scope)
             config = await config_factory(scope)
-            if ctx.scope is not None and not context.project.companies:
-                ctx.set(("activities", act_index, "label"), ACTIVITY_CHECKING_CONTEXT)
+            can_add = (
+                ctx.scope is not None
+                and settings.ui_api_url is not None
+                and settings.ui_api_internal_token is not None
+            )
+            no_company = ctx.scope is not None and not context.project.companies
+            if no_company and _INN.search(ctx.prompt) is None:
+                # Nothing to read and no INN to act on: ask for one, no model run.
                 ctx.append_text(text_path, ASK_TO_ADD_COMPANY)
                 _finish(
                     ctx,
@@ -146,7 +208,7 @@ def create_harness_runner(
                     message_status="complete",
                     refs=(),
                     msg_index=msg_index,
-                    act_index=act_index,
+                    stream=stream,
                 )
                 return
             context = replace(context, relevant_notes=render_relevant(lookup(ctx.prompt)))
@@ -154,13 +216,17 @@ def create_harness_runner(
             # the final answer is the graph-level equivalent of that budget.
             config["recursion_limit"] = settings.max_tool_calls * 2 + 1
             ledger = RunEvidenceLedger()
-            async with reports_toolset(settings) as tools:
+            async with reports_toolset(settings) as report_tools:
+                tools: list[BaseTool] = list(report_tools)
+                if can_add and ctx.scope is not None:
+                    tools.append(build_add_company_tool(settings, project_id=ctx.scope.project_id))
                 graph = create_harness(
                     model=model,
                     tools=tools,
                     context=context,
                     ledger=ledger,
                     checkpointer=checkpointer,
+                    trace=stream,
                 )
                 result = await asyncio.wait_for(
                     run_turn(graph, question=ctx.prompt, config=config, ledger=ledger),
@@ -175,7 +241,7 @@ def create_harness_runner(
                 message_status="error",
                 refs=(),
                 msg_index=msg_index,
-                act_index=act_index,
+                stream=stream,
             )
             ctx.fail(RUN_FAILED_MESSAGE)
             return
@@ -186,7 +252,7 @@ def create_harness_runner(
                 message_status="partial",
                 refs=(),
                 msg_index=msg_index,
-                act_index=act_index,
+                stream=stream,
             )
             return
         ctx.append_text(text_path, result.answer)
@@ -196,7 +262,7 @@ def create_harness_runner(
             message_status="complete",
             refs=result.observed_refs,
             msg_index=msg_index,
-            act_index=act_index,
+            stream=stream,
         )
 
     return run
@@ -216,15 +282,10 @@ def _finish(
     message_status: str,
     refs: tuple[str, ...],
     msg_index: str,
-    act_index: str,
+    stream: _ActivityStream,
 ) -> None:
     finished = datetime.now(UTC).isoformat()
-    ctx.set(
-        ("activities", act_index, "status"),
-        "completed" if refs or status is RunStatus.COMPLETED else "failed",
-    )
-    ctx.set(("activities", act_index, "finished_at"), finished)
-    ctx.set(("activities", act_index, "evidence_refs"), list(refs))
+    stream.close(ok=status is RunStatus.COMPLETED, refs=refs)
     ctx.set(("messages", msg_index, "status"), message_status)
     ctx.set(("run", "status"), status.value)
     ctx.set(("run", "finished_at"), finished)

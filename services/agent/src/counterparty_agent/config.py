@@ -34,6 +34,12 @@ class AgentSettings(BaseSettings):
     mcp_auth_token: SecretStr | None = None
     mcp_timeout_seconds: float = Field(default=20.0, gt=0)
 
+    ui_api_url: str | None = None
+    """Base URL of the UI backend, for the internal add-company endpoint."""
+
+    ui_api_internal_token: SecretStr | None = None
+    """Shared secret for the UI backend's internal, session-less endpoints."""
+
     max_tool_calls: int = Field(default=12, ge=1)
     """Engineering default from Specs 04 §3; not a measured product norm."""
 
