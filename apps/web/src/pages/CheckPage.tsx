@@ -7,7 +7,7 @@
  * per-viewer convenience only.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Button } from '@alfalab/core-components/button';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -75,15 +75,9 @@ function ProjectScreen({ apiProject, project, threadId, fixtureMode }: { apiProj
   const activeChatId = threadId ?? project.lastThreadId;
   const activeChat = chats.find((chat) => chat.id === activeChatId);
 
-  // When the agent pins the first company (add_company_to_check), open its
-  // report card right away instead of leaving the strip half-filled.
-  const hadCompanies = useRef(project.companies.length > 0);
-  useEffect(() => {
-    if (!fixtureMode && !hadCompanies.current && project.companies.length > 0) {
-      setReport({ mode: 'company', companyId: project.companies[0]!.id });
-    }
-    hadCompanies.current = project.companies.length > 0;
-  }, [project.companies, fixtureMode]);
+  // The company strip fills in on its own once the agent pins a company
+  // (CheckPage invalidates the project query when a run settles). The full
+  // report stays a click away — it must not slide over the chat mid-dialogue.
 
   const updateProject = (next: ApiProject) => {
     queryClient.setQueryData(workspaceKeys.project(project.id), next);
