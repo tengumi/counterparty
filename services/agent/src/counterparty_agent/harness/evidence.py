@@ -32,10 +32,7 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 from .prompts import (
-    UNKNOWN_HEADING,
     UNKNOWN_HEADINGS,
-    UNVERIFIED_DROPPED,
-    UNVERIFIED_FALLBACK,
 )
 
 CITATION = re.compile(r"\[evidence:([^\]\s]+)\]")
@@ -239,37 +236,34 @@ def validate_answer(answer: str, resolver: EvidenceResolver) -> ValidationReport
 
 
 def repair_answer(answer: str, resolver: EvidenceResolver) -> "RepairedAnswer":
-    """Drop every ungrounded claim and say plainly that something was dropped.
+    """Make the answer safe to publish without gutting it.
 
-    This is the last, deterministic pass. It runs after the model has had its
-    chance to add references, so its output is always publishable: no
-    ungrounded sentence survives it, and no unverified number is repeated back
-    to the user under a disclaimer. The dropped claims are returned separately
-    for the run log, not for the answer.
+    The only hard rule kept for the demo: never show a ``[evidence:X]`` chip
+    that would 404 — a line that cites a reference which does not resolve is
+    dropped. Everything else (uncited prose, a follow-up that leaned on earlier
+    context) is shown as the model wrote it; the dropped lines still go to the
+    run log. If nothing survives, the original answer is returned unchanged
+    rather than replaced with a wall of "Неизвестно".
     """
     report = validate_answer(answer, resolver)
     if report.ok:
         return RepairedAnswer(text=answer, dropped=())
-    rejected = tuple(sorted({violation.claim for violation in report.violations}))
-    kept_claims = [claim for claim in report.claims if claim.text not in rejected]
-    kept = [claim.text for claim in kept_claims]
+
+    # Only "cited a bad ref" is removed; "no ref at all" is left alone.
+    rejected = tuple(
+        sorted(
+            {
+                violation.claim
+                for violation in report.violations
+                if violation.reason == "unresolvable_evidence_ref"
+            }
+        )
+    )
+    if not rejected:
+        return RepairedAnswer(text=answer, dropped=())
+
+    kept = [claim.text for claim in report.claims if claim.text not in rejected]
     while kept and _is_heading(kept[-1]):
         kept.pop()
-    grounded_left = sum(1 for claim in kept_claims if claim.is_factual and claim.text in kept)
-    factual_total = sum(1 for claim in report.claims if claim.is_factual)
-    # A substantial answer survives on its own: drop the ungrounded lines
-    # quietly rather than ending on an alarming "часть исключена" note.
-    if grounded_left >= 3:
-        return RepairedAnswer(text="\n".join(kept).strip(), dropped=rejected)
-    # Nothing was grounded but the model did answer (a weak model that cites
-    # from memory, or a follow-up that reused earlier context). Show its answer
-    # rather than replacing it with a wall of "Неизвестно"; the run log keeps
-    # the dropped claims.
-    if grounded_left == 0 and factual_total > 0:
-        return RepairedAnswer(text=answer.strip(), dropped=rejected)
-    notes = [UNVERIFIED_DROPPED]
-    if not any(not _is_heading(text) for text in kept):
-        kept = []
-        notes.insert(0, UNVERIFIED_FALLBACK)
-    lines = [*kept, "", UNKNOWN_HEADING, *(f"- {note}" for note in notes)]
-    return RepairedAnswer(text="\n".join(lines).strip(), dropped=rejected)
+    text = "\n".join(kept).strip()
+    return RepairedAnswer(text=text or answer.strip(), dropped=rejected)

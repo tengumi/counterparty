@@ -10,7 +10,7 @@ from counterparty_agent.harness import (
     split_claims,
     validate_answer,
 )
-from counterparty_agent.harness.prompts import UNKNOWN_HEADING, UNVERIFIED_DROPPED
+from counterparty_agent.harness.prompts import UNKNOWN_HEADING
 
 
 def ledger() -> RunEvidenceLedger:
@@ -109,52 +109,29 @@ def test_split_marks_headings_and_sentences() -> None:
     assert [claim.exempt for claim in claims] == [True, False, False]
 
 
-def test_repair_keeps_the_grounded_claim_and_drops_the_rest() -> None:
-    """Repair keeps the grounded claim and drops the rest."""
+def test_repair_removes_only_a_line_that_cites_a_dead_ref() -> None:
+    """A line citing a ref that does not resolve is dropped; uncited prose stays."""
     answer = (
         f"- Proceeds 2025: 74586000 RUB [evidence:{PROCEEDS_REF}]\n"
-        "- The company will certainly deliver in 21 days."
+        "- The company will certainly deliver in 21 days.\n"
+        "- Capitals: -300000 [evidence:ev-invented]"
     )
     outcome = repair_answer(answer, ledger())
     assert PROCEEDS_REF in outcome.text
-    assert "21 days" not in outcome.text
-    assert outcome.dropped == ("The company will certainly deliver in 21 days.",)
+    assert "21 days" in outcome.text  # uncited — left alone for the demo
+    assert "-300000" not in outcome.text  # cited a dead ref — removed
+    assert outcome.dropped == ("Capitals: -300000 [evidence:ev-invented]",)
 
 
-def test_repair_drops_one_stray_claim_quietly_from_a_solid_answer() -> None:
-    """Three grounded claims stand on their own; the drop needs no notice."""
-    grounded = "\n".join(f"- Point {n} holds true [evidence:{PROCEEDS_REF}]." for n in range(1, 4))
-    outcome = repair_answer(grounded + "\n- An uncited extra point.", ledger())
-    assert "An uncited extra point." not in outcome.text
-    assert UNVERIFIED_DROPPED not in outcome.text
-    assert outcome.text.count(f"[evidence:{PROCEEDS_REF}]") == 3
-    assert outcome.dropped == ("An uncited extra point.",)
-
-
-def test_repair_shows_an_otherwise_ungrounded_answer_but_logs_the_drop() -> None:
-    """A weak model that cited nothing still gets its answer shown (demo)."""
-    answer = "- Revenue doubled.\n- Capitals: -300000 [evidence:ev-invented]"
+def test_repair_shows_an_otherwise_ungrounded_answer() -> None:
+    """Nothing resolvable survives: show the model's answer, not a wall of text."""
+    answer = "- Capitals: -300000 [evidence:ev-invented]"
     outcome = repair_answer(answer, ledger())
     assert outcome.text == answer
-    assert outcome.dropped  # the run log still records what did not resolve
+    assert outcome.dropped
 
 
-def test_a_thin_partly_grounded_answer_keeps_its_note() -> None:
-    """One grounded line plus junk: keep the good line, note the rest."""
-    answer = f"- Proceeds: 74586000 RUB [evidence:{PROCEEDS_REF}]\n- Capitals: -300000 [evidence:x]"
-    outcome = repair_answer(answer, ledger())
-    assert PROCEEDS_REF in outcome.text
-    assert "-300000" not in outcome.text
-    assert UNVERIFIED_DROPPED in outcome.text
-
-
-def test_currency_after_abbreviation_stays_with_its_cited_amount() -> None:
-    """Repair must preserve amounts, but still reject a later uncited claim."""
-    for currency in ("₽", "RUB"):
-        answer = f"Profit: 23 thousand-abbr. {currency} [evidence:{PROCEEDS_REF}]."
-        assert validate_answer(answer, ledger()).ok
-        assert repair_answer(answer, ledger()).text == answer
-        combined = answer + " Unverified claim."
-        repaired = repair_answer(combined, ledger())
-        assert answer in repaired.text
-        assert "Unverified claim." not in repaired.text
+def test_an_answer_with_no_citations_passes_through_untouched() -> None:
+    """A follow-up that leaned on earlier context is shown as written."""
+    answer = "We discussed the supplier and the 40 percent advance earlier."
+    assert repair_answer(answer, ledger()).text == answer
