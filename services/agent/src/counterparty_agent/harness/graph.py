@@ -14,6 +14,7 @@ supposed to keep. Conversation state is not rebuilt with it: that lives in the
 checkpoint keyed by the thread.
 """
 
+import logging
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -38,6 +39,8 @@ from .evidence import (
 from .filesystem import scoped_permissions
 from .middleware import ActivityTraceMiddleware, EvidenceLedgerMiddleware, ToolTrace
 from .prompts import CITE_INSTRUCTION, REPAIR_INSTRUCTION
+
+logger = logging.getLogger(__name__)
 
 CompiledHarness = CompiledStateGraph[Any, Any, Any, Any]
 """The compiled LangGraph the harness runs. Its generics are library detail."""
@@ -170,10 +173,13 @@ async def run_turn(
     cited = bool(CITATION.search(answer))
     attempted = bool(refs) and not cited
     if attempted:
+        logger.info("run_turn: answer had no citation, %d refs available — retrying", len(refs))
         so_far = list(state["messages"])
         so_far.append(HumanMessage(content=CITE_INSTRUCTION.format(refs="\n".join(refs))))
         state = await graph.ainvoke({"messages": so_far}, config)
         answer = final_text(state["messages"])
+        if not CITATION.search(answer):
+            logger.warning("run_turn: retry still produced no citation")
     outcome = repair_answer(answer, ledger)
     return TurnResult(
         answer=outcome.text,

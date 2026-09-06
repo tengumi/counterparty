@@ -78,7 +78,7 @@ def _is_explain(prompt: str) -> bool:
     return _INN.search(prompt) is None and _EXPLAIN.search(prompt) is not None
 
 
-_HISTORY_MESSAGES = 16
+_HISTORY_MESSAGES = 10
 """How many earlier messages of the thread to replay to the model.
 
 The checkpointer keeps state *inside* one turn's tool loop reliably; its
@@ -306,6 +306,16 @@ def create_harness_runner(
             config["recursion_limit"] = settings.max_tool_calls * 2 + 1
 
             question = ctx.prompt
+            if not explains:
+                # Freshest position in the context: the model mirrors its own
+                # earlier uncited answers otherwise.
+                question = (
+                    f"{ctx.prompt}\n\n"
+                    "(Открывай нужные разделы отчёта инструментами и каждый "
+                    "конкретный факт или число о компании в ответе снабжай "
+                    "ссылкой [evidence:<id>] из результата инструмента, в конце "
+                    "предложения.)"
+                )
             if explains:
                 # Put the guide in front of the model and show the step, so the
                 # answer visibly comes from the справочник, not the model's memory.
