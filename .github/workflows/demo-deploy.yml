@@ -43,6 +43,7 @@ jobs:
         run: |
           rsync -az --delete \
             --exclude .git/ --exclude .env --exclude letsencrypt/ \
+            --exclude __pycache__/ --exclude '*.pyc' \
             ./ "$SSH_USER@$SSH_HOST:/opt/counterparty/"
 
       - name: Install environment and deploy
