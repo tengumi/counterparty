@@ -21,11 +21,13 @@ from uuid import UUID
 
 from counterparty_contracts import RunStatus
 from counterparty_storage import ThreadScope
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, tool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 
 from ..config import AgentSettings
+from ..transport.public_state import PublicMessage
 from ..transport.runs import RunContext
 from .client_profile import load_client_profile
 from .context import AgentContext, build_context
@@ -63,6 +65,34 @@ pre-injected; the model can still call ``explain_indicator`` itself."""
 
 def _is_explain(prompt: str) -> bool:
     return _INN.search(prompt) is None and _EXPLAIN.search(prompt) is not None
+
+
+_HISTORY_MESSAGES = 16
+"""How many earlier messages of the thread to replay to the model.
+
+The checkpointer keeps state *inside* one turn's tool loop reliably; its
+cross-turn message reload is not something we depend on. The durable record is
+the stored public projection (AG-07), so the runner passes the thread's earlier
+messages to the model itself. That is what lets the agent hold a conversation --
+remember the deal terms, answer "что мы обсуждали" -- rather than meeting every
+message cold.
+"""
+
+
+def _history_messages(prior: list[PublicMessage]) -> list[BaseMessage]:
+    """Turn the projection's earlier messages into model input, newest window."""
+    out: list[BaseMessage] = []
+    for message in prior[-_HISTORY_MESSAGES:]:
+        text = "\n".join(
+            block.text for block in message.blocks if getattr(block, "text", "")
+        ).strip()
+        if not text:
+            continue
+        if message.role == "assistant":
+            out.append(AIMessage(content=text, id=message.id))
+        else:
+            out.append(HumanMessage(content=text, id=message.id))
+    return out
 
 
 @tool("explain_indicator", description=EXPLAIN_TOOL_DESCRIPTION)
@@ -198,6 +228,7 @@ def create_harness_runner(
 
     async def run(ctx: RunContext) -> None:
         state = ctx.run.initial_state
+        history = _history_messages(list(state.messages)[:-1])
         msg_index, act_index, text_path = _assistant_paths(state)
         started = _started_at(ctx)
         stream = _ActivityStream(ctx, base=int(act_index), run_id=str(ctx.run.id))
@@ -284,6 +315,7 @@ def create_harness_runner(
                         question=question,
                         config=config,
                         ledger=ledger,
+                        history=history,
                         enforce_grounding=not explains,
                     ),
                     timeout=settings.run_timeout_seconds,

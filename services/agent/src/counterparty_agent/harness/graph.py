@@ -104,6 +104,7 @@ async def run_turn(
     question: str,
     config: RunnableConfig,
     ledger: RunEvidenceLedger,
+    history: Sequence[BaseMessage] = (),
     enforce_grounding: bool = True,
 ) -> TurnResult:
     """Run one turn and let no ungrounded claim out of it.
@@ -113,11 +114,18 @@ async def run_turn(
     A repair turn is an ordinary turn of the same graph and thread, not a
     private loop: it is checkpointed like any other message.
 
+    ``history`` is the thread's earlier messages, passed in explicitly rather
+    than left to the checkpointer to replay: the caller owns the durable
+    conversation record and this keeps multi-turn context working even if a
+    checkpoint write is lost. ``add_messages`` merges by id, so re-sending a
+    message the checkpoint already holds is harmless.
+
     ``enforce_grounding=False`` is for turns that answer with a *definition*
     (what a report field means) rather than a fact about a company: there is
     nothing to cite and the grounding pass would wrongly strip the answer.
     """
-    state = await graph.ainvoke({"messages": [HumanMessage(content=question)]}, config)
+    turn = [*history, HumanMessage(content=question)]
+    state = await graph.ainvoke({"messages": turn}, config)
     answer = final_text(state["messages"])
     if not enforce_grounding:
         return TurnResult(
@@ -130,9 +138,9 @@ async def run_turn(
     repaired = False
     if not report.ok:
         repaired = True
-        state = await graph.ainvoke(
-            {"messages": [HumanMessage(content=_repair_prompt(report, ledger))]}, config
-        )
+        so_far = list(state["messages"])
+        so_far.append(HumanMessage(content=_repair_prompt(report, ledger)))
+        state = await graph.ainvoke({"messages": so_far}, config)
         answer = final_text(state["messages"])
     outcome = repair_answer(answer, ledger)
     return TurnResult(
