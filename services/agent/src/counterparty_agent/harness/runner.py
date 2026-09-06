@@ -27,6 +27,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 
 from ..config import AgentSettings
 from ..transport.runs import RunContext
+from .client_profile import load_client_profile
 from .context import AgentContext, build_context
 from .evidence import RunEvidenceLedger
 from .graph import create_harness, run_turn
@@ -211,7 +212,11 @@ def create_harness_runner(
                     stream=stream,
                 )
                 return
-            context = replace(context, relevant_notes=render_relevant(lookup(ctx.prompt)))
+            context = replace(
+                context,
+                client=load_client_profile(settings.client_profile_json),
+                relevant_notes=render_relevant(lookup(ctx.prompt)),
+            )
             # Specs 04 §3 caps tool calls per run; one model step per call plus
             # the final answer is the graph-level equivalent of that budget.
             config["recursion_limit"] = settings.max_tool_calls * 2 + 1

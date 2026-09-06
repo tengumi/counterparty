@@ -27,7 +27,7 @@ from typing import Any, Literal
 
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
+from langchain_core.messages import AIMessage, BaseMessage, SystemMessage, ToolMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.tools import BaseTool
 from pydantic import Field
@@ -160,7 +160,11 @@ def _payload(message: ToolMessage) -> Any:
 
 
 def _find_inn(messages: Sequence[BaseMessage]) -> str | None:
+    # Only the user names the counterparty. The system prompt now carries the
+    # signed-in client's own INN, which is not what is being checked.
     for message in reversed(messages):
+        if isinstance(message, SystemMessage):
+            continue
         text = message.text if isinstance(message.text, str) else str(message.content)
         match = _INN.search(text)
         if match is not None:

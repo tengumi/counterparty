@@ -251,9 +251,16 @@ def repair_answer(answer: str, resolver: EvidenceResolver) -> "RepairedAnswer":
     if report.ok:
         return RepairedAnswer(text=answer, dropped=())
     rejected = tuple(sorted({violation.claim for violation in report.violations}))
-    kept = [claim.text for claim in report.claims if claim.text not in rejected]
+    kept_claims = [claim for claim in report.claims if claim.text not in rejected]
+    kept = [claim.text for claim in kept_claims]
     while kept and _is_heading(kept[-1]):
         kept.pop()
+    grounded_left = sum(1 for claim in kept_claims if claim.is_factual and claim.text in kept)
+    # A substantial answer survives on its own: drop the ungrounded lines
+    # quietly rather than ending on an alarming "часть исключена" note. The
+    # notice is for the case where the answer is left thin.
+    if grounded_left >= 3:
+        return RepairedAnswer(text="\n".join(kept).strip(), dropped=rejected)
     notes = [UNVERIFIED_DROPPED]
     if not any(not _is_heading(text) for text in kept):
         kept = []

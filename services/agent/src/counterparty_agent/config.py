@@ -40,6 +40,10 @@ class AgentSettings(BaseSettings):
     ui_api_internal_token: SecretStr | None = None
     """Shared secret for the UI backend's internal, session-less endpoints."""
 
+    client_profile_json: str | None = None
+    """JSON override for the signed-in client's base profile; the demo client
+    (``harness.client_profile.DEMO_CLIENT``) is used when unset or malformed."""
+
     max_tool_calls: int = Field(default=12, ge=1)
     """Engineering default from Specs 04 §3; not a measured product norm."""
 

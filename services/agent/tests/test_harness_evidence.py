@@ -10,7 +10,11 @@ from counterparty_agent.harness import (
     split_claims,
     validate_answer,
 )
-from counterparty_agent.harness.prompts import UNKNOWN_HEADING, UNVERIFIED_FALLBACK
+from counterparty_agent.harness.prompts import (
+    UNKNOWN_HEADING,
+    UNVERIFIED_DROPPED,
+    UNVERIFIED_FALLBACK,
+)
 
 
 def ledger() -> RunEvidenceLedger:
@@ -119,6 +123,16 @@ def test_repair_keeps_the_grounded_claim_and_drops_the_rest() -> None:
     assert PROCEEDS_REF in outcome.text
     assert "21 days" not in outcome.text
     assert outcome.dropped == ("The company will certainly deliver in 21 days.",)
+
+
+def test_repair_drops_one_stray_claim_quietly_from_a_solid_answer() -> None:
+    """Three grounded claims stand on their own; the drop needs no notice."""
+    grounded = "\n".join(f"- Point {n} holds true [evidence:{PROCEEDS_REF}]." for n in range(1, 4))
+    outcome = repair_answer(grounded + "\n- An uncited extra point.", ledger())
+    assert "An uncited extra point." not in outcome.text
+    assert UNVERIFIED_DROPPED not in outcome.text
+    assert outcome.text.count(f"[evidence:{PROCEEDS_REF}]") == 3
+    assert outcome.dropped == ("An uncited extra point.",)
 
 
 def test_repair_never_republishes_an_unverified_number() -> None:
