@@ -84,11 +84,13 @@ export function displayCell(key: string, cell: Cell): string {
         >
       )[text] || text
     );
-  if (key.startsWith("financial_") && /^-?\d+(?:\.\d+)?$/.test(text)) {
-    const [whole, fraction] = text.split(".");
+  const financial = text.match(/^(-?\d+(?:\.\d+)?)( ₽)?$/);
+  if (key.startsWith("financial_") && financial) {
+    const [whole, fraction] = financial[1].split(".");
     return (
       whole.replace(/\B(?=(\d{3})+(?!\d))/g, "\u202f") +
-      (fraction ? `,${fraction}` : "")
+      (fraction ? `,${fraction}` : "") +
+      (financial[2] ?? "")
     );
   }
   return text.replaceAll("с приоритетом attention", "требующих внимания");

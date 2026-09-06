@@ -14,7 +14,12 @@ from test_review_agent import ReviewModel
 from test_review_agent import source as review_source
 
 from counterparty_agent.ai.deal import DealContext, DealPatch
-from counterparty_agent.ai.reasoning import ReviewBlock, ReviewDecision, ReviewDraft
+from counterparty_agent.ai.reasoning import (
+    GroundingVerdict,
+    ReviewBlock,
+    ReviewDecision,
+    ReviewDraft,
+)
 from counterparty_agent.ai.router import IntentPlan, RouterResult
 from counterparty_agent.config import Settings
 from counterparty_agent.data.repository import JsonCounterpartySource
@@ -84,8 +89,10 @@ async def test_identification_opens_purpose_question_once_and_restore_does_not_r
     assert not harness.model.calls and not harness.route_inputs
 
 
+@pytest.mark.parametrize("review_topics", [(), ("company", "finance", "enforcement")])
 async def test_goal_and_payment_change_reach_analysis_without_stale_terms_or_new_search(
     harness: SessionHarness,
+    review_topics,
 ) -> None:
     snapshot = harness.source.snapshots[0]
     await harness.run(snapshot.identity.inn)
@@ -93,6 +100,7 @@ async def test_goal_and_payment_change_reach_analysis_without_stale_terms_or_new
         action="ask",
         answer_mode="analysis",
         deal_patch=DealPatch(goal="выбираю поставщика", role="поставщика", advance="аванс 80%"),
+        review_topics=review_topics,
     )
     first = await harness.run("Я выбираю поставщика, аванс 80%")
     assert first.status == "answered" and first.snapshot is snapshot
@@ -115,6 +123,24 @@ async def test_goal_and_payment_change_reach_analysis_without_stale_terms_or_new
     state = json.dumps(await harness.state(), ensure_ascii=False)
     assert "deal" not in state and "аванс 80%" not in state and "оплата после поставки" not in state
     assert "выбираю поставщика" not in state
+    assert "review_topics" not in state
+
+
+async def test_explicit_advance_is_enough_to_start_without_repeating_purpose(harness):
+    snapshot = harness.source.snapshots[0]
+    harness.plan = IntentPlan(
+        action="ask",
+        targets=(snapshot.identity.inn,),
+        answer_mode="analysis",
+        deal_patch=DealPatch(advance="существенный аванс"),
+    )
+    result = await harness.run(
+        f"Хотим перечислить существенный аванс, ИНН {snapshot.identity.inn}. "
+        "На что обратить внимание?"
+    )
+    assert result.status == "answered"
+    assert result.review is not None and result.review.advance == "существенный аванс"
+    assert "goal" not in result.review.asked_fields
 
 
 async def test_first_free_request_with_purpose_does_not_ask_for_it_again(
@@ -132,6 +158,56 @@ async def test_first_free_request_with_purpose_does_not_ask_for_it_again(
     assert result.review is not None and not result.review.question
     assert result.review.goal == "выбираю поставщика"
     assert not result.review.asked_fields
+
+
+@pytest.mark.parametrize("identifier_kind", ["inn", "ogrn"])
+async def test_first_request_combines_name_identifier_and_advance(
+    harness: SessionHarness, identifier_kind: str
+) -> None:
+    snapshot = harness.source.snapshots[0]
+    identifier = getattr(snapshot.identity, identifier_kind)
+    question = (
+        f"Я рассматриваю {snapshot.identity.short_name} как подрядчика и планирую аванс. "
+        f"Проверь компанию по {identifier_kind.upper()} {identifier}. На что обратить внимание?"
+    )
+    harness.plan = IntentPlan(
+        action="lookup",
+        targets=(identifier,),
+        answer_mode="analysis",
+        deal_patch=DealPatch(role="подрядчика", advance="аванс"),
+    )
+    result = await harness.run(question)
+    assert result.status == "answered" and result.snapshot is snapshot
+    assert result.review is not None
+    assert result.review.role == "подрядчика" and result.review.advance == "аванс"
+    assert not result.review.question and not result.review.asked_fields
+    assert result.answer_claims and harness.model.inputs(ReviewDraft)
+    restored = await harness.run(restore=True)
+    assert restored.snapshot is snapshot and restored.review is not None
+    assert restored.review.advance == "аванс" and restored.review.role == "подрядчика"
+
+
+async def test_conflicting_name_and_identifier_preserve_selection_and_terms(
+    harness: SessionHarness,
+) -> None:
+    previous, target = harness.source.snapshots[:2]
+    await harness.run(previous.identity.inn)
+    before = harness.deals["one"].model_dump()
+    harness.plan = IntentPlan(
+        action="ask",
+        targets=(target.identity.inn,),
+        answer_mode="analysis",
+        deal_patch=DealPatch(advance="аванс"),
+    )
+    result = await harness.run(
+        f"Проверь ООО «Другое-название-для-проверки» по ИНН {target.identity.inn}. Планирую аванс."
+    )
+    assert result.status == "needs_clarification"
+    assert "Название в запросе не совпадает" in result.answer
+    assert target.identity.short_name in result.answer
+    assert result.snapshot is previous and not result.answer_claims
+    assert not harness.model.calls
+    assert harness.deals["one"].model_dump() == before
 
 
 async def test_focused_analysis_uses_one_company_and_keeps_group_deal_memory(
@@ -154,6 +230,20 @@ async def test_focused_analysis_uses_one_company_and_keeps_group_deal_memory(
     assert focused.snapshot is second and focused.snapshots == (first, second)
     assert focused.review.snapshot_ids == group_ids
     assert focused.review.advance == "аванс 80%"
+    for schema in (ReviewDecision, ReviewDraft, GroundingVerdict):
+        scope = harness.model.inputs(schema)[-1]["review_scope"]
+        assert scope == {
+            "mode": "focused",
+            "group_size": 2,
+            "companies": [
+                {
+                    "name": second.identity.short_name,
+                    "inn": second.identity.inn,
+                    "original_position": 2,
+                    "report_available": True,
+                }
+            ],
+        }
     catalog_text = json.dumps(
         harness.model.inputs(ReviewDraft)[-1]["approved_facts"], ensure_ascii=False
     )
@@ -164,6 +254,9 @@ async def test_focused_analysis_uses_one_company_and_keeps_group_deal_memory(
     restored = await harness.run("Каков итог по всей группе?")
     assert restored.status == "answered" and restored.focus_snapshot_id is None
     assert restored.review.snapshot_ids == group_ids and restored.review.advance == "аванс 80%"
+    scope = harness.model.inputs(ReviewDraft)[-1]["review_scope"]
+    assert scope["mode"] == "group"
+    assert [company["original_position"] for company in scope["companies"]] == [1, 2]
     group_text = json.dumps(
         harness.model.inputs(ReviewDraft)[-1]["approved_facts"], ensure_ascii=False
     )
@@ -325,7 +418,9 @@ async def test_group_analysis_maps_financial_memory_without_enabling_another_mat
     analyzed = await harness.run("Я выбираю поставщика, сравни выручку по группе")
     assert analyzed.status == "answered"
     state = await harness.state()
-    assert len(state["last_comparison_fact_ids"]) == 1
+    # Для участника без выбранного финансового значения сохраняется ещё один
+    # grounded-якорь покрытия, но новый финансовый год не открывается.
+    assert 1 <= len(state["last_comparison_fact_ids"]) <= 2
     calls = len(harness.model.calls)
     harness.plan = IntentPlan(action="ask", scope="group", answer_mode="analysis")
     previous = await harness.run("А за предыдущий год?")

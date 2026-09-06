@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import AnyHttpUrl, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -30,6 +31,8 @@ class Settings(BaseSettings):
     llm_reasoning_enabled: bool = False
     llm_reasoning_max_tokens: int = Field(default=1024, ge=128, le=8000)
     llm_review_reasoning_enabled: bool = False
+    llm_reasoning_effort: Literal["low", "high", "max"] = "low"
+    llm_combined_planning: bool = True
 
     snapshot_json_path: Path = Path("data/snapshot.json")
     snapshot_csv_path: Path | None = None

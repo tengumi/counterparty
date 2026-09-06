@@ -19,6 +19,7 @@ from counterparty_agent.ai.deal import (
     DealPatch,
     apply_deal,
     deal_facts,
+    deal_implication_facts,
     extract_deal,
     validate_deal,
 )
@@ -66,7 +67,7 @@ class ReviewModel:
         monkeypatch: pytest.MonkeyPatch,
         decide: Callable[[dict[str, Any]], ReviewDecision] | None = None,
         draft: Callable[[dict[str, Any]], ReviewDraft] | None = None,
-        verdict: GroundingVerdict | None = None,
+        verdict: GroundingVerdict | Callable[[dict[str, Any]], GroundingVerdict] | None = None,
     ) -> None:
         self.calls: list[tuple[type[Any], dict[str, Any]]] = []
         self.decide = decide or self.default_decision
@@ -112,7 +113,7 @@ class ReviewModel:
         if schema is ReviewDraft:
             return self.draft(data)
         if schema is GroundingVerdict:
-            return self.verdict
+            return self.verdict(data) if callable(self.verdict) else self.verdict
         raise AssertionError("Неожиданный дополнительный вызов модели")
 
     def inputs(self, schema: type[Any]) -> list[dict[str, Any]]:
@@ -137,6 +138,30 @@ def test_deal_update_is_literal_revisioned_and_replaces_payment_origin() -> None
     assert all("аванс 80%" not in fact.claim.text for fact in facts)
     assert all("Со слов пользователя" in fact.claim.text for fact in facts)
     assert apply_deal(updated, DealPatch(advance=updated.advance), updated.advance) == updated
+
+
+def test_payment_effect_is_calculated_from_current_terms_and_keeps_their_source() -> None:
+    advance = purpose()
+    advance_effect = deal_implication_facts(advance)
+    assert len(advance_effect) == 1
+    assert "Вы планируете аванс" in advance_effect[0].claim.text
+    assert "до перечисления денег" in advance_effect[0].claim.text
+    assert advance_effect[0].claim.evidence_ids == tuple(
+        advance.terms[key].evidence_id for key in ("advance", "role", "goal")
+    )
+
+    postpayment = apply_deal(
+        advance,
+        DealPatch(advance="оплата после поставки и приёмки, без аванса"),
+        "оплата после поставки и приёмки, без аванса",
+    )
+    postpayment_effect = deal_implication_facts(postpayment)
+    assert len(postpayment_effect) == 1
+    assert "Риск потери именно предоплаты" in postpayment_effect[0].claim.text
+    assert "остаются вопросы к срокам и качеству" in postpayment_effect[0].claim.text
+    assert postpayment_effect[0].claim.evidence_ids == tuple(
+        postpayment.terms[key].evidence_id for key in ("advance", "role", "goal")
+    )
 
 
 @pytest.mark.parametrize("value", ["аванс 20%", " ", "сумма неизвестна"])
@@ -236,6 +261,128 @@ def test_safe_disclaimer_is_not_mistaken_for_a_guarantee() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Компания несёт высокие финансовые риски.",
+        "Её показатели более предпочтительны для сделки.",
+        "Убыток может затруднить закупку комплектующих.",
+        "Финансовая устойчивость определяет его способность самостоятельно закупить товар.",
+        "Финансовая устойчивость критична для исполнения обязательств.",
+        "Финансовая устойчивость поставщика критична для исполнения обязательств.",
+        "Отрицательный капитал и убытки указывают на нестабильность бизнеса.",
+        "Убытки могут свидетельствовать о проблемах со средствами для закупки товара.",
+    ],
+)
+def test_draft_rejects_unsupported_ranking_and_operational_inference(text: str) -> None:
+    fact = ApprovedFact(
+        "loss",
+        GroundedClaim(text="В отчёте указана отрицательная прибыль.", evidence_ids=("loss_e",)),
+        "financial",
+    )
+    with pytest.raises(ValueError, match="Блок 0"):
+        validate_draft(
+            ReviewDraft(blocks=[ReviewBlock(kind="interpretation", text=text, fact_ids=["loss"])]),
+            {"loss": fact},
+        )
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Компания нарастила активы.",
+        "Компания показывает устойчивые убытки.",
+        "Капитал компании восстановился до положительных значений.",
+    ],
+)
+def test_draft_does_not_present_unverified_financial_interpretation_as_fact(text: str) -> None:
+    fact = ApprovedFact(
+        "financial",
+        GroundedClaim(text="В отчёте есть финансовые значения.", evidence_ids=("finance_e",)),
+        "financial",
+    )
+    with pytest.raises(ValueError, match="Блок 0"):
+        validate_draft(
+            ReviewDraft(blocks=[ReviewBlock(kind="fact", text=text, fact_ids=["financial"])]),
+            {"financial": fact},
+        )
+
+
+async def test_small_group_answer_keeps_at_least_one_fact_for_every_company(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    catalog = {
+        f"company_{position}": ApprovedFact(
+            f"company_{position}",
+            GroundedClaim(
+                text=(
+                    f"Компания {position} (ИНН {str(position) * 10}): В отчёте компания действует."
+                ),
+                evidence_ids=(f"company_e_{position}",),
+            ),
+            "company_status",
+        )
+        for position in range(1, 4)
+    }
+    model = ReviewModel(
+        monkeypatch,
+        draft=lambda data: ReviewDraft(
+            blocks=[
+                ReviewBlock(
+                    kind="fact",
+                    text=f"Компания {position} (ИНН {str(position) * 10}): "
+                    "В отчёте компания действует.",
+                    fact_ids=[f"F{position}"],
+                )
+                for position in range(1, 3)
+            ]
+        ),
+    )
+    answer, draft = await synthesize(
+        settings, object(), "Сравни компании", purpose(), catalog, "Проверен статус"
+    )
+    assert len(model.inputs(ReviewDraft)) == len(model.inputs(GroundingVerdict)) == 1
+    assert len(draft.blocks) == 3
+    assert draft.blocks[-1].fact_ids == ["company_3"]
+    assert "Компания 3" in answer.answer
+
+
+async def test_rejected_action_keeps_safe_next_step_after_one_repair(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    catalog = {
+        "loss": ApprovedFact(
+            "loss",
+            GroundedClaim(text="В отчёте указана отрицательная прибыль.", evidence_ids=("loss_e",)),
+            "financial",
+        )
+    }
+    model = ReviewModel(
+        monkeypatch,
+        draft=lambda data: ReviewDraft(
+            blocks=[
+                ReviewBlock(
+                    kind="action",
+                    text="Потребуйте гарантию исполнения.",
+                    fact_ids=["F1"],
+                )
+            ]
+        ),
+        verdict=lambda data: GroundingVerdict(
+            unsupported_blocks=[
+                b["index"] for b in data["blocks"] if "Потребуйте гарантию" in b["text"]
+            ],
+            answers_question=True,
+        ),
+    )
+    answer, draft = await synthesize(
+        settings, object(), "Что сделать дальше?", purpose(), catalog, "Проверены финансы"
+    )
+    assert len(model.inputs(ReviewDraft)) == len(model.inputs(GroundingVerdict)) == 2
+    assert draft.blocks[0].kind == "action"
+    assert "проверьте актуальность" in answer.answer
+
+
 async def test_read_findings_change_next_step_and_stop_with_grounded_answer(
     source: JsonCounterpartySource, settings: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -260,10 +407,47 @@ async def test_read_findings_change_next_step_and_stop_with_grounded_answer(
         settings, "Какие риски предоплаты?", (snapshot,), (analysis,), purpose(), client=object()
     )
     assert run.answer.status == "answered"
-    assert run.steps == ["Проверено: финансы", "Проверено: взыскания"]
+    assert run.steps == [
+        "Проверено: финансы",
+        "Проверено: полнота данных",
+        "Проверено: взыскания",
+    ]
     assert len(model.inputs(ReviewDecision)) == 3
     assert len(model.inputs(GroundingVerdict)) == 1
     validate_review_run(run)
+
+
+async def test_group_review_balances_companies_and_compacts_duplicate_finance_summary(
+    source: JsonCounterpartySource, settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    snapshots = tuple(source.snapshots[:3])
+    analyses = tuple(
+        analyze_snapshot(snapshot, evaluated_at=snapshot.report_at + timedelta(days=1))
+        for snapshot in snapshots
+    )
+
+    def decide(data: dict[str, Any]) -> ReviewDecision:
+        return (
+            ReviewDecision(action="read", topics=["company", "finance", "data_quality"])
+            if not data["read_topics"]
+            else ReviewDecision(action="finish")
+        )
+
+    model = ReviewModel(monkeypatch, decide=decide)
+    run = await run_review(
+        settings,
+        "Сравни существенные обстоятельства для сделки",
+        snapshots,
+        analyses,
+        purpose(),
+        client=object(),
+    )
+    assert run.answer.status == "answered"
+    synthesis = model.inputs(ReviewDraft)[0]
+    texts = "\n".join(fact["text"] for fact in synthesis["approved_facts"])
+    assert all(snapshot.identity.inn in texts for snapshot in snapshots)
+    assert not any(fact["topic"] == "financial_period" for fact in synthesis["approved_facts"])
+    assert len(json.dumps(synthesis["approved_facts"], ensure_ascii=False)) <= 21_000
 
 
 @pytest.mark.parametrize("stop_early", [False, True])
@@ -334,7 +518,7 @@ async def test_payment_change_replans_and_regenerates_the_conclusion(
         settings, "Что меняется?", (snapshot,), (analysis,), changed, client=object()
     )
     assert first.answer.status == second.answer.status == "answered"
-    assert first.steps == ["Проверено: финансы"]
+    assert first.steps == ["Проверено: финансы", "Проверено: полнота данных"]
     assert second.steps == ["Проверено: статус компании"]
     assert "авансе 80%" in first.answer.answer and "порядок приёмки" in second.answer.answer
     assert "80%" not in second.answer.answer
@@ -418,8 +602,12 @@ async def test_document_read_is_forbidden_without_an_uploaded_document(
     assert not model.inputs(ReviewDraft) and not run.steps
 
 
+@pytest.mark.parametrize("initial_topics", [(), ("company",)])
 async def test_report_and_contract_synthesis_preserves_both_sources_and_user_conditions(
-    source: JsonCounterpartySource, settings: Settings, monkeypatch: pytest.MonkeyPatch
+    source: JsonCounterpartySource,
+    settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+    initial_topics,
 ) -> None:
     snapshot = source.snapshots[0]
     analysis = analyze_snapshot(snapshot, evaluated_at=snapshot.report_at + timedelta(days=1))
@@ -453,7 +641,14 @@ async def test_report_and_contract_synthesis_preserves_both_sources_and_user_con
             ]
         )
 
-    model = ReviewModel(monkeypatch, draft=draft)
+    def decide(data: dict[str, Any]) -> ReviewDecision:
+        if not data["read_topics"]:
+            # Даже если модель пропустила договор, явный составной вопрос обязан
+            # добавить его чтение до синтеза.
+            return ReviewDecision(action="read", topics=["company"])
+        return ReviewDecision(action="finish")
+
+    model = ReviewModel(monkeypatch, decide=decide, draft=draft)
     run = await run_review(
         settings,
         "Сопоставь отчёт и договор с моими условиями",
@@ -462,17 +657,199 @@ async def test_report_and_contract_synthesis_preserves_both_sources_and_user_con
         purpose(),
         client=object(),
         extra_facts=(doc,),
+        initial_topics=initial_topics,
     )
     assert run.answer.status == "answered"
     assert "document_fragment_1" in run.answer.claims[1].evidence_ids
     assert run.deal.terms["advance"].evidence_id in run.answer.claims[1].evidence_ids
     assert analysis.bank_evidence_id in run.answer.claims[0].evidence_ids
     assert "contract_1" in run.answer.fact_ids
+    assert run.steps[:2] == ["Проверено: условия документов", "Проверено: статус компании"]
+    synthesis = model.inputs(ReviewDraft)[0]
+    assert synthesis["answer_requirements"] == ["document", "current_terms", "report"]
     checked = model.inputs(GroundingVerdict)[0]
     assert checked["current_deal"]["advance"] == "аванс 80%"
     assert len(checked["blocks"][1]["fact_ids"]) == 2
     assert checked["approved_facts"]
     validate_review_run(run)
+
+
+async def test_document_comparison_retries_when_first_draft_ignores_document(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    catalog = {
+        "report": ApprovedFact(
+            "report",
+            GroundedClaim(text="В отчёте компания действует.", evidence_ids=("report_e",)),
+            "company_status",
+        ),
+        "term": ApprovedFact(
+            "term",
+            GroundedClaim(
+                text="По вашим условиям оплата после поставки.", evidence_ids=("term_e",)
+            ),
+            "deal_context",
+            metric="advance",
+        ),
+        "document": ApprovedFact(
+            "document",
+            GroundedClaim(text="В документе указана предоплата.", evidence_ids=("document_e",)),
+            "user_document",
+        ),
+    }
+
+    def draft(data: dict[str, Any]) -> ReviewDraft:
+        if "previous_draft" not in data:
+            return ReviewDraft(
+                blocks=[
+                    ReviewBlock(
+                        kind="fact",
+                        text="В отчёте компания действует.",
+                        fact_ids=["F1"],
+                    )
+                ]
+            )
+        return ReviewDraft(
+            blocks=[
+                ReviewBlock(
+                    kind="interpretation",
+                    text="В документе указана предоплата, а по вашим условиям — оплата после "
+                    "поставки; условия расходятся.",
+                    fact_ids=["F2", "F3"],
+                ),
+                ReviewBlock(kind="fact", text="В отчёте компания действует.", fact_ids=["F1"]),
+            ]
+        )
+
+    model = ReviewModel(monkeypatch, draft=draft)
+    answer, verified = await synthesize(
+        settings,
+        object(),
+        "Сопоставь отчёт и договор с нашими условиями",
+        purpose("оплата после поставки"),
+        catalog,
+        "Проверена выборка",
+    )
+    assert answer.status == "answered" and len(verified.blocks) == 2
+    assert len(model.inputs(ReviewDraft)) == 2
+    assert model.inputs(ReviewDraft)[1]["answer_requirements"] == [
+        "document",
+        "current_terms",
+        "report",
+    ]
+
+
+async def test_invalid_document_synthesis_uses_safe_cross_source_fallback(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    catalog = {
+        "report": ApprovedFact(
+            "report",
+            GroundedClaim(
+                text="Компания (ИНН 1234567890): В отчёте компания действует.",
+                evidence_ids=("report_e",),
+            ),
+            "company_status",
+        ),
+        "term": ApprovedFact(
+            "term",
+            GroundedClaim(
+                text="По вашим условиям оплата после поставки.", evidence_ids=("term_e",)
+            ),
+            "deal_context",
+            metric="advance",
+        ),
+        "document": ApprovedFact(
+            "document",
+            GroundedClaim(text="В документе указан аванс 80%.", evidence_ids=("document_e",)),
+            "user_document",
+        ),
+    }
+    model = ReviewModel(
+        monkeypatch,
+        draft=lambda data: ReviewDraft(
+            blocks=[
+                ReviewBlock(
+                    kind="interpretation",
+                    text="Финансовая устойчивость определяет способность закупить товар.",
+                    fact_ids=["F1", "F2", "F3"],
+                )
+            ]
+        ),
+    )
+    answer, draft = await synthesize(
+        settings,
+        object(),
+        "Сопоставь договор, условия и отчёт",
+        purpose("оплата после поставки"),
+        catalog,
+        "Проверена выборка",
+    )
+    assert len(model.inputs(ReviewDraft)) == 1
+    assert len(model.inputs(GroundingVerdict)) == 1
+    assert "Условия оплаты расходятся" in answer.answer
+    assert {"report", "term", "document"} <= set(answer.fact_ids)
+    assert draft.blocks[-1].kind == "action"
+
+
+async def test_irrelevant_answer_repair_can_rebuild_the_whole_structure(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[tuple[type[Any], dict[str, Any]]] = []
+    drafts = [
+        ReviewDraft(blocks=[ReviewBlock(kind="fact", text="Компания действует.", fact_ids=["F1"])]),
+        ReviewDraft(
+            blocks=[
+                ReviewBlock(kind="fact", text="Компания действует.", fact_ids=["F1"]),
+                ReviewBlock(
+                    kind="action",
+                    text="Перед оплатой проверьте полномочия подписанта.",
+                    fact_ids=["F1"],
+                ),
+            ]
+        ),
+    ]
+    verdicts = [
+        GroundingVerdict(
+            unsupported_blocks=[], answers_question=False, reasons=["Нет следующего шага"]
+        ),
+        GroundingVerdict(unsupported_blocks=[], answers_question=True),
+    ]
+
+    async def call(
+        settings: Any,
+        client: Any,
+        question: str,
+        data: dict[str, Any],
+        prompt: str,
+        schema: type[Any],
+    ) -> Any:
+        calls.append((schema, json.loads(json.dumps(data))))
+        if schema is ReviewDraft:
+            return drafts.pop(0)
+        if schema is GroundingVerdict:
+            return verdicts.pop(0)
+        raise AssertionError("Неожиданный тип ответа")
+
+    monkeypatch.setattr("counterparty_agent.ai.reasoning.structured_call", call)
+    answer, verified = await synthesize(
+        settings,
+        object(),
+        "Что проверить перед оплатой?",
+        purpose(),
+        {
+            "company": ApprovedFact(
+                "company",
+                GroundedClaim(text="Компания действует.", evidence_ids=("company_e",)),
+                "company_status",
+            )
+        },
+        "Проверен статус",
+    )
+    assert answer.status == "answered" and len(verified.blocks) == 2
+    second_draft_data = [data for schema, data in calls if schema is ReviewDraft][1]
+    assert second_draft_data["review_feedback"]["answers_question"] is False
+    assert "repair_block_indices" not in second_draft_data
 
 
 @pytest.mark.parametrize(
@@ -482,7 +859,7 @@ async def test_report_and_contract_synthesis_preserves_both_sources_and_user_con
         GroundingVerdict(unsupported_blocks=[], answers_question=False),
     ],
 )
-async def test_unsupported_or_irrelevant_synthesis_never_reaches_user(
+async def test_unsupported_or_irrelevant_fallback_is_not_automatically_approved(
     source: JsonCounterpartySource,
     settings: Settings,
     monkeypatch: pytest.MonkeyPatch,
@@ -494,11 +871,14 @@ async def test_unsupported_or_irrelevant_synthesis_never_reaches_user(
     run = await run_review(
         settings, "Проанализируй", (snapshot,), (analysis,), purpose(), client=object()
     )
+    assert 2 <= len(model.inputs(ReviewDraft)) <= 3
+    assert len(model.inputs(GroundingVerdict)) >= 2
     assert run.answer.status == "validation_failed" and not run.answer.claims
-    assert len(model.inputs(ReviewDraft)) == len(model.inputs(GroundingVerdict)) == 2
+    assert run.draft is None
+    validate_review_run(run)
 
 
-async def test_unknown_fact_or_number_is_rejected_before_semantic_verifier(
+async def test_unknown_fact_is_hidden_by_grounded_fallback_before_semantic_verifier(
     source: JsonCounterpartySource, settings: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     snapshot = source.snapshots[0]
@@ -510,10 +890,11 @@ async def test_unknown_fact_or_number_is_rejected_before_semantic_verifier(
         ),
     )
     catalog, _ = review_catalog((snapshot,), (analysis,), purpose())
-    with pytest.raises(ValueError):
-        await synthesize(settings, object(), "Проверить", purpose(), catalog, "Выборка")
+    answer, draft = await synthesize(settings, object(), "Проверить", purpose(), catalog, "Выборка")
+    assert answer.status == "answered" and "Неизвестный факт" not in answer.answer
+    assert all(fact_id in catalog for block in draft.blocks for fact_id in block.fact_ids)
     assert len(model.inputs(ReviewDraft)) == 2
-    assert not model.inputs(GroundingVerdict)
+    assert len(model.inputs(GroundingVerdict)) == 1
 
 
 @pytest.mark.parametrize("field", ["answer", "text", "evidence"])
@@ -586,7 +967,7 @@ async def test_short_aliases_are_remapped_and_not_rendered_as_inline_technical_i
     assert answer.fact_ids == ("canonical_bank",)
     assert answer.claims[0].evidence_ids == ("bank_evidence",)
     assert verified.blocks[0].fact_ids == ["canonical_bank"]
-    assert answer.answer == "Факт: Оценка в отчёте: YELLOW."
+    assert answer.answer == "Оценка в отчёте: YELLOW."
     assert all(alias not in answer.answer for alias in ("F1", "F2", "canonical_bank"))
     check = model.inputs(GroundingVerdict)[0]["blocks"][0]
     assert check["text"] == "Оценка в отчёте: YELLOW."
@@ -622,7 +1003,7 @@ async def test_literal_f1_from_cited_source_is_not_silently_removed(
     }
     model = ReviewModel(monkeypatch)
     answer, _ = await synthesize(settings, object(), "Название?", purpose(), catalog, "Название")
-    assert answer.answer == "Факт: Название компании: F1."
+    assert answer.answer == "Название компании: F1."
     assert model.inputs(GroundingVerdict)[0]["blocks"][0]["text"] == "Название компании: F1."
 
 
@@ -642,7 +1023,7 @@ async def test_unknown_or_non_alias_id_is_rejected_before_verifier(
 
 
 @pytest.mark.parametrize("text", ["YELLOW из-за убытков.", "Цвет YELLOW обусловлен убытком."])
-async def test_causal_scoring_explanation_is_rejected_even_if_verifier_would_approve(
+async def test_causal_scoring_explanation_is_replaced_even_if_verifier_would_approve(
     settings: Settings, monkeypatch: pytest.MonkeyPatch, text: str
 ) -> None:
     model = ReviewModel(
@@ -652,11 +1033,13 @@ async def test_causal_scoring_explanation_is_rejected_even_if_verifier_would_app
         ),
         verdict=GroundingVerdict(unsupported_blocks=[], answers_question=True),
     )
-    with pytest.raises(ValueError):
-        await synthesize(
-            settings, object(), "Почему YELLOW?", purpose(), scoring_facts(), "Оценка и убыток"
-        )
-    assert len(model.inputs(ReviewDraft)) == 2 and not model.inputs(GroundingVerdict)
+    answer, _ = await synthesize(
+        settings, object(), "Почему YELLOW?", purpose(), scoring_facts(), "Оценка и убыток"
+    )
+    assert text not in answer.answer
+    assert "Оценка в отчёте: YELLOW — требует внимания." in answer.answer
+    assert len(model.inputs(ReviewDraft)) == 2
+    assert len(model.inputs(GroundingVerdict)) == 1
 
 
 async def test_independent_scoring_and_loss_blocks_remain_allowed(
@@ -765,6 +1148,8 @@ def test_numeric_grounding_rejects_sign_changes(source_text: str, output: str) -
         ("Прибыль: -100.", "Прибыль: минус 100."),
         ("Прибыль: 100.", "Прибыль: +100."),
         ("Прибыль: -100.50.", "Прибыль: −100,50."),
+        ("Прибыль: -23349000.", "Прибыль: -23 349 000."),
+        ("Прибыль: -23349000.", "Прибыль: -23\u202f349\u202f000."),
         ("Проверено 2026-09-04T00:00:00Z. Прибыль -100.", "На 2026-09-04 прибыль −100."),
     ],
 )
@@ -823,7 +1208,48 @@ async def test_numeric_repair_suggests_condition_source_but_model_must_fix_its_r
     )
 
 
-async def test_repair_preserves_approved_blocks_and_verifier_sees_uncited_facts(
+async def test_repeated_derived_number_is_replaced_with_literal_grounded_fact(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    context = apply_deal(
+        purpose(),
+        DealPatch(amount="2 млн рублей"),
+        "Сумма сделки — 2 млн рублей.",
+    )
+    catalog = {fact.fact_id: fact for fact in deal_facts(context)}
+
+    def draft(data: dict[str, Any]) -> ReviewDraft:
+        amount = next(
+            fact
+            for fact in data["approved_facts"]
+            if fact["topic"] == "deal_context" and fact["metric"] == "amount"
+        )
+        return ReviewDraft(
+            blocks=[
+                ReviewBlock(
+                    kind="interpretation",
+                    text="Аванс составит 1,6 млн рублей.",
+                    fact_ids=[amount["fact_id"]],
+                )
+            ]
+        )
+
+    model = ReviewModel(monkeypatch, draft=draft)
+    answer, verified = await synthesize(
+        settings,
+        object(),
+        "Сколько перечислить авансом?",
+        context,
+        catalog,
+        "Условия пользователя",
+    )
+    assert len(model.inputs(ReviewDraft)) == 2
+    assert len(model.inputs(GroundingVerdict)) == 1
+    assert "1,6" not in answer.answer and "2 млн рублей" in answer.answer
+    assert verified.blocks[0].kind == "fact"
+
+
+async def test_document_repair_preserves_approved_blocks_and_verifier_sees_uncited_facts(
     settings: Settings,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -848,6 +1274,14 @@ async def test_repair_preserves_approved_blocks_and_verifier_sees_uncited_facts(
                         else "В отчёте указан убыток.",
                         fact_ids=["F2"],
                     ),
+                    ReviewBlock(
+                        kind="interpretation",
+                        text=(
+                            "В документе указана предоплата, а по вашим условиям — "
+                            "оплата после поставки; условия расходятся."
+                        ),
+                        fact_ids=["F4", "F5"],
+                    ),
                 ]
             )
         assert schema is GroundingVerdict
@@ -855,7 +1289,7 @@ async def test_repair_preserves_approved_blocks_and_verifier_sees_uncited_facts(
         # Повторная генерация не подменяет уже проверенный цвет.
         assert data["blocks"][0]["text"] == "Оценка YELLOW."
         # Даже не выбранный автором факт доступен для проверки противоречий.
-        assert len(data["approved_facts"]) == 3
+        assert len(data["approved_facts"]) == 5
         return GroundingVerdict(
             unsupported_blocks=[1] if calls["verify"] == 1 else [],
             answers_question=True,
@@ -869,7 +1303,27 @@ async def test_repair_preserves_approved_blocks_and_verifier_sees_uncited_facts(
         GroundedClaim(text="Капитал за 2025 год положительный.", evidence_ids=("later_capital",)),
         "financial",
     )
-    answer, _ = await synthesize(settings, object(), "Что важно?", purpose(), catalog, "Выборка")
+    catalog["term"] = ApprovedFact(
+        "term",
+        GroundedClaim(
+            text="По вашим условиям оплата после поставки.", evidence_ids=("term_evidence",)
+        ),
+        "deal_context",
+        metric="advance",
+    )
+    catalog["document"] = ApprovedFact(
+        "document",
+        GroundedClaim(text="В документе указана предоплата.", evidence_ids=("document_evidence",)),
+        "user_document",
+    )
+    answer, _ = await synthesize(
+        settings,
+        object(),
+        "Сопоставь договор с отчётом и нашими условиями",
+        purpose("оплата после поставки"),
+        catalog,
+        "Выборка",
+    )
     assert calls == {"draft": 2, "verify": 2}
     assert "RED" not in answer.answer
-    assert answer.fact_ids == ("canonical_bank", "canonical_loss")
+    assert answer.fact_ids == ("canonical_bank", "canonical_loss", "term", "document")

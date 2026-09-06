@@ -245,6 +245,8 @@ describe("Поиск → задача → диалог → подробност�
     const html = render();
     expect(html).toContain("Кого проверим?");
     expect(html).toContain("ИНН, ОГРН или название компании");
+    expect(html).toContain("Можно описать задачу своими словами.");
+    expect(html).not.toContain("через точку с запятой");
     expect(html).not.toContain('aria-label="Помощник по проверке"');
     expect(html).not.toContain("Сохранить проверку");
   });
@@ -267,13 +269,19 @@ describe("Поиск → задача → диалог → подробност�
     expect(html).toContain("ОГРН ogrn-1");
     expect(html).not.toContain('aria-label="Помощник по проверке"');
   });
-  it("после выбора диалог идёт до закрытого полного отчёта и предлагает общую проверку", () => {
+  it("после выбора сводка видна рядом с единственным чатом, детали раскрываются внутри отчёта", () => {
     workspace(response());
     const html = render();
-    expect(html.indexOf('aria-label="Помощник по проверке"')).toBeLessThan(
-      html.indexOf('class="report-disclosure"'),
+    expect(html.indexOf('aria-label="Отчёт о компании"')).toBeLessThan(
+      html.indexOf('aria-label="Помощник по проверке"'),
     );
-    expect(html).toContain('<details class="report-disclosure">');
+    expect(html).not.toContain('<details class="report-disclosure">');
+    expect(html).toContain('aria-label="Расширить чат"');
+    expect(html).toContain('aria-controls="check-reports"');
+    expect(html).toContain('aria-controls="check-dialogue"');
+    expect(html.match(/id="chat-question"/g)).toHaveLength(1);
+    expect(html).toContain('aria-describedby="chat-keyboard-hint"');
+    expect(html).toContain("Shift+Enter — новая строка");
     expect(html).toContain("Общая проверка");
     expect(html).toContain("Выбираю поставщика");
     expect(html).not.toContain("Методика закрыта");

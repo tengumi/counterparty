@@ -47,7 +47,16 @@ def test_bank_catalog_keeps_color_and_separates_unknown_reason(
         assert "Причина" not in bank.claim.text
         assert "методик" not in bank.claim.text and "скоринг" not in bank.claim.text
         if snapshot.bank_risk.recognized_level is not None:
-            assert snapshot.bank_risk.raw_level in bank.claim.text
+            assert snapshot.bank_risk.raw_level not in bank.claim.text
+            assert any(
+                label in bank.claim.text
+                for label in (
+                    "надёжный контрагент",
+                    "требует внимания",
+                    "в зоне риска",
+                    "нет данных для оценки",
+                )
+            )
             assert reason.claim.text == "Причина этой оценки в отчёте не указана."
         else:
             assert "GREY" not in bank.claim.text
@@ -73,7 +82,7 @@ def test_comparison_keeps_missing_unknown_and_grey_distinct(
     comparison = compare_snapshots(snapshots, evaluated_at=NOW)
     row = next(r for r in comparison.rows if r.key == "bank_risk")
     assert [cell.value for cell in row.cells] == ["GREEN", "YELLOW", "RED", "GREY", None, "UNKNOWN"]
-    assert row.cells[3].display_value == "GREY — нет данных для оценки"
+    assert row.cells[3].display_value == "нет данных для оценки"
     assert row.cells[4].display_value == "Оценка отсутствует"
     assert row.cells[5].display_value == "Значение оценки не распознано"
     facts = build_comparison_fact_catalog(snapshots, comparison)

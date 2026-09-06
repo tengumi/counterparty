@@ -59,6 +59,8 @@ def _build_evidence(
         kind: EvidenceKind = EvidenceKind.OBSERVED,
         coverage: EvidenceCoverage = EvidenceCoverage.PRESENT,
         period: int | str | None = None,
+        unit: str | None = None,
+        currency: str | None = None,
         pii_class: PiiClass = PiiClass.NONE,
     ) -> None:
         identifier_source = json.dumps(
@@ -89,6 +91,8 @@ def _build_evidence(
                 source_hash=source_hash,
                 record_hash=record_hash,
                 period=period,
+                unit=unit,
+                currency=currency,
                 coverage=coverage,
                 pii_class=pii_class,
             )
@@ -168,6 +172,8 @@ def _build_evidence(
                 (f"/report/finReports/{index}",),
                 statement.model_dump(mode="python"),
                 period=statement.year,
+                unit="ruble",
+                currency="RUB",
             )
 
     if financial_coefficients is None:
@@ -195,6 +201,8 @@ def _build_evidence(
         ("/report/arbitrationByStatus",),
         arbitration_summary.model_dump(mode="python"),
         kind=EvidenceKind.PROVIDER_ASSERTION,
+        unit="ruble",
+        currency="RUB",
     )
     if arbitration_by_year is None:
         add(
@@ -221,6 +229,8 @@ def _build_evidence(
                 (f"/report/arbitrationCases/{index}",),
                 year_summary.model_dump(mode="python"),
                 period=year_summary.year,
+                unit="ruble",
+                currency="RUB",
             )
 
     if not enforcement_proceedings:
@@ -240,6 +250,8 @@ def _build_evidence(
                 stable_key,
                 (f"/report/executionProceedings/{index}",),
                 proceeding.model_dump(mode="python"),
+                unit="ruble",
+                currency="RUB",
                 pii_class=PiiClass.ORGANIZATION,
             )
 

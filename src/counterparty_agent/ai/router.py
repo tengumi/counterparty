@@ -10,8 +10,18 @@ from typing import TYPE_CHECKING, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from counterparty_agent.ai import transport
-from counterparty_agent.ai.contracts import LlmContextLimitError, LlmInvalidResponseError
-from counterparty_agent.ai.deal import DealContext, DealPatch, validate_patch
+from counterparty_agent.ai.contracts import (
+    LlmContextLimitError,
+    LlmInvalidResponseError,
+    ReviewTopic,
+)
+from counterparty_agent.ai.deal import (
+    DealContext,
+    DealPatch,
+    literal_deal_patch,
+    recover_deal_patch,
+    validate_patch,
+)
 
 if TYPE_CHECKING:
     from counterparty_agent.config import Settings
@@ -31,9 +41,12 @@ class IntentPlan(BaseModel):
     include_current: bool = False
     answer_mode: Literal["facts", "analysis"] = "facts"
     deal_patch: DealPatch = Field(default_factory=DealPatch)
+    review_topics: tuple[ReviewTopic, ...] = Field(default=(), max_length=6)
 
     @model_validator(mode="after")
     def validate_action(self) -> IntentPlan:
+        if len(set(self.review_topics)) != len(self.review_topics):
+            raise ValueError("Повторяющиеся разделы проверки")
         if any(not target.strip() for target in self.targets):
             raise ValueError("Пустое упоминание компании")
         if self.position is not None and (self.targets or self.scope == "group"):
@@ -75,7 +88,7 @@ _ROUTER_PROMPT = """Ты — семантический маршрутизато
 Верни только один JSON-объект со следующими полями, без дополнительных полей:
 {"action":"ask","targets":[],"scope":"current","position":null,"include_current":false,
 "answer_mode":"facts","deal_patch":{"goal":null,"role":null,"subject":null,
-"amount":null,"advance":null,"deadline":null,"general_check":false}}
+"amount":null,"advance":null,"deadline":null,"general_check":false},"review_topics":[]}
 
 Допустимые action:
 - lookup: найти и открыть одну компанию; ровно один target.
@@ -95,6 +108,9 @@ targets — максимум 100 дословных фрагментов соо�
 Не исправляй написание названия и цифры; не придумывай реквизиты или snapshot_id.
 Не копируй target из session, если его нет в сообщении. Не включай весь вопрос вместо
 названия. «Этот контрагент», «она», «их» — ссылки на контекст, не новые названия.
+Если одна компания названа одновременно по имени и ИНН/ОГРН, верни в targets
+только реквизит. Например, «ООО Ромашка, ИНН 0000000000» — один target
+«0000000000», не две компании. Соответствие названия реквизиту проверит сервер.
 Если в вопросе назван новый контрагент, обязательно верни target: нельзя молча
 отвечать по текущей карточке. Само совпадение компании проверит только сервер.
 
@@ -109,10 +125,23 @@ ask/show допускают не более одного target. include_current
 answer_mode=analysis для вопросов о рисках, причинах, пригодности для цели, выборе
 поставщика, договоре, сравнительном выводе и изменении условий. facts для конкретных
 показателей/периодов/перечня дел. Для ответа на вопрос о цели или условиях — analysis.
+review_topics — первоначальный план чтения для analysis: 1–6 разных разделов из
+company, finance, arbitration, enforcement, reputation, licenses, data_quality, documents.
+Для facts оставь []. План ещё не является результатом проверки: доступность разделов,
+компании и факты определит сервер. При общем вопросе о рисках аванса или отсрочки
+выбирай company, finance, arbitration, enforcement, reputation, data_quality одним пакетом.
+Для узкого аналитического вопроса выбирай относящиеся к нему разделы: например, finance
+для прибыльности, company для достаточности зелёного статуса, enforcement для полноты
+суммы взысканий. Для сопоставления договора добавь documents. При новом вопросе
+планируй заново, учитывая сохранённые условия; не копируй прошлый план автоматически.
 deal_patch: только новые сведения, явно сообщённые пользователем в QUESTION. Каждое
 непустое поле — дословный короткий фрагмент сообщения (не исправляй цифры и опечатки).
 goal — зачем проверяет, role — кем выступает контрагент, subject — предмет сделки,
-amount — сумма, advance — любые условия оплаты (включая постоплату), deadline — срок.
+amount — сумма, advance — любые условия оплаты (включая постоплату), deadline — срок исполнения.
+«Для нас как продавца» описывает пользователя, не контрагента: не меняй role на «продавца».
+Если новой роли контрагента нет, оставь role=null; существующая роль сохранится.
+В advance сохраняй смысл оплаты: «аванс 50%», не только «50%». Если есть аванс и
+остаток после приёмки, сохрани оба условия; это не полная постоплата.
 Не превращай вопросы в утверждения и не копируй поля из session. null не меняет память.
 Не заменяй согласованные условия пересказом чужого документа или гипотезой из вопроса.
 Например, «в договоре указан аванс, это противоречит нашей постоплате?» — вопрос о
@@ -120,14 +149,23 @@ amount — сумма, advance — любые условия оплаты (вк�
 general_check=true только если человек явно просит общую проверку или пропустить
 уточнения. «Не знаю» в ответ на условия тоже разрешает продолжить общую проверку.
 Если пользователь уже назвал цель вместе с реквизитами, извлеки её сразу в deal_patch.
+«ООО X просит поставить товар с оплатой через 60 дней. Проверь ИНН ...» — ask,
+один target с ИНН, analysis; role="просит поставить товар", subject="товар",
+advance="оплатой через 60 дней". Не пиши role="покупатель", если такого слова нет:
+роль может быть дословной фразой, смысл которой будет учтён при анализе.
+Срок оплаты хранится в advance; deadline — срок исполнения, не копируй туда отсрочку.
+Вопрос о достаточности зелёного статуса для сделки — analysis, не clarify и не поиск.
 
 Примеры:
 Просьба проверить организацию по указанному ИНН -> lookup, targets=[сам ИНН из вопроса].
 «Из-за чего этот контрагент надежен?» -> ask, targets=[], scope=current.
 «А каккие есть судебные дела?» -> ask, targets=[], scope=current.
+«Покажи источники для взыскания, выручки и арбитража» -> ask, targets=[], facts.
+Источник — ссылка на данные текущей проверки, не название новой компании.
 «Какие риски у ООО Ромашка?» -> ask, targets=["ООО Ромашка"].
 «Почему вторая требует внимания?» -> ask, targets=[], position=2.
 «У кого есть убытки?» -> ask, targets=[], scope=group.
+«Нужна общая проверка доступных отчётов» -> ask, targets=[], scope=group.
 «Покажи сравнение» -> show, targets=[], scope=group.
 «Добавь ещё ООО Ромашка» -> add_to_comparison, targets=["ООО Ромашка"].
 
@@ -239,6 +277,7 @@ async def route_intent(
         return RouterResult(None, "routing_failed", False, None)
     llm_client = client
     used_llm = False
+    recovered: IntentPlan | None = None
     try:
         if llm_client is None:
             llm_client = transport.create_client(settings)
@@ -259,11 +298,22 @@ async def route_intent(
                 try:
                     validate_patch(plan.deal_patch, question)
                 except ValueError as error:
+                    # Адресат уже проверен. Не теряем весь запрос из-за пересказа
+                    # одного условия: сохраняем только дословные поля и даём одну попытку исправить.
+                    partial = literal_deal_patch(question).model_dump(exclude_none=True)
+                    partial.update(
+                        recover_deal_patch(plan.deal_patch, question).model_dump(exclude_none=True)
+                    )
+                    recovered = plan.model_copy(
+                        update={"deal_patch": DealPatch.model_validate(partial)}
+                    )
                     raise LlmInvalidResponseError("Условия не подтверждены сообщением") from error
                 return RouterResult(plan, "routed", True, result.model)
             except (ValidationError, LlmInvalidResponseError):
                 if attempt == 0:
                     messages.append({"role": "system", "content": _REPAIR_PROMPT})
+        if recovered is not None:
+            return RouterResult(recovered, "routed", True, settings.llm_model)
         return RouterResult(None, "routing_failed", True, settings.llm_model)
     except Exception:
         return RouterResult(

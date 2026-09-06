@@ -10,6 +10,7 @@ from counterparty_agent.analytics.common import (
     _AnalysisBuilder,
     _contains_none,
     _encode,
+    _money,
     _number,
 )
 from counterparty_agent.models import (
@@ -25,15 +26,37 @@ def _analyze_arbitration(builder: _AnalysisBuilder) -> None:
     parents = builder.inputs("arbitration_summary", (summary.model_dump(mode="python"),))
     values = summary.model_dump(mode="python")
     partial = _contains_none(values)
+    amount = (
+        f"{_money(summary.total_amount)} рублей"
+        if summary.total_amount is not None
+        else "не указана"
+    )
+    summary_text = (
+        f"Судебных дел в отчёте: {_number(summary.total_count)}. Сумма требований: {amount}. "
+        f"Завершённых дел в роли истца: {_number(summary.as_plaintiff.finished_count)}; "
+        f"в роли ответчика: {_number(summary.as_defendant.finished_count)}. "
+        f"Незавершённых дел в роли ответчика: {_number(summary.as_defendant.pending_count)}. "
+        "Наличие дела не означает проигрыш или подтверждённый долг."
+    )
+    if (
+        summary.total_count is None
+        and summary.total_amount is None
+        and all(
+            value is None
+            for role in (summary.as_plaintiff, summary.as_defendant)
+            for value in role.model_dump().values()
+        )
+    ):
+        summary_text = "Сводных данных о судебных делах нет. Это не означает, что дел не было."
     builder.add(
         "arbitration_summary",
         FindingCategory.ARBITRATION,
-        f"Источник указывает всего дел: {_number(summary.total_count)}; "
-        f"сумма указанных требований: {_number(summary.total_amount)} в единицах источника. "
-        "Наличие дела не означает проигрыш или подтверждённый долг.",
+        summary_text,
         values,
         parents,
         status=FindingDataStatus.PARTIAL if partial else FindingDataStatus.CONFIRMED,
+        unit="ruble",
+        currency="RUB",
     )
     defendant = summary.as_defendant
     if defendant.pending_count is not None and defendant.pending_count > 0:
@@ -45,6 +68,8 @@ def _analyze_arbitration(builder: _AnalysisBuilder) -> None:
             {"count": defendant.pending_count, "amount": defendant.pending_amount},
             parents,
             severity=FindingSeverity.ATTENTION,
+            unit="ruble",
+            currency="RUB",
             status=FindingDataStatus.PARTIAL
             if defendant.pending_amount is None
             else FindingDataStatus.CONFIRMED,
@@ -95,18 +120,28 @@ def _analyze_enforcement(builder: _AnalysisBuilder) -> None:
         "missing_amount_count": missing,
         "active_known_amount": sum(active_known, Decimal(0)) if active_known else None,
         "active_missing_amount_count": active_missing,
+        "active_known_amount_count": len(active_known),
         "future_opened_count": future_count,
     }
     builder.add(
         "enforcement_summary",
         FindingCategory.ENFORCEMENT,
-        f"В переданной коллекции производств: {len(records)}, из них помечены "
-        f"источником как активные: {len(active)}. Сумма известных значений активных: "
-        f"{_number(values['active_known_amount'])}; активных записей без суммы: {active_missing}. "
-        "Валюта и масштаб не указаны. Это не общий долг и не проверка реестров на сегодня.",
+        f"Исполнительных производств в отчёте: {len(records)}, "
+        f"из них отмечены активными: {len(active)}. "
+        + (
+            f"Известная сумма по активным записям: {_money(sum(active_known, Decimal(0)))} рублей. "
+            f"Сумма указана у {len(active_known)} из {len(active)} активных записей. "
+            if active_known
+            else "Суммы активных записей неизвестны. "
+            if active
+            else "В выгрузке активных записей нет; это не подтверждает отсутствие долга. "
+        )
+        + (f"У активных записей без суммы: {active_missing}. " if active_missing else "")
+        + "Это сведения на дату отчёта, не общий долг компании на сегодня.",
         values,
         (*parents, *builder.inputs("report_at", (builder.snapshot.report_at,))),
-        unit="source_unit",
+        unit="ruble",
+        currency="RUB",
         status=(
             FindingDataStatus.CONFLICTING
             if future_count
@@ -115,6 +150,22 @@ def _analyze_enforcement(builder: _AnalysisBuilder) -> None:
             else FindingDataStatus.CONFIRMED
         ),
         severity=FindingSeverity.ATTENTION if active else FindingSeverity.INFO,
+    )
+    builder.add(
+        "debt_total_unavailable",
+        FindingCategory.ENFORCEMENT,
+        "Суммы судебных требований и исполнительных производств нельзя складывать "
+        "в общий долг: их связь, пересечение и текущие остатки в этих сводках не установлены. "
+        "Известная сумма производств не подтверждает полную задолженность компании.",
+        {"overlap_verified": False, "current_total_debt_known": False},
+        (
+            *parents,
+            *builder.inputs(
+                "arbitration_summary",
+                (builder.snapshot.arbitration_summary.model_dump(mode="python"),),
+            ),
+        ),
+        status=FindingDataStatus.INSUFFICIENT,
     )
     if future_count:
         builder.add(
@@ -161,8 +212,8 @@ def _analyze_reputation(builder: _AnalysisBuilder) -> None:
         builder.add(
             "provider_negative_signal",
             FindingCategory.REPUTATION,
-            f"В отрицательном разделе поставщика есть сигнал по теме «{topic}». "
-            "Это утверждение поставщика, не самостоятельный вывод агента."
+            f"В отчёте отмечено обстоятельство для проверки: {topic}. "
+            "Это отметка источника; её основание и актуальность нужно уточнить."
             if topic
             else "В отрицательном разделе есть неизвестный правилам сигнал поставщика; "
             "его значение не интерпретируется.",

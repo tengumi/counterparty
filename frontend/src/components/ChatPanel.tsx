@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { Message, ReviewContext } from "../types";
 import { Action, Icon } from "./Primitives";
 import type { SourceDetails } from "./EvidenceDrawer";
@@ -10,6 +10,19 @@ export function scrollConversation(
   if (container) container.scrollTop = container.scrollHeight;
 }
 
+export function submitChatOnEnter(event: KeyboardEvent<HTMLTextAreaElement>) {
+  // Во время ввода иероглифов Enter подтверждает символ, а не отправляет вопрос.
+  if (
+    event.key !== "Enter" ||
+    event.shiftKey ||
+    event.nativeEvent.isComposing ||
+    event.nativeEvent.keyCode === 229
+  )
+    return;
+  event.preventDefault();
+  if (!event.repeat) event.currentTarget.form?.requestSubmit();
+}
+
 export function ChatPanel({
   messages,
   busy,
@@ -19,6 +32,8 @@ export function ChatPanel({
   scope,
   review,
   pending = false,
+  expanded = false,
+  toggleExpanded,
 }: {
   messages: Message[];
   busy: boolean;
@@ -28,9 +43,20 @@ export function ChatPanel({
   scope?: string;
   review?: ReviewContext | null;
   pending?: boolean;
+  expanded?: boolean;
+  toggleExpanded?: () => void;
 }) {
   const [question, setQuestion] = useState("");
+  const textarea = useRef<HTMLTextAreaElement>(null);
+  const returnFocus = useRef(false);
   const conversation = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (busy || pending || !returnFocus.current) return;
+    // После ответа продолжаем ввод с клавиатуры, не отнимая фокус у других кнопок.
+    if (document.activeElement === document.body)
+      textarea.current?.focus({ preventScroll: true });
+    returnFocus.current = false;
+  }, [busy, pending]);
   useEffect(() => {
     if (messages.length) scrollConversation(conversation.current);
   }, [messages, busy]);
@@ -42,20 +68,35 @@ export function ChatPanel({
     >
       <header className="assistant-header">
         <span className="assistant-symbol">
-          <Icon name="file" />
+          <Icon name="chat" />
         </span>
         <div>
-          <strong>Разберём вашу задачу</strong>
+          <strong>Помощник</strong>
           <p className="small muted">
             {scope ||
               (group ? "По выбранным контрагентам" : "По данным проверки")}
           </p>
         </div>
+        {toggleExpanded && (
+          <button
+            type="button"
+            className="chat-expand"
+            onClick={toggleExpanded}
+            aria-pressed={expanded}
+            aria-label={expanded ? "Вернуть чат сбоку" : "Расширить чат"}
+            title={expanded ? "Вернуть чат сбоку" : "Расширить чат"}
+          >
+            <Icon name={expanded ? "minimize" : "expand"} />
+            <span>{expanded ? "Сбоку" : "Расширить"}</span>
+          </button>
+        )}
       </header>
       {review && (review.goal || review.general_check) && (
-        <div className="review-context" aria-label="Условия проверки">
-          <span className="eyebrow">Ваша задача</span>
-          <p>{review.goal || "Общая проверка"}</p>
+        <details className="review-context" aria-label="Условия проверки">
+          <summary>
+            <span>Ваша задача</span>
+            <strong>{review.goal || "Общая проверка"}</strong>
+          </summary>
           <dl>
             {(
               [
@@ -75,12 +116,23 @@ export function ChatPanel({
               ))}
           </dl>
           <small>Сообщите в чате, если условия изменились.</small>
-        </div>
+          {!!review.steps.length && (
+            <div className="review-steps">
+              <p>Что проверено</p>
+              <ul>
+                {review.steps.map((step, i) => (
+                  <li key={i}>{step}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </details>
       )}
       <div
         ref={conversation}
         className="conversation"
         role="log"
+        aria-label="Сообщения проверки"
         aria-live="polite"
       >
         {!messages.length && (
@@ -127,16 +179,6 @@ export function ChatPanel({
         )}
       </div>
       <div className="chat-bottom">
-        {!!review?.steps.length && (
-          <details className="review-steps">
-            <summary>Что проверено</summary>
-            <ul>
-              {review.steps.map((step, i) => (
-                <li key={i}>{step}</li>
-              ))}
-            </ul>
-          </details>
-        )}
         {pending && (
           <p className="notice">
             Сначала подтвердите добавляемые компании. Текущий состав сохранён.
@@ -158,8 +200,9 @@ export function ChatPanel({
           className="composer"
           onSubmit={(e) => {
             e.preventDefault();
-            if (question.trim()) {
-              send(question);
+            if (!busy && !pending && question.trim()) {
+              returnFocus.current = document.activeElement === textarea.current;
+              send(question.trim());
               setQuestion("");
             }
           }}
@@ -168,22 +211,30 @@ export function ChatPanel({
             Запрос помощнику
           </label>
           <textarea
+            ref={textarea}
             id="chat-question"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={submitChatOnEnter}
+            aria-describedby="chat-keyboard-hint"
             placeholder="Опишите задачу или задайте вопрос…"
             maxLength={12000}
             disabled={busy || pending}
             rows={2}
           />
-          <Action
-            view="primary"
-            type="submit"
-            disabled={busy || pending || !question.trim()}
-            aria-label="Отправить запрос"
-          >
-            <Icon name="arrow" />
-          </Action>
+          <div className="composer-actions">
+            <span id="chat-keyboard-hint">
+              Enter — отправить · Shift+Enter — новая строка
+            </span>
+            <Action
+              view="primary"
+              type="submit"
+              disabled={busy || pending || !question.trim()}
+              aria-label="Отправить запрос"
+            >
+              <Icon name="arrow" />
+            </Action>
+          </div>
         </form>
         <p className="small muted chat-disclaimer">
           Ответы ограничены доступными данными

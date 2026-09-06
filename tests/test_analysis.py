@@ -294,7 +294,7 @@ def test_provider_summaries_preserve_roles_counts_and_missing_values(
         )
 
 
-def test_money_units_are_not_invented(
+def test_confirmed_ruble_unit_is_preserved_in_evidence(
     source: JsonCounterpartySource,
     results: tuple[AnalysisResult, ...],
 ) -> None:
@@ -302,10 +302,22 @@ def test_money_units_are_not_invented(
     for snapshot, result in zip(source.snapshots, results, strict=True):
         if not snapshot.financial_statements:
             continue
-        _finding(result, "money_units_unspecified")
-        for evidence in result.derived_evidence:
-            if evidence.currency is not None:
-                pytest.fail("Анализ назначил валюту без входных сведений")
+        units = _finding(result, "money_units_confirmed")
+        source_finance = [
+            evidence
+            for evidence in snapshot.evidence
+            if evidence.canonical_path == "financial_statements.item"
+        ]
+        assert source_finance and all(
+            evidence.currency == "RUB" and evidence.unit == "ruble" for evidence in source_finance
+        )
+        derived = next(
+            evidence
+            for evidence in result.derived_evidence
+            if evidence.evidence_id in units.evidence_ids
+        )
+        assert derived.currency == "RUB" and derived.unit == "ruble"
+        assert derived.typed_value == {"currency": "RUB", "unit": "ruble"}
         checked += 1
     assert checked > 0
 

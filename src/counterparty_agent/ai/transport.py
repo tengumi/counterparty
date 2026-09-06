@@ -107,18 +107,13 @@ async def _request_completion(
 ) -> LlmResult:
     """Общий ограниченный Chat Completions вызов без отражения payload в ошибках."""
 
-    options: dict[str, object] = {}
-    reasoning: dict[str, object] = {"enabled": settings.llm_reasoning_enabled}
-    if settings.llm_reasoning_enabled:
-        reasoning["max_tokens"] = settings.llm_reasoning_max_tokens
+    options = completion_options(settings)
     if json_mode:
         options["response_format"] = {"type": "json_object"}
     completion = await llm_client.chat.completions.create(
         model=settings.llm_model,
         messages=messages,
-        temperature=settings.llm_temperature,
         max_tokens=settings.llm_max_tokens,
-        extra_body={"reasoning": reasoning},
         **options,
     )
 
@@ -140,6 +135,28 @@ async def _request_completion(
         input_tokens=getattr(usage, "prompt_tokens", None),
         output_tokens=getattr(usage, "completion_tokens", None),
     )
+
+
+def completion_options(settings: Settings) -> dict[str, Any]:
+    """Параметры подтверждённых моделей; несовместимые режимы не смешиваются.
+
+    У DeepSeek 0731 и GLM рассуждения включены самим провайдером. Флаг Qwen
+    их не отключает: для сравнительного прогона явно задаётся уровень effort.
+    Общий бюджет токенов не увеличивается скрыто, обрыв ответа остаётся ошибкой.
+    """
+
+    if settings.llm_model == "deepseek-v4-flash-0731":
+        return {"reasoning_effort": settings.llm_reasoning_effort}
+    if settings.llm_model == "glm-5.3-flash":
+        return {
+            "reasoning_effort": settings.llm_reasoning_effort,
+            "temperature": min(settings.llm_temperature, 1.0),
+            "extra_body": {"thinking": {"type": "enabled"}},
+        }
+    reasoning: dict[str, object] = {"enabled": settings.llm_reasoning_enabled}
+    if settings.llm_reasoning_enabled:
+        reasoning["max_tokens"] = settings.llm_reasoning_max_tokens
+    return {"temperature": settings.llm_temperature, "extra_body": {"reasoning": reasoning}}
 
 
 async def _check_connection() -> LlmResult:

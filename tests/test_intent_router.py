@@ -31,9 +31,7 @@ class ScriptedClient:
         return SimpleNamespace(
             model="configured-model",
             choices=[
-                SimpleNamespace(
-                    finish_reason="stop", message=SimpleNamespace(content=response)
-                )
+                SimpleNamespace(finish_reason="stop", message=SimpleNamespace(content=response))
             ],
             usage=None,
         )
@@ -112,9 +110,7 @@ async def test_valid_intent_preserves_original_question(
         _plan("compare", targets=["Ромашка"] * 101),
     ],
 )
-async def test_rejects_invalid_schema_after_one_repair(
-    settings: Settings, response: str
-) -> None:
+async def test_rejects_invalid_schema_after_one_repair(settings: Settings, response: str) -> None:
     client = ScriptedClient(response)
     result = await route_intent(settings, "Какие риски у Ромашка и Василёк?", {}, client=client)
     assert result.status == "routing_failed"
@@ -131,6 +127,20 @@ async def test_repairs_once_without_echoing_untrusted_response(settings: Setting
     assert result.status == "routed"
     assert len(client.calls) == 2
     assert "UNTRUSTED_PAYLOAD" not in json.dumps(client.calls[1])
+
+
+async def test_initial_sections_share_route_call_without_becoming_company_targets(settings):
+    client = ScriptedClient(_plan(answer_mode="analysis", review_topics=["finance", "enforcement"]))
+    result = await route_intent(settings, "Что важно для отсрочки?", {}, client=client)
+    assert result.plan.review_topics == ("finance", "enforcement")
+    assert result.plan.targets == ()
+    assert len(client.calls) == 1
+
+
+@pytest.mark.parametrize("topics", [["finance", "finance"], ["web_search"], ["shell"]])
+def test_initial_sections_are_limited_to_unique_allowed_topics(topics):
+    with pytest.raises(ValidationError):
+        IntentPlan.model_validate_json(_plan(answer_mode="analysis", review_topics=topics))
 
 
 async def test_rejects_invented_target_even_if_present_in_session(settings: Settings) -> None:
@@ -285,3 +295,41 @@ def test_python_contract_is_strict_and_does_not_coerce_targets() -> None:
     with pytest.raises(ValidationError):
         IntentPlan.model_validate({"action": "lookup", "targets": ["Ромашка"]})
     assert IntentPlan(action="lookup", targets=("Ромашка",)).targets == ("Ромашка",)
+
+
+async def test_bad_role_quote_does_not_discard_valid_identifier_and_payment(settings):
+    question = (
+        "ООО «ТЕТРАДОМ» просит поставить товар с оплатой через 60 дней. Проверь ИНН 9714038662."
+    )
+    client = ScriptedClient(
+        _plan(
+            "ask",
+            targets=["9714038662"],
+            answer_mode="analysis",
+            deal_patch={"role": "покупатель", "advance": "оплатой через 60 дней"},
+        )
+    )
+    result = await route_intent(settings, question, {}, client=client)
+    assert result.plan is not None and result.plan.targets == ("9714038662",)
+    assert result.plan.deal_patch.role == "просит поставить товар"
+    assert result.plan.deal_patch.advance == "оплатой через 60 дней"
+    assert len(client.calls) == 2
+
+
+@pytest.mark.parametrize("role", ["продавца", "нас как продавца"])
+async def test_user_role_does_not_replace_counterparty_role(settings, role):
+    question = "Теперь отсрочка 30 дней. Что меняется для нас как продавца?"
+    client = ScriptedClient(
+        _plan(
+            "ask",
+            answer_mode="analysis",
+            deal_patch={
+                "role": role,
+                "advance": "отсрочка 30 дней",
+            },
+        )
+    )
+    result = await route_intent(settings, question, {}, client=client)
+    assert result.plan is not None
+    assert result.plan.deal_patch.role is None
+    assert result.plan.deal_patch.advance == "отсрочка 30 дней"

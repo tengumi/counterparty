@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { createElement } from "react";
+import { createElement, type KeyboardEvent } from "react";
 import {
   comparisonBankKey,
   comparisonCellSources,
@@ -11,7 +11,7 @@ import {
 } from "../comparison/presentation";
 import { ComparisonTable } from "../comparison/ComparisonTable";
 import { responseSources } from "./evidence";
-import { scrollConversation } from "../components/ChatPanel";
+import { scrollConversation, submitChatOnEnter } from "../components/ChatPanel";
 import { EvidenceDrawer } from "../components/EvidenceDrawer";
 import { bankLabel } from "../components/Primitives";
 import type { Card, Cell, ChatResponse, Row } from "../types";
@@ -155,10 +155,37 @@ describe("Представление без пересчёта фактов", ()
     expect(container.scrollIntoView).not.toHaveBeenCalled();
     expect(() => scrollConversation(null)).not.toThrow();
   });
+  it.each([
+    ["Enter", false, false, 13, false, true, true],
+    ["Enter", true, false, 13, false, false, false],
+    ["Enter", false, true, 13, false, false, false],
+    ["Enter", false, false, 229, false, false, false],
+    ["Enter", false, false, 13, true, true, false],
+    ["a", false, false, 65, false, false, false],
+  ])(
+    "отправка с клавиатуры: %s, Shift=%s, IME=%s, код=%s, повтор=%s",
+    (key, shiftKey, isComposing, keyCode, repeat, prevent, send) => {
+      const requestSubmit = vi.fn();
+      const preventDefault = vi.fn();
+      submitChatOnEnter({
+        key,
+        shiftKey,
+        repeat,
+        nativeEvent: { isComposing, keyCode },
+        currentTarget: { form: { requestSubmit } },
+        preventDefault,
+      } as unknown as KeyboardEvent<HTMLTextAreaElement>);
+      expect(preventDefault).toHaveBeenCalledTimes(prevent ? 1 : 0);
+      expect(requestSubmit).toHaveBeenCalledTimes(send ? 1 : 0);
+    },
+  );
   it("сохраняет точность денег за пределами Number", () => {
     expect(
       displayCell("financial_profit", cell(0, "18014398509481985.03")),
     ).toBe("18\u202f014\u202f398\u202f509\u202f481\u202f985,03");
+    expect(displayCell("financial_proceeds", cell(0, "60746000 ₽"))).toBe(
+      "60\u202f746\u202f000 ₽",
+    );
     expect(displayCell("financial_profit", cell(0, "Нет данных"))).toBe(
       "Нет данных",
     );
@@ -171,19 +198,22 @@ describe("Представление без пересчёта фактов", ()
     [null, "Сигнал не передан"],
     ["NEW_CODE", "Сигнал не распознан"],
     ["__proto__", "Сигнал не распознан"],
-  ])("подписи оценки %s русифицируются без изменения источника", (raw, label) => {
-    const sourceCell = Object.freeze({
-      ...cell(0),
-      value: raw,
-      display_value: `${raw} — исходная подпись поставщика`,
-    });
-    expect(bankLabel(raw)).toBe(label);
-    expect(displayCell("bank_risk", sourceCell)).toBe(label);
-    expect(sourceCell.value).toBe(raw);
-    expect(sourceCell.display_value).toBe(
-      `${raw} — исходная подпись поставщика`,
-    );
-  });
+  ])(
+    "подписи оценки %s русифицируются без изменения источника",
+    (raw, label) => {
+      const sourceCell = Object.freeze({
+        ...cell(0),
+        value: raw,
+        display_value: `${raw} — исходная подпись поставщика`,
+      });
+      expect(bankLabel(raw)).toBe(label);
+      expect(displayCell("bank_risk", sourceCell)).toBe(label);
+      expect(sourceCell.value).toBe(raw);
+      expect(sourceCell.display_value).toBe(
+        `${raw} — исходная подпись поставщика`,
+      );
+    },
+  );
   it("совмещает поиск, банковский фильтр и ручной отбор без нового ранжирования", () => {
     expect(
       filterCards(

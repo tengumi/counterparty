@@ -36,6 +36,7 @@ from counterparty_agent.query import QueryParseError, resolve_query
 from counterparty_agent.workflow.intents import (
     _LEGAL_FORM_IN_QUESTION,
     _QUOTED_NAME,
+    _has_group_reference,
     _has_named_target,
     _ordinal_positions,
     _parse_workflow_query,
@@ -155,11 +156,20 @@ async def ask_project(
     )
     if routed.plan is None:
         return _safe_answer("llm_unavailable", used_llm=routed.used_llm, model=routed.model)
-    if routed.plan.action not in {"ask", "lookup", "show", "compare"}:
+    intent = routed.plan
+    if (
+        intent.action in {"ask", "show"}
+        and len(project_snapshots) >= 2
+        and intent.position is None
+        and not intent.targets
+        and _has_group_reference(question)
+    ):
+        intent = intent.model_copy(update={"scope": "group"})
+    if intent.action not in {"ask", "lookup", "show", "compare"}:
         return _safe_answer("insufficient_data", used_llm=True, model=routed.model)
-    if routed.plan.targets:
+    if intent.targets:
         selected = set()
-        for target in routed.plan.targets:
+        for target in intent.targets:
             try:
                 results = resolve_query(_parse_workflow_query(target), source).results
             except QueryParseError:
@@ -170,13 +180,13 @@ async def ask_project(
         if not selected or not selected <= {snapshot.snapshot_id for snapshot in snapshots}:
             return _safe_answer("insufficient_data", used_llm=True, model=routed.model)
         snapshots = [snapshot for snapshot in snapshots if snapshot.snapshot_id in selected]
-    elif routed.plan.position is not None and positions != [routed.plan.position]:
+    elif intent.position is not None and positions != [intent.position]:
         return _safe_answer("insufficient_data", used_llm=True, model=routed.model)
-    explicit_target = bool(named or positions or routed.plan.targets)
+    explicit_target = bool(named or positions or intent.targets)
     focus = None
     if explicit_target and len(snapshots) == 1:
         focus = snapshots[0]
-    elif routed.plan.scope == "current" and remembered_focus is not None:
+    elif intent.scope == "current" and remembered_focus is not None:
         focus = remembered_focus
         snapshots = [focus]
     # scope=group оставляет весь разрешённый состав и явно снимает прежний фокус.
@@ -188,9 +198,7 @@ async def ask_project(
     if project.focused_snapshot_id != new_focus_id:
         project.last_fact_ids = []
     project.focused_snapshot_id = new_focus_id
-    accept_user_context(
-        project, apply_deal(project.deal, routed.plan.deal_patch, question), question
-    )
+    accept_user_context(project, apply_deal(project.deal, intent.deal_patch, question), question)
     project.deal.snapshot_ids = [snapshot.snapshot_id for snapshot in project_snapshots]
     project.deal.source_hash = source.source_hash
     extra_facts: tuple[ApprovedFact, ...] = (
@@ -205,6 +213,7 @@ async def ask_project(
         project.deal,
         client=client,
         extra_facts=extra_facts,
+        initial_topics=intent.review_topics if intent.answer_mode == "analysis" else (),
     )
     validate_review_run(result)
     accept_context(project, result.deal)

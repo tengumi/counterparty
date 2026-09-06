@@ -214,16 +214,16 @@ describe("Финансовые диаграммы", () => {
     };
     expect(annualPoints(company)).toEqual([]);
   });
-  it("подписывает ограничения и показывает точные значения без выдуманной валюты", () => {
+  it("показывает точные значения в подтверждённых рублях", () => {
     const company = card();
     addYear(company, 2025, "123456.78");
     const html = renderToStaticMarkup(
       createElement(CompanyFinancials, { card: company, source: () => {} }),
     );
-    expect(html).toContain("Валюта и масштаб сумм не указаны");
+    expect(html).toContain("Суммы указаны в рублях");
     expect(html).toContain("123\u202f456,78");
     expect(html).toContain("Нет данных");
-    expect(html).not.toContain("₽");
+    expect(html).toContain("₽");
   });
 });
 describe("Групповая сводка", () => {

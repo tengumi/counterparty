@@ -16,6 +16,9 @@ export function Icon({
     | "spark"
     | "arrow"
     | "plus"
+    | "chat"
+    | "expand"
+    | "minimize"
     | "close";
 }) {
   const paths = {
@@ -26,6 +29,9 @@ export function Icon({
     spark: "m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z",
     arrow: "M5 12h14m-6-6 6 6-6 6",
     plus: "M12 5v14M5 12h14",
+    chat: "M21 11a8 8 0 0 1-8 8H5l-3 3V11a8 8 0 0 1 8-8h3a8 8 0 0 1 8 8ZM7 9h9M7 13h6",
+    expand: "M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7",
+    minimize: "M20 4l-7 7m0-6v6h6M4 20l7-7m-6 0h6v6",
     close: "m6 6 12 12M6 18 18 6",
   };
   return (
@@ -64,4 +70,4 @@ export function Bank({ level }: { level?: string | null }) {
   );
 }
 export const date = (value: string) =>
-  new Date(value).toLocaleDateString("ru-RU");
+  new Date(value).toLocaleDateString("ru-RU", { timeZone: "Europe/Moscow" });

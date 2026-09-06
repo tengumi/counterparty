@@ -9,11 +9,56 @@ from decimal import Decimal
 
 from counterparty_agent.ai.contracts import ApprovedFact, GroundedClaim
 from counterparty_agent.analytics.comparison import validate_comparison
+from counterparty_agent.analytics.core import validate_analysis
 from counterparty_agent.models import (
+    AnalysisResult,
     ComparisonResult,
     CounterpartySnapshot,
     FindingDataStatus,
 )
+
+
+def build_enforcement_focus(
+    snapshots: Sequence[CounterpartySnapshot], analyses: Sequence[AnalysisResult]
+) -> ApprovedFact | None:
+    """Сравнить один явный критерий; число записей не становится рейтингом надёжности."""
+    if not 2 <= len(snapshots) <= 6 or len(snapshots) != len(analyses):
+        return None
+    counts: list[int] = []
+    ids: list[str] = []
+    for snapshot, analysis in zip(snapshots, analyses, strict=True):
+        validate_analysis(analysis, snapshot)
+        finding = next(f for f in analysis.findings if f.code == "enforcement_summary")
+        counts.append(sum(item.is_active for item in snapshot.enforcement_proceedings))
+        ids.extend(finding.evidence_ids)
+        ids.extend(e.evidence_id for e in snapshot.evidence if e.canonical_path == "identity")
+    highest = max(counts)
+    if highest == 0 or counts.count(highest) != 1:
+        return None
+    leader = snapshots[counts.index(highest)]
+    text = (
+        "Для первоочередной проверки взысканий по числу активных записей выделяется "
+        f"{leader.identity.short_name} (ИНН {leader.identity.inn}): {highest}. "
+        "В остальных отчётах: "
+        + "; ".join(
+            f"{s.identity.short_name} (ИНН {s.identity.inn}) — {count}"
+            for s, count in zip(snapshots, counts, strict=True)
+            if s is not leader
+        )
+        + ". Сравнивается число записей в выгрузках, не вероятность неоплаты и не "
+        "надёжность компаний. Это не основание выбрать или отклонить исполнителя."
+    )
+    if len(text) > 1100:
+        return None
+    evidence = tuple(dict.fromkeys(ids))
+    digest = hashlib.sha256(json.dumps([text, evidence], ensure_ascii=False).encode()).hexdigest()[
+        :24
+    ]
+    return ApprovedFact(
+        f"fact_{digest}",
+        GroundedClaim(text=text, evidence_ids=evidence),
+        "comparison_enforcement_focus",
+    )
 
 
 def build_comparison_fact_catalog(
@@ -115,8 +160,8 @@ def build_comparison_fact_catalog(
             (
                 f"Проверка знака прибыли {period_text}.",
                 *parts,
-                "Значения в единицах источника; "
-                "масштаб и валюта неизвестны, денежное ранжирование не выполняется.",
+                "Значения указаны в рублях без дополнительного множителя; "
+                "денежное ранжирование не выполняется.",
             )
         ),
         [key for cell in profit.cells for key in cell.evidence_ids],

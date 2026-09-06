@@ -157,6 +157,7 @@ async def review_session(state: WorkflowState, runtime: Runtime[WorkflowContext]
     if (
         not deal.goal
         and not deal.role
+        and not deal.advance
         and not deal.general_check
         and "goal" not in deal.asked_fields
     ):
@@ -190,6 +191,7 @@ async def review_session(state: WorkflowState, runtime: Runtime[WorkflowContext]
         scope_analyses,
         deal,
         client=context.llm_client,
+        initial_topics=plan.review_topics if plan and plan.answer_mode == "analysis" else (),
     )
     result.review_run = run
     result.review = context.deal = run.deal

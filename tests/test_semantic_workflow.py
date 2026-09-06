@@ -11,14 +11,16 @@ from langgraph.checkpoint.memory import InMemorySaver
 from pydantic import SecretStr
 
 from counterparty_agent.ai.catalog import build_fact_catalog
+from counterparty_agent.ai.comparison_catalog import build_comparison_fact_catalog
 from counterparty_agent.ai.contracts import GroundedAnswer
 from counterparty_agent.ai.router import IntentPlan, RouterResult
 from counterparty_agent.config import Settings
 from counterparty_agent.data.repository import JsonCounterpartySource
 from counterparty_agent.models import AnalysisResult, CounterpartySnapshot
+from counterparty_agent.query import resolve_query
 from counterparty_agent.workflow.builder import build_graph
 from counterparty_agent.workflow.contracts import WorkflowContext, WorkflowResult
-from counterparty_agent.workflow.semantic import _target_plan
+from counterparty_agent.workflow.semantic import _recover_explicit_request, _target_plan
 
 
 @pytest.fixture(scope="module")
@@ -102,6 +104,7 @@ def harness(source: JsonCounterpartySource, monkeypatch: pytest.MonkeyPatch) -> 
         "Из-за чего этот контрагент надежен?",
         "А каккие есть судебные дела?",
         "На чём основана эта оценка?",
+        "Покажи источники для взыскания, выручки и арбитража.",
     ],
 )
 async def test_free_followup_reaches_llm_with_current_company(
@@ -129,6 +132,36 @@ async def test_first_message_can_find_and_answer_without_exact_command(
     result = await harness.run(question)
     assert result.status == "answered" and result.snapshot is snapshot
     assert harness.routes[0][0] == question and harness.answers[0][0] == question
+
+
+async def test_explicit_check_survives_router_failure(source, harness):
+    from counterparty_agent.ai.deal import DealContext
+
+    harness.failure = "unavailable"
+    question = (
+        "ООО «ТЕТРАДОМ» просит поставить товар с оплатой через 60 дней. "
+        "Проверь ИНН 9714038662 и объясни, что важно для решения об отсрочке."
+    )
+    result = await harness.run(question, deal=DealContext())
+    assert result.snapshot is not None and result.snapshot.identity.inn == "9714038662"
+    assert result.review is not None and result.review.advance == "оплатой через 60 дней"
+    assert result.review.role == "просит поставить товар"
+    assert "Не удалось однозначно понять" not in result.answer
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Не надо проверить ИНН 9714038662",
+        "Сравни и проверь ИНН 9714038662 и 7813664770",
+        "Добавь и проверь ИНН 9714038662",
+        "ООО «АПРЕЛЬ». Проверь ИНН 9714038662",
+        "Если понадобится, проверь ИНН 9714038662",
+    ],
+)
+def test_route_recovery_does_not_bypass_user_scope_or_name_conflict(source, question):
+    context = WorkflowContext(source, source.snapshots[0].report_at, question=question)
+    assert _recover_explicit_request(context) is None
 
 
 async def test_lookup_by_natural_name_uses_resolver_and_marks_router_call(
@@ -173,6 +206,29 @@ async def test_model_cannot_drop_or_correct_explicit_identifier(
     result = await harness.run(f"Есть ли суды у ИНН {second.identity.inn}?")
     assert result.status == "routing_failed" and not harness.answers
     assert (await harness.state())["selected_snapshot_id"] == first.snapshot_id
+
+
+async def test_name_does_not_override_invalid_identifier(
+    source: JsonCounterpartySource, harness: Any
+) -> None:
+    harness.plan = IntentPlan(action="lookup", targets=("ИНН 123",))
+    result = await harness.run(f"Проверь {source.snapshots[0].identity.short_name}, ИНН 123")
+    assert result.status == "invalid_identifier" and result.snapshot is None
+    assert not harness.answers
+
+
+def test_name_does_not_override_missing_identifier(source: JsonCounterpartySource) -> None:
+    # Валидный ИНН выбранной компании отсутствует в ограниченном источнике.
+    missing = source.snapshots[0]
+    present = source.snapshots[1]
+    reduced = JsonCounterpartySource((present,), source_hash=source.source_hash)
+    plan = _target_plan(
+        IntentPlan(action="lookup", targets=(missing.identity.inn,)),
+        f"Проверь {present.identity.short_name}, ИНН {missing.identity.inn}",
+        reduced,
+    )
+    resolution = resolve_query(plan, reduced)
+    assert resolution.results[0].status.value == "not_found"
 
 
 async def test_unknown_literal_target_does_not_fall_back_to_previous_card(
@@ -232,6 +288,45 @@ async def test_group_focus_then_compare_her_means_one_company(
     result = await harness.run(f"Сравни её с ИНН {target.identity.inn}")
     assert result.status == "compared"
     assert result.snapshots == (source.snapshots[1], target)
+
+
+async def test_explicit_available_reports_returns_from_focus_to_group(
+    source: JsonCounterpartySource,
+    harness: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _group(source, harness)
+    harness.plan = IntentPlan(action="show", position=2)
+    focused = await harness.run("Давай подробнее про вторую")
+    assert focused.focus_snapshot_id == source.snapshots[1].snapshot_id
+
+    calls: list[tuple[str, ...]] = []
+
+    async def answer_group(settings, question, snapshots, comparison, **kwargs):
+        del settings, question, kwargs
+        calls.append(tuple(item.snapshot_id for item in snapshots))
+        fact = next(
+            item
+            for item in build_comparison_fact_catalog(snapshots, comparison)
+            if item.topic == "comparison_bank_signal"
+        )
+        return GroundedAnswer(
+            "answered", fact.claim.text, (fact.claim,), (fact.fact_id,), "test-model", True
+        )
+
+    monkeypatch.setattr(
+        "counterparty_agent.workflow.comparison.answer_comparison_question", answer_group
+    )
+    # Даже при ошибочном scope=current у модели явная групповая фраза снимает фокус.
+    harness.plan = IntentPlan(action="ask", scope="current", answer_mode="facts")
+    restored = await harness.run(
+        "Каких данных не хватает, чтобы сделать обоснованный выбор? "
+        "Нужна общая проверка доступных отчётов."
+    )
+    assert restored.status == "answered"
+    assert restored.focus_snapshot_id is None and restored.snapshot is None
+    assert restored.snapshots == source.snapshots[:3]
+    assert calls == [tuple(item.snapshot_id for item in source.snapshots[:3])]
 
 
 async def test_compare_current_without_focus_requires_clarification(

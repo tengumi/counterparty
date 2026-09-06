@@ -34,6 +34,21 @@ def needs_bank_reason(question: str, previous_facts: Sequence[ApprovedFact] = ()
     )
 
 
+def needs_bank_assessment(question: str) -> bool:
+    """Достаточность оценки для решения — не вопрос о причине её цвета."""
+
+    text = question.casefold().replace("ё", "е")
+    bank = re.search(
+        r"\b(?:зелен\w*|желт\w*|красн\w*|светофор\w*|статус\w*|оценк\w*|green|yellow|red)\b", text
+    )
+    decision = re.search(
+        r"достаточ\w*|гарант\w*|можно\s+(?:довер\w*|работать|платить|перечисл\w*)|"
+        r"зачем\s+(?:еще|провер\w*)|разве\s+не\s+надеж\w*",
+        text,
+    )
+    return bool(bank and decision)
+
+
 def required_group_topics(question: str) -> set[str]:
     text = question.casefold()
     required: set[str] = set()

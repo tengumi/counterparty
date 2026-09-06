@@ -72,11 +72,85 @@ def validate_patch(patch: DealPatch, question: str) -> None:
             not value.strip() or _normalized(value) not in _normalized(question)
         ):
             raise ValueError("Условие не является цитатой сообщения пользователя")
+    if patch.role:
+        user_roles = re.finditer(
+            r"\b(?:мы|я|нам|мне|нас|меня)\s+как\s+"
+            r"(?:продав\w*|поставщик\w*|покупател\w*|подрядчик\w*|заказчик\w*)\b",
+            _normalized(question),
+        )
+        if any(
+            _normalized(patch.role) in match.group() or match.group() in _normalized(patch.role)
+            for match in user_roles
+        ):
+            raise ValueError("Названа роль пользователя, а не контрагента")
     if patch.general_check and not re.search(
-        r"\b(?:общ\w*\s+провер\w*|без\s+(?:уточн\w*|детал\w*)|не\s+знаю|пропуст\w*)\b",
+        r"\b(?:общ\w*\s+провер\w*|без\s+(?:уточн\w*|детал\w*|(?:нов\w*\s+)?вопрос\w*)|"
+        r"не\s+(?:знаю|задавай\w*\s+(?:нов\w*\s+|дополнительн\w*\s+)?вопрос\w*)|пропуст\w*)\b",
         _normalized(question),
     ):
         raise ValueError("Общая проверка не запрошена пользователем")
+
+
+def literal_deal_patch(question: str) -> DealPatch:
+    """Восстановить только явные цитаты в просьбе о проверке, не гипотезы и не договор."""
+
+    if not re.search(r"\b(?:проверь|проверьте|проверить)\b", question, re.I) or re.search(
+        r"\b(?:если|допустим|предположим|договоре|документе|цитата)\b", question, re.I
+    ):
+        return DealPatch()
+    patterns = {
+        "role": r"\b(?:как\s+)?(?:подрядчик\w*|поставщик\w*|покупател\w*|заказчик\w*)\b|"
+        r"\bпросит\s+(?:поставить|отгрузить|продать)\s+товар\w*",
+        "subject": r"\b(?:товар\w*|оборудовани\w*|ремонт\w*(?:\s+помещени\w*)?)\b",
+        "advance": r"\b(?:оплат\w*\s+через\s+\d+\s+дн\w*|отсрочк\w*(?:\s+(?:на\s+)?\d+\s+дн\w*)?|"
+        r"без\s+(?:аванс\w*|предоплат\w*)|(?:аванс\w*|предоплат\w*)(?:\s+\d+(?:[.,]\d+)?\s*%)?|"
+        r"оплат\w*\s+после\s+[^.!?;]{1,100})",
+        "goal": r"\b(?:решени\w*\s+об\s+отсрочк\w*|выбираю\s+[^.!?;]{1,80}|"
+        r"рассматриваю\s+[^.!?;]{1,200}|проверь\s+[^.!?;]{1,200})",
+    }
+    values: dict[str, str] = {}
+    for key, pattern in patterns.items():
+        matches = list(re.finditer(pattern, question, re.I))
+        if key == "advance" and len(matches) > 1:
+            concrete = [m for m in matches if not re.fullmatch(r"отсрочк\w*", m.group(), re.I)]
+            if concrete:
+                matches = concrete
+        if key == "advance" and len(matches) > 1:
+            # Смешанные условия и противоречия не сокращаем до первой предоплаты.
+            continue
+        if matches:
+            values[key] = matches[0].group()
+    return recover_deal_patch(DealPatch.model_validate(values), question)
+
+
+def recover_deal_patch(patch: DealPatch, question: str) -> DealPatch:
+    """Ошибка в одном поле не отменяет дословные условия остальных полей."""
+
+    values: dict[str, Any] = {}
+    for key in (*FIELDS, "general_check"):
+        value = getattr(patch, key)
+        if value is None or value is False:
+            continue
+        single = DealPatch.model_validate({key: value})
+        try:
+            validate_patch(single, question)
+        except ValueError:
+            continue
+        values[key] = value
+    return DealPatch.model_validate(values)
+
+
+def counterparty_role(deal: DealContext) -> Literal["buyer", "supplier", "unknown"]:
+    """Роль относительно пользователя; основания остаются дословными условиями."""
+
+    context = _normalized(deal.role or deal.goal or "")
+    buyer = bool(
+        re.search(r"покупател\w*|заказчик\w*|просит\s+(?:поставить|отгрузить|продать)", context)
+    )
+    supplier = bool(re.search(r"поставщик\w*|подрядчик\w*|продавец|продавц\w*", context))
+    return (
+        "buyer" if buyer and not supplier else "supplier" if supplier and not buyer else "unknown"
+    )
 
 
 def apply_deal(deal: DealContext, patch: DealPatch, question: str) -> DealContext:
@@ -85,6 +159,17 @@ def apply_deal(deal: DealContext, patch: DealPatch, question: str) -> DealContex
     changed = False
     for key in FIELDS:
         value = getattr(patch, key)
+        if key == "advance" and value and re.fullmatch(r"\d+(?:[.,]\d+)?\s*%", value):
+            # Восстанавливаем «аванс 50%» только из одной явной дословной фразы.
+            matches = list(
+                re.finditer(
+                    r"\b(?:аванс\w*|предоплат\w*)\s*[:—–-]?\s*" + re.escape(value),
+                    question,
+                    re.I,
+                )
+            )
+            if len(matches) == 1:
+                value = matches[0].group()
         if value is not None and value != getattr(updated, key):
             setattr(updated, key, value)
             updated.terms[key] = DealTerm(text=value, evidence_id=term_id(key, value))
@@ -125,6 +210,71 @@ def deal_facts(deal: DealContext) -> tuple[ApprovedFact, ...]:
             metric=key,
         )
         for key, term in deal.terms.items()
+    )
+
+
+def deal_implication_facts(deal: DealContext) -> tuple[ApprovedFact, ...]:
+    """Связать порядок оплаты с ролью контрагента, не оценивать его платёжеспособность."""
+
+    term = deal.terms.get("advance")
+    if term is None:
+        return ()
+    payment = _normalized(term.text)
+    no_advance = bool(re.search(r"\bбез\s+(?:аванс\w*|предоплат\w*)\b", payment)) or bool(
+        re.search(r"\b(?:аванс\w*|предоплат\w*)\s*[:—–-]?\s*0(?:[.,]0+)?\s*%", payment)
+    )
+    has_advance = bool(re.search(r"\b(?:аванс\w*|предоплат\w*)\b", payment)) and not no_advance
+    postpayment = no_advance or (
+        not has_advance
+        and bool(
+            re.search(
+                r"\bоплат\w*\b.*\bпосле\b|\bпосле\b.*\bоплат\w*\b|"
+                r"\bотсрочк\w*|\bоплат\w*\s+через\s+\d+\s+дн\w*",
+                payment,
+            )
+        )
+    )
+    role = counterparty_role(deal)
+    evidence = [term.evidence_id]
+    evidence.extend(deal.terms[key].evidence_id for key in ("role", "goal") if key in deal.terms)
+    if postpayment and role == "buyer":
+        text = (
+            f"Вы рассматриваете отсрочку покупателю: «{term.text}». "
+            "Товар или результат передаётся до получения оплаты. Для вашей задачи важно, "
+            "сможет ли покупатель рассчитаться в согласованный срок: речь о риске задержки "
+            "или неполучения оплаты, а не о потере аванса подрядчику. "
+            "Само условие отсрочки не определяет вероятность неоплаты."
+        )
+    elif postpayment and role == "unknown":
+        text = (
+            f"Указаны условия оплаты без аванса: «{term.text}». "
+            "Нужно различить, кто передаёт товар "
+            "и кто платит: для продавца существенна оплата покупателем, для покупателя — "
+            "исполнение поставщиком. Роль сторон по сохранённым условиям не определена."
+        )
+    elif postpayment:
+        text = (
+            "По вашим условиям оплата будет после исполнения, без аванса. "
+            "Риск потери именно предоплаты к этим условиям не относится. "
+            "При этом остаются вопросы к срокам и качеству исполнения."
+        )
+    elif has_advance and role == "buyer":
+        text = (
+            f"Покупатель оплачивает до исполнения: «{term.text}». "
+            "Это не аванс, который вы перечисляете подрядчику. "
+            "Условие оплаты само по себе не подтверждает поступление денег."
+        )
+    elif has_advance:
+        text = "Вы планируете аванс. Вопросы к контрагенту стоит выяснить до перечисления денег."
+    else:
+        return ()
+    return (
+        ApprovedFact(
+            f"user_payment_effect_{term.evidence_id}",
+            GroundedClaim(text=text, evidence_ids=tuple(dict.fromkeys(evidence))),
+            "deal_context",
+            metric="payment_effect",
+        ),
     )
 
 

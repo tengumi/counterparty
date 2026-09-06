@@ -27,6 +27,9 @@ const axisNumber = (value: number) =>
     maximumFractionDigits: 1,
   }).format(value);
 
+const rubles = (value: string | null) =>
+  value === null ? exactNumber(value) : `${exactNumber(value)} ₽`;
+
 export function CompanyFinancials({
   card,
   source,
@@ -57,7 +60,7 @@ export function CompanyFinancials({
       value:
         point.values[key] === null
           ? `Нет данных за ${year}. Пропуск не заменён нулём.`
-          : `${exactNumber(point.values[key])} · единицы источника`,
+          : rubles(point.values[key]),
       company: card.name,
       evidence: point.evidence,
     });
@@ -85,12 +88,10 @@ export function CompanyFinancials({
             <strong
               data-negative={latest.values[key]?.startsWith("-") || undefined}
             >
-              {exactNumber(latest.values[key])}
+              {rubles(latest.values[key])}
             </strong>
             <small>
-              {latest.values[key] === null
-                ? "Не заменяем нулём"
-                : "В единицах источника"}
+              {latest.values[key] === null ? "Не заменяем нулём" : "Рубли"}
             </small>
           </button>
         ))}
@@ -234,8 +235,8 @@ export function CompanyFinancials({
             </p>
           )}
           <figcaption className="chart-disclaimer">
-            Валюта и масштаб сумм не указаны; сопоставимость единиц между годами
-            не подтверждена. Это значения отчёта, не оценка роста бизнеса.
+            Суммы указаны в рублях без дополнительного множителя. Это значения
+            отчёта, а не готовая оценка роста бизнеса.
           </figcaption>
         </figure>
         <div className="period-values" aria-label={`Точные значения: ${label}`}>
@@ -247,7 +248,7 @@ export function CompanyFinancials({
               <span>
                 {point.year} <span aria-hidden="true">↗</span>
               </span>
-              <strong>{exactNumber(point.values[metric])}</strong>
+              <strong>{rubles(point.values[metric])}</strong>
             </button>
           ))}
         </div>

@@ -19,6 +19,8 @@ export function App() {
   const [query, setQuery] = useState("");
   const [source, setSource] = useState<SourceDetails | null>(null);
   const [creating, setCreating] = useState(false);
+  const [chatExpanded, setChatExpanded] = useState(false);
+  const [mobilePane, setMobilePane] = useState<"reports" | "chat">("chat");
   const choose = (candidate: Candidate, selectionId?: string) =>
     w.send(
       {
@@ -60,6 +62,7 @@ export function App() {
       ? "Выбранная компания недоступна в текущем составе"
       : `Вся группа проекта · компаний: ${dialogueCards.length}`;
   const focusCompany = (position: number, selection = cards) => {
+    setMobilePane("chat");
     if (projectView) {
       const company = selection[position - 1];
       if (company) void w.command("set_focus", { value: company.snapshot_id });
@@ -70,6 +73,7 @@ export function App() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
+          if (busy || !query.trim()) return;
           // Список и свободную фразу различает сервер: запятая может быть частью условий.
           void w.send({ question: query });
         }}
@@ -91,10 +95,7 @@ export function App() {
           Найти
         </Action>
       </form>
-      <p className="small muted">
-        Несколько компаний — через точку с запятой. Можно описать задачу своими
-        словами.
-      </p>
+      <p className="small muted">Можно описать задачу своими словами.</p>
     </section>
   );
   return (
@@ -131,6 +132,8 @@ export function App() {
                 void w.reset();
                 setQuery("");
                 setSource(null);
+                setChatExpanded(false);
+                setMobilePane("chat");
               }}
             >
               <Icon name="plus" />
@@ -261,8 +264,96 @@ export function App() {
                   </button>
                 </div>
               )}
-              <div className="check-layout">
-                <div className="check-dialogue">
+              <nav className="workspace-panels" aria-label="Рабочая область">
+                <button
+                  aria-pressed={mobilePane === "reports"}
+                  aria-controls="check-reports"
+                  onClick={() => setMobilePane("reports")}
+                >
+                  <Icon name="file" />
+                  {data?.comparison ? "Сравнение" : "Отчёт"}
+                </button>
+                <button
+                  aria-pressed={mobilePane === "chat"}
+                  aria-controls="check-dialogue"
+                  onClick={() => setMobilePane("chat")}
+                >
+                  <Icon name="chat" /> Чат
+                  {busy && <span className="chat-activity" />}
+                </button>
+              </nav>
+              <div
+                className="check-layout"
+                data-chat-expanded={chatExpanded}
+                data-mobile-pane={mobilePane}
+              >
+                <div className="check-reports" id="check-reports">
+                  {dialogueCards.length > 1 && (
+                    <details className="participants-disclosure">
+                      <summary>
+                        Выбранные компании <span>{dialogueCards.length}</span>
+                      </summary>
+                      <SelectionSummary
+                        cards={dialogueCards}
+                        focused={dialogueFocus}
+                        busy={busy || selectionPending}
+                        source={setSource}
+                        focus={(n) => focusCompany(n, dialogueCards)}
+                      />
+                    </details>
+                  )}
+                  {selected && (
+                    <div className="surface reports-surface">
+                      {data?.comparison && (
+                        <ComparisonTable
+                          data={data}
+                          shortlist={shortlist}
+                          setShortlist={w.setShortlist}
+                          source={setSource}
+                          focus={focusCompany}
+                          busy={busy || selectionPending}
+                        />
+                      )}
+                      {detailedCard && (
+                        <CompanyReport card={detailedCard} source={setSource} />
+                      )}
+                    </div>
+                  )}
+                  {projectView && (
+                    <details
+                      className="report-disclosure project-disclosure"
+                      open
+                    >
+                      <summary>
+                        <span>
+                          Документы и резюме проверки
+                          <small>
+                            План, открытые вопросы и сохранение результата
+                          </small>
+                        </span>
+                        <Icon name="plus" />
+                      </summary>
+                      <ProjectPanel
+                        key={`${project.project_id}:${project.goal}`}
+                        project={project}
+                        busy={busy}
+                        command={w.command}
+                        upload={w.upload}
+                        cards={cards}
+                        source={setSource}
+                      />
+                    </details>
+                  )}
+                  <details className="additional-search">
+                    <summary>Поиск по реквизитам</summary>
+                    {search}
+                  </details>
+                  <p className="workspace-footnote">
+                    Выводы основаны на доступных данных. Решение о
+                    сотрудничестве остаётся за вами.
+                  </p>
+                </div>
+                <div className="check-dialogue" id="check-dialogue">
                   {dialogueFocus && (projectView || data?.comparison) && (
                     <div className="focus-return">
                       <Action
@@ -284,6 +375,8 @@ export function App() {
                     group={dialogueCards.length > 1 && !dialogueFocus}
                     source={setSource}
                     pending={selectionPending}
+                    expanded={chatExpanded}
+                    toggleExpanded={() => setChatExpanded((value) => !value)}
                     review={
                       projectView && project.deal
                         ? {
@@ -301,80 +394,7 @@ export function App() {
                     }
                   />
                 </div>
-                <SelectionSummary
-                  cards={dialogueCards}
-                  focused={dialogueFocus}
-                  busy={busy || selectionPending}
-                  source={setSource}
-                  focus={(n) => focusCompany(n, dialogueCards)}
-                />
               </div>
-              {projectView && (
-                <details className="report-disclosure project-disclosure" open>
-                  <summary>
-                    <span>
-                      Документы и резюме проверки
-                      <small>
-                        План, открытые вопросы и сохранение результата
-                      </small>
-                    </span>
-                    <Icon name="plus" />
-                  </summary>
-                  <ProjectPanel
-                    key={`${project.project_id}:${project.goal}`}
-                    project={project}
-                    busy={busy}
-                    command={w.command}
-                    upload={w.upload}
-                    cards={cards}
-                    source={setSource}
-                  />
-                </details>
-              )}
-              {selected && (
-                <details
-                  className="report-disclosure"
-                  key={
-                    data?.comparison?.snapshot_ids.join(":") ||
-                    data?.card?.snapshot_id
-                  }
-                >
-                  <summary>
-                    <span>
-                      {data?.comparison
-                        ? "Сравнение и полные отчёты"
-                        : "Полный отчёт о компании"}
-                      <small>
-                        Показатели, финансы, судебные дела и источники
-                      </small>
-                    </span>
-                    <Icon name="plus" />
-                  </summary>
-                  <div className="surface">
-                    {data?.comparison && (
-                      <ComparisonTable
-                        data={data}
-                        shortlist={shortlist}
-                        setShortlist={w.setShortlist}
-                        source={setSource}
-                        focus={focusCompany}
-                        busy={busy || selectionPending}
-                      />
-                    )}
-                    {detailedCard && (
-                      <CompanyReport card={detailedCard} source={setSource} />
-                    )}
-                  </div>
-                </details>
-              )}
-              <details className="additional-search">
-                <summary>Поиск по реквизитам</summary>
-                {search}
-              </details>
-              <p className="workspace-footnote">
-                Выводы основаны на доступных данных. Решение о сотрудничестве
-                остаётся за вами.
-              </p>
             </>
           )}
         </div>

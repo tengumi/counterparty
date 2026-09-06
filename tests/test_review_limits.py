@@ -23,6 +23,133 @@ from counterparty_agent.workflow.review import run_review, validate_review_run
 source = review_source
 
 
+@pytest.mark.parametrize("combined", [True, False])
+async def test_initial_plan_skips_redundant_decisions_but_keeps_verification(
+    source, monkeypatch, combined
+):
+    model = ReviewModel(monkeypatch)
+    snapshot = next(s for s in source.snapshots if s.identity.inn == "1684017097")
+    run = await run_review(
+        Settings(
+            _env_file=None, llm_api_key=SecretStr("unit-only"), llm_combined_planning=combined
+        ),
+        "Что важно для нашей сделки?",
+        (snapshot,),
+        (analyze_snapshot(snapshot, evaluated_at=snapshot.report_at),),
+        purpose(),
+        client=object(),
+        initial_topics=("company", "finance", "arbitration", "enforcement", "reputation"),
+    )
+    assert run.answer.status == "answered"
+    assert bool(model.inputs(ReviewDecision)) is not combined
+    assert model.inputs(ReviewDraft) and model.inputs(GroundingVerdict)
+    assert "Проверено: полнота данных" in run.steps
+    validate_review_run(run)
+
+
+async def test_seeded_group_still_reconsiders_observed_facts(source, monkeypatch):
+    model = ReviewModel(monkeypatch)
+    snapshots = source.snapshots[:2]
+    run = await run_review(
+        Settings(_env_file=None, llm_api_key=SecretStr("unit-only")),
+        "Сравни для нашей сделки",
+        snapshots,
+        tuple(analyze_snapshot(s, evaluated_at=s.report_at) for s in snapshots),
+        purpose(),
+        client=object(),
+        initial_topics=("company", "finance"),
+    )
+    assert run.answer.status == "answered"
+    decisions = model.inputs(ReviewDecision)
+    assert decisions and decisions[0]["approved_facts"]
+    assert "finance" in decisions[0]["read_topics"]
+
+
+async def test_fast_path_cannot_bypass_rejection_of_unsupported_answer(source, monkeypatch):
+    model = ReviewModel(
+        monkeypatch,
+        verdict=GroundingVerdict(unsupported_blocks=[0], answers_question=False),
+    )
+    snapshot = next(s for s in source.snapshots if s.identity.inn == "1684017097")
+    run = await run_review(
+        Settings(_env_file=None, llm_api_key=SecretStr("unit-only")),
+        "Что важно для нашей сделки?",
+        (snapshot,),
+        (analyze_snapshot(snapshot, evaluated_at=snapshot.report_at),),
+        purpose(),
+        client=object(),
+        initial_topics=("company", "finance", "arbitration", "enforcement", "reputation"),
+    )
+    assert not model.inputs(ReviewDecision)
+    assert model.inputs(GroundingVerdict)
+    assert run.answer.status == "validation_failed"
+    assert not run.answer.claims
+
+
+async def test_missing_seeded_section_does_not_claim_it_was_checked(source, monkeypatch):
+    model = ReviewModel(monkeypatch)
+    snapshot = source.snapshots[0]
+    run = await run_review(
+        Settings(_env_file=None, llm_api_key=SecretStr("unit-only")),
+        "Какие риски?",
+        (snapshot,),
+        (analyze_snapshot(snapshot, evaluated_at=snapshot.report_at),),
+        purpose(),
+        client=object(),
+        initial_topics=("documents",),
+    )
+    assert model.inputs(ReviewDecision)[0]["read_topics"] == []
+    assert "Проверено: условия документов" not in run.steps
+
+
+async def test_unread_attention_keeps_adaptive_planner(source, monkeypatch):
+    model = ReviewModel(monkeypatch)
+    snapshot = next(s for s in source.snapshots if s.identity.inn == "7813664770")
+    run = await run_review(
+        Settings(_env_file=None, llm_api_key=SecretStr("unit-only")),
+        "На что обратить внимание?",
+        (snapshot,),
+        (analyze_snapshot(snapshot, evaluated_at=snapshot.report_at),),
+        purpose(),
+        client=object(),
+        initial_topics=("company",),
+    )
+    assert run.answer.status == "answered"
+    assert model.inputs(ReviewDecision)[0]["attention_topics"]
+
+
+async def test_group_address_and_facts_share_the_model_context_budget(source, monkeypatch):
+    from counterparty_agent.ai.transport import build_messages
+
+    model = ReviewModel(monkeypatch)
+
+    async def bounded(settings, client, question, data, prompt, schema):
+        build_messages(question, data)
+        return await model.call(settings, client, question, data, prompt, schema)
+
+    monkeypatch.setattr("counterparty_agent.workflow.review.structured_call", bounded)
+    monkeypatch.setattr("counterparty_agent.ai.reasoning.structured_call", bounded)
+    snapshots = source.snapshots[:100]
+    deal = purpose()
+    deal.snapshot_ids = [s.snapshot_id for s in snapshots]
+    run = await run_review(
+        Settings(_env_file=None, llm_api_key=SecretStr("unit-only")),
+        "Какие обстоятельства есть в этой группе?",
+        snapshots,
+        tuple(analyze_snapshot(s, evaluated_at=s.report_at) for s in snapshots),
+        deal,
+        client=object(),
+    )
+    assert run.answer.status == "answered"
+    scope = model.inputs(ReviewDraft)[-1]["review_scope"]
+    assert scope["group_size"] == len(snapshots)
+    assert [item["original_position"] for item in scope["companies"]] == list(
+        range(1, len(snapshots) + 1)
+    )
+    assert "выборка" in model.inputs(ReviewDraft)[-1]["coverage"]
+    validate_review_run(run)
+
+
 @pytest.mark.parametrize(
     "name,value",
     [
@@ -117,7 +244,7 @@ async def test_initial_goal_question_works_offline_then_does_not_block_analysis(
     assert second.deal.asked_fields == ["goal"] and model.calls
 
 
-async def test_every_review_model_call_uses_its_output_budget_without_changing_other_modes(
+async def test_review_uses_full_generation_budget_and_short_verifier_budget(
     source: JsonCounterpartySource,
 ) -> None:
     calls: list[dict[str, Any]] = []
@@ -156,7 +283,8 @@ async def test_every_review_model_call_uses_its_output_budget_without_changing_o
         client=client,
     )
     assert run.answer.status == "answered" and len(calls) == 4
-    assert {call["max_tokens"] for call in calls} == {3100}
+    budgets = [call["max_tokens"] for call in calls]
+    assert budgets.count(3100) == 3 and budgets.count(900) == 1
     assert settings.llm_max_tokens == 1200 and settings.llm_review_max_tokens == 3100
 
 

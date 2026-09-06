@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import re
+from collections.abc import Mapping, Sequence
 
 from counterparty_agent.ai.catalog import build_fact_catalog
 from counterparty_agent.ai.comparison_catalog import build_comparison_fact_catalog
@@ -11,6 +12,7 @@ from counterparty_agent.ai.contracts import (
     GroundedAnswer,
     GroundedStatus,
     LlmInvalidResponseError,
+    ReviewDraft,
 )
 from counterparty_agent.ai.prompts import (
     _INSUFFICIENT,
@@ -24,6 +26,35 @@ from counterparty_agent.models import (
     ComparisonResult,
     CounterpartySnapshot,
 )
+
+# Здесь запрещается отрицание наличия целого выбранного отчёта, а не честное
+# указание на отсутствующий показатель. Смысл остальных фраз проверяет верификатор.
+_COMPANY_NOUN = (
+    r"(?:(?:выбранн\w*|эт\w*|данн\w*|перв\w*|втор\w*|треть\w*)\s+)?"
+    r"(?:компани\w*|контрагент\w*)"
+)
+_REPORT_SUBJECT = (
+    rf"(?:данны[ех]|сведени[яй]|информаци[яи]|отч[её]т\w*)\s+(?:о|об|по|для)\s+{_COMPANY_NOUN}"
+)
+_NO_REPORT = re.compile(
+    rf"\b(?:нет|отсутству\w*|не\s+предоставлен\w*)\s+(?:никак\w*\s+)?{_REPORT_SUBJECT}"
+    rf"|\b{_REPORT_SUBJECT}\s+(?:(?:в\s+отч[её]те|здесь|сейчас)\s+)?"
+    r"(?:нет|отсутству\w*|не\s+(?:предоставлен\w*|загружен\w*|представлен\w*|доступн\w*))\b",
+    re.I,
+)
+
+
+def validate_report_availability(draft: ReviewDraft, catalog: Mapping[str, ApprovedFact]) -> None:
+    """Сведения выбранной компании не могут одновременно означать отсутствие её отчёта."""
+
+    if not any(re.match(r".+? \(ИНН \d{10,12}\):", fact.claim.text) for fact in catalog.values()):
+        return
+    for index, block in enumerate(draft.blocks):
+        if _NO_REPORT.search(block.text):
+            raise ValueError(
+                f"Блок {index}: отчёт выбранной компании уже передан. "
+                "Ответь о ней по каталогу; назови конкретные пробелы, не отрицай наличие отчёта."
+            )
 
 
 def validate_grounded_answer(

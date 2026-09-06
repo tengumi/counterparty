@@ -171,15 +171,29 @@ class DealReviewer(TopicSelector):
             source = next(
                 (f for f in data["approved_facts"] if f["topic"] == "user_document"), loss
             )
-            content = {
-                "blocks": [
+            blocks = [{"kind": "fact", "text": loss["text"], "fact_ids": [loss["fact_id"]]}]
+            if source != loss:
+                document_ids = [source["fact_id"]]
+                document_text = source["text"]
+                if "current_terms" in data.get("answer_requirements", []):
+                    condition = next(
+                        f
+                        for f in data["approved_facts"]
+                        if f["topic"] == "deal_context" and f["metric"] == "advance"
+                    )
+                    document_ids.append(condition["fact_id"])
+                    document_text = (
+                        f"{source['text']} {condition['text']} "
+                        "Эти условия расходятся и требуют согласования до подписания."
+                    )
+                blocks.append(
                     {
                         "kind": "interpretation",
-                        "text": "Убыток требует внимания при обсуждении условий сделки.",
-                        "fact_ids": list(dict.fromkeys([loss["fact_id"], source["fact_id"]])),
+                        "text": document_text,
+                        "fact_ids": document_ids,
                     }
-                ]
-            }
+                )
+            content = {"blocks": blocks}
         else:
             self.operations.append("extract")
             content = (
@@ -226,7 +240,9 @@ def test_project_focus_survives_reload_and_pronoun_then_returns_to_group(client,
             IntentPlan(
                 action="ask",
                 position=2 if "второго" in question else None,
-                scope="group" if "всей группе" in question else "current",
+                # Последний scope намеренно ошибочен: явную групповую фразу
+                # обязан применить сервер, а не вероятностный маршрутизатор.
+                scope="current",
                 answer_mode="analysis",
             ),
             "routed",
@@ -236,7 +252,11 @@ def test_project_focus_survives_reload_and_pronoun_then_returns_to_group(client,
 
     monkeypatch.setattr("counterparty_agent.projects.dialogue.route_intent", route)
     for index, text in enumerate(
-        ("Какие риски у второго?", "А какие у него риски?", "Теперь риски по всей группе?")
+        (
+            "Какие риски у второго?",
+            "А какие у него риски?",
+            "Нужна общая проверка доступных отчётов.",
+        )
     ):
         data = ask(client, project, text).json()
         assert data["status"] == "answered"
@@ -247,7 +267,10 @@ def test_project_focus_survives_reload_and_pronoun_then_returns_to_group(client,
         project = restored
     assert route_focus == [2, 2, 2]
     assert [
-        sum(fact["topic"] == "bank_signal" for fact in data["approved_facts"])
+        sum(
+            fact["topic"] == "bank_signal" and fact["metric"] is None
+            for fact in data["approved_facts"]
+        )
         for data in model.inputs(ReviewDraft)
     ] == [1, 1, len(project["snapshot_ids"])]
 
@@ -375,8 +398,8 @@ def test_project_analysis_combines_report_with_relevant_document_fragment(client
     assert data["status"] == "answered"
     assert any(source["quality"] == "user_document" for source in data["evidence"])
     assert any(source["quality"] != "user_document" for source in data["evidence"])
-    assert len(data["review"]["steps"]) == 2
-    assert reviewer.operations == ["route", "decide", "decide", "decide", "synthesize", "verify"]
+    assert len(data["review"]["steps"]) == 3
+    assert reviewer.operations == ["route", "decide", "decide", "synthesize", "verify"]
     synthesis = next(
         data for data in reviewer.contexts if "coverage" in data and "approved_facts" in data
     )
@@ -478,7 +501,7 @@ def test_project_run_uses_adaptive_review_and_keeps_proposal_separate(client):
     client.app.state.runtime.llm_client = reviewer
     project = command(client, project, "run")
     assert project["plan_mode"] == "ai"
-    assert len(project["plan"]) == 2
+    assert len(project["plan"]) == 3
     assert reviewer.operations == ["decide", "decide", "decide", "synthesize", "verify"]
     assert project["memo"] is None and project["proposal"] is not None
     assert any(item["kind"] == "analysis" for item in project["proposal"]["memo"]["items"])

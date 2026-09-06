@@ -9,9 +9,17 @@ from typing import Any
 
 from langgraph.runtime import Runtime
 
-from counterparty_agent.ai.deal import DealPatch
+from counterparty_agent.ai.deal import DealPatch, literal_deal_patch
 from counterparty_agent.ai.router import IntentPlan, route_intent
-from counterparty_agent.models import EntityKind, EntityMention, QueryIntent, QueryPlan
+from counterparty_agent.ai.topics import needs_bank_assessment
+from counterparty_agent.data.repository import CounterpartySource
+from counterparty_agent.models import (
+    EntityKind,
+    EntityMention,
+    QueryIntent,
+    QueryPlan,
+    ResolutionStatus,
+)
 from counterparty_agent.query import QueryParseError, parse_query
 from counterparty_agent.workflow.contracts import WorkflowContext, WorkflowResult, WorkflowState
 from counterparty_agent.workflow.intents import (
@@ -20,6 +28,7 @@ from counterparty_agent.workflow.intents import (
     _REOPEN_COMPARISON_REQUESTS,
     _REOPEN_REQUESTS,
     _UNSUPPORTED_ANSWER,
+    _has_group_reference,
     _has_named_target,
     _has_unsupported_comparison_period,
     _is_question,
@@ -161,6 +170,11 @@ async def _route_intent(state: WorkflowState, runtime: Runtime[WorkflowContext])
     )
     context._routing_used_llm = result.used_llm
     context._routing_model = result.model
+    if result.plan is None or result.plan.action == "clarify":
+        recovered = _recover_explicit_request(context)
+        if recovered is not None:
+            context._intent_plan = recovered
+            return {"status": "apply_intent"}
     if result.plan is None:
         return _routing_error(
             context,
@@ -168,12 +182,24 @@ async def _route_intent(state: WorkflowState, runtime: Runtime[WorkflowContext])
             _ROUTING_UNAVAILABLE if result.status == "llm_unavailable" else _ROUTING_FAILED,
         )
     context._intent_plan = result.plan
+    if needs_bank_assessment(context.question):
+        context._intent_plan = result.plan.model_copy(update={"answer_mode": "analysis"})
     if (
-        result.plan.action == "ask"
-        and is_short_relative_question(context.question)
-        and not any(result.plan.deal_patch.model_dump(exclude_none=True).values())
+        result.plan.action in {"ask", "show"}
+        and len(context._base_snapshot_ids) >= 2
+        and result.plan.position is None
+        and not result.plan.targets
+        and _has_group_reference(context.question)
     ):
-        context._intent_plan = result.plan.model_copy(update={"answer_mode": "facts"})
+        # Явное «по всем/по доступным отчётам» сильнее сохранённого фокуса и
+        # ошибки вероятностного роутера: пользователь возвращается ко всей группе.
+        context._intent_plan = result.plan.model_copy(update={"scope": "group"})
+    if (
+        context._intent_plan.action == "ask"
+        and is_short_relative_question(context.question)
+        and not any(context._intent_plan.deal_patch.model_dump(exclude_none=True).values())
+    ):
+        context._intent_plan = context._intent_plan.model_copy(update={"answer_mode": "facts"})
     return {"status": "apply_intent"}
 
 
@@ -182,7 +208,79 @@ def _routing_error(context: WorkflowContext, status: str, message: str) -> Workf
     return {"status": status}
 
 
-def _target_plan(intent: IntentPlan, question: str) -> QueryPlan:
+def _recover_explicit_request(context: WorkflowContext) -> IntentPlan | None:
+    """Точный реквизит в явной просьбе проверить не зависит от корректности JSON модели."""
+
+    question = context.question
+    if not re.search(r"\b(?:проверь|проверьте|проверить)\b", question, re.I) or re.search(
+        r"\b(?:не\s+(?:проверя\w*|проверь\w*|надо|нужно)|сравн\w*|сравни\w*|добав\w*|"
+        r"замен\w*|удал\w*|убер\w*|если|допустим|документе|договоре)\b",
+        question,
+        re.I,
+    ):
+        return None
+    try:
+        original = _parse_workflow_query(question)
+        identifiers = [m for m in original.mentions if m.kind is not EntityKind.NAME]
+        if len(identifiers) != 1:
+            return None
+        candidate = IntentPlan(
+            action="ask",
+            targets=(identifiers[0].raw_text,),
+            answer_mode="analysis",
+            deal_patch=literal_deal_patch(question),
+        )
+        # Нельзя обойти конфликт названия и ИНН или молча отбросить вторую компанию.
+        _target_plan(candidate, question, context.source)
+        return candidate
+    except (QueryParseError, ValueError):
+        return None
+
+
+class _NameIdentifierMismatch(QueryParseError):
+    """Название из запроса не подтверждено компанией, найденной по реквизиту."""
+
+
+def _name_matches_identifier(
+    name: EntityMention,
+    mentions: list[EntityMention],
+    source: CounterpartySource | None,
+) -> bool:
+    """Сверить два обозначения одной компании по точному индексу, без fuzzy-выбора."""
+
+    if source is None or len(mentions) != 1 or mentions[0].kind is EntityKind.NAME:
+        return False
+    identifier = mentions[0]
+    resolved = (
+        source.find_by_inn(identifier.normalized_value)
+        if identifier.kind is EntityKind.INN
+        else source.find_by_ogrn(identifier.normalized_value)
+    )
+    # Невалидный или неизвестный реквизит далее получит обычный ответ поиска;
+    # одноимённая компания не может заменить отсутствующий точный результат.
+    if resolved.status in {ResolutionStatus.INVALID_IDENTIFIER, ResolutionStatus.NOT_FOUND}:
+        return True
+    if resolved.status is not ResolutionStatus.RESOLVED:
+        return False
+    candidate = resolved.candidates[0]
+    named = source.find_by_name_exact(name.normalized_value)
+    if any(
+        item.snapshot_id == candidate.snapshot_id and not item.legal_form_conflict
+        for item in named.candidates
+    ):
+        return True
+    label = "ИНН" if identifier.kind is EntityKind.INN else "ОГРН"
+    raise _NameIdentifierMismatch(
+        f"По {label} {identifier.normalized_value} найдена {candidate.short_name}. "
+        "Название в запросе не совпадает с её названием в отчёте. "
+        "Уточните реквизиты или отправьте только ИНН/ОГРН, если хотите проверить "
+        "именно найденную компанию."
+    )
+
+
+def _target_plan(
+    intent: IntentPlan, question: str, source: CounterpartySource | None = None
+) -> QueryPlan:
     """Модель даёт фрагменты, а тип реквизита и контрольную сумму определяет код."""
 
     mentions: list[EntityMention] = []
@@ -254,6 +352,10 @@ def _target_plan(intent: IntentPlan, question: str) -> QueryPlan:
     ]
     for name in explicit_names:
         if not any(name.normalized_value == item.normalized_value for item in mentions):
+            if intent.action in {"lookup", "ask", "show"} and _name_matches_identifier(
+                name, mentions, source
+            ):
+                continue
             # Старый парсер может включить вводную фразу/год в NAME. Это не ещё одно имя:
             # принимаем дословный адресат внутри такого span, но не обрезаем явное ООО/кавычки.
             span_text = original_text[name.span_start : name.span_end]
@@ -281,8 +383,16 @@ def _apply_intent(state: WorkflowState, runtime: Runtime[WorkflowContext]) -> Wo
             _ROUTING_FAILED if intent.action == "clarify" else _UNSUPPORTED_ANSWER,
         )
     try:
-        context._plan = _target_plan(intent, context.question)
+        context._plan = _target_plan(intent, context.question, context.source)
+    except _NameIdentifierMismatch as error:
+        return _routing_error(context, "needs_clarification", str(error))
     except (QueryParseError, ValueError):
+        recovered = _recover_explicit_request(context)
+        if recovered is not None:
+            context._intent_plan = recovered
+            context._plan = _target_plan(recovered, context.question, context.source)
+            context._qa_requested = True
+            return {"pending_snapshot_ids": [], "status": "resolve"}
         return _routing_error(context, "routing_failed", _ROUTING_FAILED)
     context._qa_requested = intent.action == "ask"
     if intent.action in {"compare", "add_to_comparison"}:

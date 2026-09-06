@@ -62,7 +62,7 @@ export function findingSources(card: Card, finding: Finding) {
 
 export function findingTitle(finding: Finding) {
   const labels: Record<string, string> = {
-    money_units_unspecified: "Валюта и единицы измерения",
+    money_units_confirmed: "Валюта и единицы измерения",
     financial_loss: "Отрицательная прибыль",
     negative_equity: "Отрицательный капитал и резервы",
     financial_fields_missing: "Не все финансовые показатели заполнены",

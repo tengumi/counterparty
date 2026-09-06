@@ -98,6 +98,61 @@ def test_enabled_reasoning_has_an_explicit_budget_and_hidden_content_is_not_retu
     assert answer.answer == "Данных недостаточно."
 
 
+@pytest.mark.parametrize("model", ["deepseek-v4-flash-0731", "glm-5.3-flash"])
+def test_alternative_profiles_keep_json_and_do_not_send_qwen_reasoning(model: str) -> None:
+    from counterparty_agent.ai.transport import _request_completion
+
+    completions = _FakeCompletions()
+    client = SimpleNamespace(chat=SimpleNamespace(completions=completions))
+    settings = Settings(_env_file=None, llm_model=model, llm_reasoning_effort="low")
+    asyncio.run(_request_completion(settings, [], client, json_mode=True))
+    sent = completions.kwargs
+    assert sent["reasoning_effort"] == "low"
+    assert sent["response_format"] == {"type": "json_object"}
+    assert sent["max_tokens"] == 1200
+    assert "reasoning" not in sent.get("extra_body", {})
+    if model == "glm-5.3-flash":
+        assert sent["extra_body"] == {"thinking": {"type": "enabled"}}
+    else:
+        assert "temperature" not in sent and "extra_body" not in sent
+
+
+def test_reasoning_effort_rejects_unknown_value() -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, llm_reasoning_effort="unlimited")
+
+
+@pytest.mark.parametrize("fails", [False, True])
+def test_benchmark_telemetry_restores_transport_and_does_not_record_payload(monkeypatch, fails):
+    from benchmarks.evaluate_quality import measure_calls
+    from counterparty_agent.ai import reasoning, transport
+    from counterparty_agent.api import runtime
+
+    scripted = _ScriptedClient(RuntimeError("PRIVATE_PAYLOAD") if fails else "PRIVATE_PAYLOAD")
+
+    def factory(settings):
+        return scripted
+
+    monkeypatch.setattr(transport, "create_client", factory)
+    monkeypatch.setattr(runtime, "create_client", factory)
+    original = reasoning.structured_call
+    calls = []
+    with measure_calls(calls):
+        measured = runtime.create_client(Settings(_env_file=None))
+        if fails:
+            with pytest.raises(RuntimeError):
+                asyncio.run(measured.chat.completions.create(messages="PRIVATE_REQUEST"))
+        else:
+            asyncio.run(measured.chat.completions.create(messages="PRIVATE_REQUEST"))
+    assert len(calls) == 1 and calls[0]["seconds"] >= 0
+    assert "PRIVATE" not in json.dumps(calls)
+    assert calls[0].get("error") == ("RuntimeError" if fails else None)
+    assert transport.create_client is runtime.create_client is factory
+    assert reasoning.structured_call is original
+
+
 @pytest.fixture(scope="module")
 def source() -> JsonCounterpartySource:
     """Использовать выданные карточки без сохранения их копии в репозитории."""
@@ -210,7 +265,8 @@ async def test_attention_question_requires_bank_boundary_and_independent_signal(
     assert result.fact_ids == expected
     assert (reason.claim.text in result.answer) is needs_bank_reason(question)
     assert "методик" not in result.answer and "скоринг" not in result.answer
-    assert "Отдельный сигнал внимания по данным отчёта" in result.answer
+    assert signal.claim.text in result.answer
+    assert "Отдельный сигнал внимания по данным отчёта" not in result.answer
     finding = next(
         item
         for item in analysis.findings

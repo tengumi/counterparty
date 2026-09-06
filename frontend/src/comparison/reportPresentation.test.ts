@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { Card, Finding } from "../types";
 import { CompanyReport } from "./CompanyReport";
+import { date } from "../components/Primitives";
 import {
   findingPeriod,
   findingSources,
@@ -57,6 +58,9 @@ const html = (value: Card) =>
   );
 
 describe("Краткий и подробный отчёт", () => {
+  it("показывает дату отчёта по Москве, как ответ помощника", () => {
+    expect(date("2026-08-01T21:00:00Z")).toBe("02.08.2026");
+  });
   it("сохраняет каждую запись, включая новые категории и финансовый alias", () => {
     const input = [
       finding("a", "custom"),
@@ -129,7 +133,7 @@ describe("Краткий и подробный отчёт", () => {
       expect(value.bank_risk.display_level).toBe("GREEN");
     }
   });
-  it("не заменяет пропуски нулями и не назначает валюту", () => {
+  it("не заменяет пропуски нулями и показывает подтверждённые рубли", () => {
     const item = { ...finding("year"), code: "financial_period", period: 2025 };
     const value = card([item]);
     value.evidence[0].canonical_path = "analysis.financial_period";
@@ -141,10 +145,10 @@ describe("Краткий и подробный отчёт", () => {
       equity: null,
     };
     const markup = html(value);
-    expect(markup).toMatch(/<strong[^>]*>0<\/strong>/);
+    expect(markup).toMatch(/<strong[^>]*>0 ₽<\/strong>/);
     expect(markup).toMatch(/<strong[^>]*>Нет данных<\/strong>/);
-    expect(markup).toContain("Валюта и единицы измерения не подтверждены");
-    expect(markup).not.toContain("₽");
+    expect(markup).toContain("Суммы указаны в рублях");
+    expect(markup).toContain("₽");
   });
   it("не выводит коды сигналов как годы", () => {
     expect(findingPeriod(2025)).toBe("2025 год");

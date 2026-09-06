@@ -3,7 +3,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 22px max(28px, calc((100vw - 1180px) / 2));
+  padding: 18px max(28px, calc((100vw - 1480px) / 2));
   background: #fff;
   border-bottom: 1px solid var(--line);
 }
@@ -57,7 +57,7 @@
   background: #f6f6f5;
 }
 .app-shell .main-workspace {
-  max-width: 1236px;
+  max-width: 1536px;
   margin: 0 auto;
 }
 .app-shell .workspace-content {
@@ -120,138 +120,101 @@
 }
 .check-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 290px;
+  grid-template-columns: minmax(0, 1fr) clamp(380px, 32vw, 460px);
   align-items: start;
   gap: 24px;
 }
+.check-reports {
+  min-width: 0;
+  container-type: inline-size;
+}
+.reports-surface {
+  overflow: hidden;
+}
+.workspace-panels {
+  display: none;
+}
 .check-dialogue {
   min-width: 0;
+  position: sticky;
+  top: 20px;
+  height: clamp(480px, calc(100dvh - 196px), 1000px);
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--line);
   background: #fff;
   border-radius: 16px;
   overflow: hidden;
+  box-shadow: 0 8px 28px #20232806;
 }
 .check-dialogue .focus-return {
-  padding: 14px 24px 0;
+  padding: 12px 20px 0;
 }
-.app-shell .assistant-panel {
-  border: 0;
-  position: static;
-  height: auto;
-  min-height: 530px;
-  background: transparent;
-}
-.app-shell .assistant-header {
-  min-height: 0;
-  padding: 22px 26px;
-  gap: 12px;
-}
-.app-shell .assistant-header strong {
-  font-size: 17px;
-  font-weight: 600;
-}
-.app-shell .assistant-header p {
-  font-size: 13px;
-}
-.app-shell .assistant-symbol {
-  color: #6f727a;
-  background: #f4f4f3;
-}
-.app-shell .conversation {
-  padding: 24px 26px 10px;
-  max-height: min(600px, 65vh);
-  min-height: 240px;
-}
-.app-shell .message {
-  font-size: 15px;
-  line-height: 1.8;
-  margin-bottom: 26px;
-}
-.app-shell .message.user {
-  margin-left: 12%;
-  padding: 12px 18px;
-  background: #f4f4f3;
-}
-.app-shell .message-label {
-  font-size: 12px;
-}
-.app-shell .message.assistant .message-label {
-  color: #727880;
-}
-.app-shell .chat-bottom {
-  padding: 10px 24px 20px;
-}
-.app-shell .question-hints {
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: 8px;
+.participants-disclosure {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
   margin-bottom: 16px;
+  overflow: hidden;
 }
-.app-shell .question-hints button {
-  font-size: 13px;
-  padding: 7px 11px;
-  border-radius: 20px;
-}
-.app-shell .composer {
-  background: #fafafa;
-}
-.app-shell .chat-disclaimer {
-  font-size: 11px;
-  margin-top: 10px;
-  text-align: left;
-}
-.review-context {
-  margin: 18px 24px 0;
-  padding: 16px 18px;
-  background: #f7f7f5;
-  border-radius: 10px;
-}
-.review-context .eyebrow {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-.review-context > p {
-  margin-top: 4px;
+.participants-disclosure > summary {
+  padding: 14px 20px;
+  cursor: pointer;
   font-size: 14px;
-  overflow-wrap: anywhere;
 }
-.review-context dl {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 20px;
-  margin: 10px 0 8px;
-  font-size: 12px;
+.participants-disclosure > summary span {
+  color: var(--muted);
+  margin-left: 6px;
 }
-.review-context dl:empty {
+.participants-disclosure .selection-summary {
+  border: 0;
+  border-radius: 0;
+  border-top: 1px solid var(--line);
+}
+.participants-disclosure .selection-heading {
   display: none;
 }
-.review-context dl > div {
-  display: flex;
-  gap: 5px;
-  overflow-wrap: anywhere;
+.participants-disclosure .selection-companies {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  max-height: 320px;
 }
-.review-context dt {
-  color: #7c8188;
+@media (min-width: 1001px) {
+  .check-layout[data-chat-expanded="true"] {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+  .check-layout[data-chat-expanded="true"] .check-reports {
+    display: none;
+  }
+  .check-layout[data-chat-expanded="true"] .conversation,
+  .check-layout[data-chat-expanded="true"] .chat-bottom {
+    padding-left: clamp(24px, 6vw, 80px);
+    padding-right: clamp(24px, 6vw, 80px);
+  }
 }
-.review-context dd {
-  margin: 0;
-}
-.review-context small {
-  color: #858a90;
-  font-size: 11px;
-}
-.review-steps {
-  font-size: 12px;
-  color: #707781;
-  margin-bottom: 16px;
-}
-.review-steps summary {
-  cursor: pointer;
-}
-.review-steps ul {
-  margin: 8px 0;
-  padding-left: 20px;
+@container (max-width: 650px) {
+  .company-dossier {
+    padding: 22px;
+  }
+  .dossier-heading {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .dossier-bank {
+    flex-basis: 100%;
+    border-left: 0;
+    padding-left: 0;
+  }
+  .dossier-bank button {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .dossier-brief-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .selection-summary {
   border: 1px solid var(--line);
@@ -411,7 +374,7 @@
   color: #959ba2;
   padding: 18px 0 0;
 }
-@media (max-width: 850px) {
+@media (max-width: 1000px) {
   .app-header {
     padding: 18px 22px;
   }
@@ -421,6 +384,49 @@
   .check-layout {
     grid-template-columns: minmax(0, 1fr);
     gap: 18px;
+  }
+  .workspace-panels {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--line);
+    background: #eeeef0;
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+  .workspace-panels button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex: 1;
+    min-height: 44px;
+    padding: 8px;
+    font-size: 14px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+  }
+  .workspace-panels button[aria-pressed="true"] {
+    background: #fff;
+    box-shadow: 0 1px 4px #20232812;
+  }
+  .chat-activity {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .check-layout[data-mobile-pane="chat"] .check-reports,
+  .check-layout[data-mobile-pane="reports"] .check-dialogue {
+    display: none;
+  }
+  .check-dialogue {
+    position: static;
+    height: max(480px, calc(100dvh - 240px));
+  }
+  .chat-expand {
+    display: none;
   }
   .selection-companies {
     display: flex;
@@ -441,11 +447,11 @@
   .check-heading h1 {
     font-size: 21px;
   }
-  .app-shell .conversation {
-    max-height: 55vh;
-  }
 }
 @media (max-width: 540px) {
+  .check-dialogue {
+    height: max(420px, calc(100dvh - 340px));
+  }
   .app-header {
     flex-wrap: wrap;
     gap: 14px;
@@ -502,22 +508,6 @@
   }
   .check-heading .text-button {
     margin-top: 10px;
-  }
-  .app-shell .assistant-header {
-    padding: 18px;
-  }
-  .app-shell .conversation {
-    padding: 20px 18px 0;
-  }
-  .app-shell .message {
-    font-size: 14px;
-  }
-  .app-shell .chat-bottom {
-    padding: 10px 16px 16px;
-  }
-  .review-context {
-    margin: 16px 16px 0;
-    padding: 14px;
   }
   .report-disclosure > summary {
     padding: 18px;

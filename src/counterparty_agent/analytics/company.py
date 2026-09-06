@@ -59,7 +59,7 @@ def _analyze_company(
     builder.add(
         "company_status",
         FindingCategory.COMPANY,
-        "Источник указывает статус CURRENT на дату отчёта; это не гарантия исполнения сделки."
+        "Компания указана как действующая на дату отчёта. Это не гарантия исполнения договора."
         if known_status
         else "Статус источника сохранён, но его трактовка правилами не задана.",
         {"raw_status": snapshot.status.raw_status, "effective_at": snapshot.status.effective_at},
@@ -73,6 +73,18 @@ def _analyze_company(
         ),
     )
     identity_input = builder.inputs("identity", (snapshot.identity.model_dump(mode="python"),))
+    builder.add(
+        "capability_coverage",
+        FindingCategory.COMPANY,
+        "Эта проверка не подтверждает опыт конкретных работ, качество результата и готовность "
+        "команды к вашей задаче. Она не проверяет выполненные проекты и отзывы заказчиков; "
+        "из этого нельзя заключить, что у компании нет опыта. "
+        "Для подтверждения запросите примеры похожих проектов, акты выполненных работ "
+        "и контакты заказчиков для получения отзыва.",
+        {"experience_verified": False, "work_quality_verified": False},
+        identity_input,
+        status=FindingDataStatus.INSUFFICIENT,
+    )
     if snapshot.identity.registration_at > snapshot.report_at:
         builder.add(
             "registration_after_report",

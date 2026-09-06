@@ -9,6 +9,7 @@ from counterparty_agent.analytics.common import (
     AnalysisValidationError,
     _AnalysisBuilder,
     _encode,
+    _money,
     _number,
 )
 from counterparty_agent.models import (
@@ -31,7 +32,7 @@ def _analyze_finances(builder: _AnalysisBuilder) -> None:
         builder.add(
             "financial_missing" if statements is None else "financial_empty",
             FindingCategory.FINANCE,
-            "В snapshot ИП нет финансовых отчётов; финансовое положение не оценено."
+            "В отчёте об ИП нет финансовых данных; финансовое положение не оценено."
             if is_ip
             else "Раздел финансов отсутствует или пуст; это не доказывает отсутствие деятельности.",
             {"missing": statements is None, "party_type": snapshot.identity.party_type.value},
@@ -59,13 +60,13 @@ def _analyze_finances(builder: _AnalysisBuilder) -> None:
         ):
             raise AnalysisValidationError("Доказательство относится к другому финансовому периоду")
     builder.add(
-        "money_units_unspecified",
-        FindingCategory.DATA_QUALITY,
-        "Валюта и масштаб финансовых значений не заданы. Суммы показаны в единицах источника; "
-        "сопоставимость единиц между годами не подтверждена.",
-        {"currency": None, "unit": None},
+        "money_units_confirmed",
+        FindingCategory.FINANCE,
+        "Финансовые значения указаны в рублях без дополнительного множителя.",
+        {"currency": "RUB", "unit": "ruble"},
         all_inputs,
-        status=FindingDataStatus.INSUFFICIENT,
+        unit="ruble",
+        currency="RUB",
     )
     usable: list[FinancialStatement] = []
     for item in ordered:
@@ -98,19 +99,22 @@ def _analyze_finances(builder: _AnalysisBuilder) -> None:
             f"За {item.year}: выручка — {_number(item.proceeds)}, "
             f"прибыль — {_number(item.profit)}, активы — {_number(item.assets.total)}, "
             f"итог пассивов — {_number(item.liabilities.total)}. "
-            "Значения даны в единицах источника; итог пассивов не равен сумме долга.",
+            "Значения указаны в рублях; итог пассивов не равен сумме долга.",
             values,
             parent,
             period=item.year,
-            unit="source_unit",
+            unit="ruble",
+            currency="RUB",
             status=FindingDataStatus.PARTIAL if missing else FindingDataStatus.CONFIRMED,
         )
         if missing:
+            names = {"proceeds": "выручка", "profit": "прибыль", "equity": "капитал и резервы"}
             builder.add(
                 "financial_fields_missing",
                 FindingCategory.DATA_QUALITY,
-                f"В финансовом периоде {item.year} есть незаполненные показатели; "
-                "они не заменены нулями.",
+                f"За {item.year} не указаны показатели: "
+                + ", ".join(names.get(name, name) for name in missing)
+                + ". Их значения неизвестны, а не равны нулю.",
                 {"missing_fields": tuple(missing)},
                 parent,
                 status=FindingDataStatus.INSUFFICIENT,
@@ -124,12 +128,12 @@ def _analyze_finances(builder: _AnalysisBuilder) -> None:
                 builder.add(
                     code,
                     FindingCategory.FINANCE,
-                    f"За {item.year} показатель «{label}» отрицательный: {_number(value)} "
-                    "в единицах источника.",
+                    f"За {item.year} {label}: {_money(value)} рублей (отрицательное значение).",
                     {"value": value},
                     parent,
                     period=item.year,
-                    unit="source_unit",
+                    unit="ruble",
+                    currency="RUB",
                     severity=FindingSeverity.ATTENTION,
                 )
         _balance_checks(builder, item, parent)
@@ -161,8 +165,8 @@ def _analyze_finances(builder: _AnalysisBuilder) -> None:
                 FindingCategory.FINANCE,
                 f"Изменение указанных значений выручки {previous.year} → {current.year}: "
                 f"{_number(delta)}; процент — {_number(percent)}. "
-                "Единицы между годами требуют подтверждения; при неположительной базе "
-                "или отрицательной выручке процент не рассчитывается.",
+                "Методика заполнения между годами требует подтверждения; при неположительной "
+                "базе или отрицательной выручке процент не рассчитывается.",
                 {
                     "previous_year": previous.year,
                     "year": current.year,
@@ -174,6 +178,8 @@ def _analyze_finances(builder: _AnalysisBuilder) -> None:
                 parents,
                 period=period,
                 status=FindingDataStatus.PARTIAL,
+                unit="ruble",
+                currency="RUB",
             )
 
 
@@ -202,16 +208,32 @@ def _balance_checks(
             continue
         parts_sum = sum((value for value in parts if value is not None), Decimal(0))
         if total != parts_sum:
+            labels = {
+                "financial_balance_mismatch": ("итог активов", "итог пассивов"),
+                "financial_assets_components_mismatch": (
+                    "итог активов",
+                    "сумма оборотных и внеоборотных активов",
+                ),
+                "financial_liabilities_components_mismatch": (
+                    "итог пассивов",
+                    "сумма капитала и обязательств",
+                ),
+            }
+            left, right = labels[code]
+            difference = abs(total - parts_sum)
             builder.add(
                 code,
                 FindingCategory.DATA_QUALITY,
-                f"За {item.year} связанные финансовые значения не сходятся: "
-                f"{_number(total)} и {_number(parts_sum)} в единицах источника. "
-                "Нужна проверка исходных показателей; это не вывод о нарушении закона.",
-                {"total": total, "parts": parts, "parts_sum": parts_sum},
+                f"За {item.year} {left} — {_money(total)} рублей, "
+                f"а {right} — {_money(parts_sum)} рублей. "
+                f"Расхождение — {_money(difference)} рублей. "
+                "Причина неизвестна: нужно сверить данные с бухгалтерским отчётом. "
+                "Это расхождение данных, а не доказательство ненадёжности компании.",
+                {"total": total, "parts": parts, "parts_sum": parts_sum, "difference": difference},
                 parents,
                 status=FindingDataStatus.CONFLICTING,
                 severity=FindingSeverity.ATTENTION,
                 period=item.year,
-                unit="source_unit",
+                unit="ruble",
+                currency="RUB",
             )

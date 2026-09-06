@@ -11,6 +11,16 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from counterparty_agent.ai.prompts import MAX_ANSWER_FACTS
 
 ChatRole = Literal["user", "assistant"]
+ReviewTopic = Literal[
+    "company",
+    "finance",
+    "arbitration",
+    "enforcement",
+    "reputation",
+    "licenses",
+    "data_quality",
+    "documents",
+]
 
 
 ChatHistory = Sequence[tuple[ChatRole, str]]
@@ -38,6 +48,22 @@ class GroundedClaim(BaseModel):
 
     text: str = Field(min_length=1, repr=False)
     evidence_ids: tuple[str, ...] = Field(min_length=1)
+
+
+class ReviewBlock(BaseModel):
+    """Короткий абзац анализа с проверяемыми основаниями."""
+
+    model_config = ConfigDict(extra="forbid")
+    kind: Literal["fact", "interpretation", "limitation", "action"]
+    text: str = Field(min_length=1, max_length=1100)
+    fact_ids: list[str] = Field(min_length=1, max_length=32)
+
+
+class ReviewDraft(BaseModel):
+    """Общий формат модельного и резервного ответа; правила проверки одинаковые."""
+
+    model_config = ConfigDict(extra="forbid")
+    blocks: list[ReviewBlock] = Field(min_length=1, max_length=8)
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,6 +104,7 @@ class ApprovedFact:
     topic: str
     period: int | None = None
     metric: str | None = None
+    signal_code: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

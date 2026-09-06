@@ -87,6 +87,7 @@ class _AnalysisBuilder:
         severity: FindingSeverity = FindingSeverity.INFO,
         period: int | str | None = None,
         unit: str | None = None,
+        currency: str | None = None,
     ) -> None:
         if not parents:
             raise AnalysisValidationError("Расчёт не имеет исходных доказательств")
@@ -134,6 +135,7 @@ class _AnalysisBuilder:
                 record_hash=self.snapshot.record_hash,
                 period=period,
                 unit=unit,
+                currency=currency,
                 quality=quality,
                 coverage=coverage,
                 derived_from=source_ids,
@@ -157,6 +159,14 @@ class _AnalysisBuilder:
 
 def _number(value: object) -> str:
     return "нет данных" if value is None else str(value)
+
+
+def _money(value: Decimal | None) -> str:
+    """Показать рубли с разрядами без округления и изменения масштаба."""
+
+    if value is None:
+        return "нет данных"
+    return format(value, ",f").replace(",", "\u202f")
 
 
 def _contains_none(value: object) -> bool:

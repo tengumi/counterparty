@@ -37,8 +37,12 @@ _ADD_COMPARISON = re.compile(
 
 
 _GROUP_QUESTION = re.compile(
-    r"\b(?:у\s+кого|у\s+всех|по\s+группе|по\s+всем|среди\s+них|"
-    r"среди\s+компаний|всех\s+компаний|сравни\s+их|сравни\s+группу)\b"
+    r"\b(?:у\s+кого|у\s+всех|по\s+группе|по\s+всем|"
+    r"по\s+этим\s+(?:компаниям|контрагентам|поставщикам)|среди\s+них|"
+    r"среди\s+компаний|всех\s+компаний|сравни\s+их|сравни\s+группу|"
+    r"(?:все|доступные|выбранные)\s+отчеты|"
+    r"общ(?:ая|ую)\s+проверк(?:а|у)\s+"
+    r"(?:всех|доступных|выбранных|этих)\s+отчетов)\b"
 )
 
 
@@ -124,7 +128,7 @@ _TOPIC_REQUEST = re.compile(
     r"финанс(?:ы|ах|ов)|финансовые\s+показатели|риск(?:и|ах|ов)?|"
     r"требует\s+внимания|в\s+зоне\s+риска|"
     r"суд(?:ы|ах|ов)|арбитраж(?:е)?|"
-    r"судебные\s+дела|исполнительные\s+производства|взыскания|"
+    r"судебные\s+дела|исполнительные\s+производства|взыскания|источник(?:и|ов)|"
     r"светофор(?:е)?|налог(?:и|ах)|оквэд|лицензи(?:и|ях)|контакты|госзакупки|"
     r"предыдущий\s+год|прошлый\s+год)(?:\s|$)"
 )
@@ -257,6 +261,13 @@ def _is_question(normalized: str) -> bool:
     )
 
 
+def _has_group_reference(question: str) -> bool:
+    """Распознать только явную адресацию всей уже выбранной группы."""
+
+    normalized = " ".join(question.casefold().replace("ё", "е").split())
+    return _GROUP_QUESTION.search(normalized) is not None
+
+
 def _unclear_named_company(normalized: str) -> bool:
     """Не подменять нераспознанное имя в вопросе прежней выбранной компанией."""
 
@@ -321,12 +332,20 @@ def _parse_workflow_query(question: str) -> QueryPlan:
     for match in _QUOTED_NAME.finditer(question):
         if any(item.span_start <= match.start() < item.span_end for item in explicit):
             continue
-        quoted_plan = parse_query(match.group())
+        # «ООО ЛПК «САМЗА»» нельзя сокращать до «САМЗА»: сокращение может
+        # отсутствовать в точном индексе, хотя полное имя с ИНН совпадает.
+        prefix = re.search(
+            _LEGAL_FORM_IN_QUESTION.pattern + r"(?:\s+[\w-]+){0,3}\s*$",
+            question[: match.start()],
+            re.I,
+        )
+        start = prefix.start() if prefix else match.start()
+        quoted_plan = parse_query(question[start : match.end()])
         for item in quoted_plan.mentions:
             if _TOPIC_REQUEST.search(item.normalized_value):
                 continue
             explicit.append(
-                item.model_copy(update={"span_start": match.start(), "span_end": match.end()})
+                item.model_copy(update={"span_start": start, "span_end": match.end()})
             )
     if explicit and any(item not in plan.mentions for item in explicit):
         return plan.model_copy(update={"mentions": tuple(explicit)})

@@ -207,8 +207,9 @@ function ReportContent({ card, source }: ReportProps) {
                   source({
                     title: label + " · " + latest.year,
                     value:
-                      exactNumber(latest.values[key]) +
-                      ". Валюта и единицы измерения не подтверждены источником.",
+                      latest.values[key] === null
+                        ? "Нет данных"
+                        : exactNumber(latest.values[key]) + " ₽",
                     company: card.name,
                     evidence: latest.evidence,
                   })
@@ -219,15 +220,17 @@ function ReportContent({ card, source }: ReportProps) {
                   <small>{latest.year}</small>
                 </span>
                 <strong data-negative={latest.values[key]?.startsWith("-")}>
-                  {exactNumber(latest.values[key])}
+                  {latest.values[key] === null
+                    ? exactNumber(latest.values[key])
+                    : exactNumber(latest.values[key]) + " ₽"}
                 </strong>
                 <span className="dossier-metric-link">Данные отчёта ↗</span>
               </button>
             ))}
           </div>
           <p className="dossier-unit-note">
-            Валюта и единицы измерения не подтверждены. Динамика — в разделе
-            «Финансы».
+            Суммы указаны в рублях без дополнительного множителя. Динамика — в
+            разделе «Финансы».
           </p>
         </>
       ) : (

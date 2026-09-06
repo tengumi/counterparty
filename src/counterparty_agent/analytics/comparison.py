@@ -108,8 +108,8 @@ def compare_snapshots(
         "Матрица показывает факты и пробелы, не назначает победителя, рейтинг "
         "или решение о сделке.",
         "Отсутствие данных не означает отсутствие риска; нули показываются только из источника.",
-        "Валюта и масштаб денежных значений неизвестны: суммы нельзя ранжировать или делить "
-        "между компаниями и разделами.",
+        "Денежные значения указаны в рублях без дополнительного множителя. "
+        "Разные показатели нельзя подменять друг другом при ранжировании компаний.",
     ]
     if len({item.identity.party_type for item in selected}) > 1:
         limitations.append(
@@ -223,8 +223,7 @@ def compare_snapshots(
                 and column.snapshot.bank_risk.recognized_level.value != "GREY"
                 else FindingDataStatus.INSUFFICIENT,
                 display=(
-                    f"{column.snapshot.bank_risk.recognized_level.value} — "
-                    f"{bank_labels[column.snapshot.bank_risk.recognized_level.value]}"
+                    bank_labels[column.snapshot.bank_risk.recognized_level.value]
                     if column.snapshot.bank_risk.recognized_level
                     else "Оценка отсутствует"
                     if column.snapshot.bank_risk.raw_level is None
@@ -248,8 +247,8 @@ def compare_snapshots(
             label,
             "finance",
             [_financial_cell(column, metric, financial_year) for column in columns],
-            "Один финансовый год для всех компаний. Единицы и валюта неизвестны; "
-            "числовое ранжирование недопустимо. Итог пассивов не равен долгу.",
+            "Один финансовый год для всех компаний. Значения указаны в рублях; "
+            "числовое ранжирование само по себе недопустимо. Итог пассивов не равен долгу.",
             period=financial_year,
         )
     for role, role_label in (("as_plaintiff", "Истец"), ("as_defendant", "Ответчик")):
@@ -405,6 +404,7 @@ def _financial_cell(column: _ComparisonColumn, metric: str, year: int | None) ->
             value,
             finding.evidence_ids,
             FindingDataStatus.INSUFFICIENT if value is None else finding.data_status,
+            display=None if value is None else f"{_number(value)} ₽",
         )
     # Список всех проверенных периодов или явный пробел подтверждает отсутствие выбранного года.
     coverage = tuple(
