@@ -189,6 +189,15 @@ Task ID и результат.
 
 ## Общие правила качества
 
+## Демо-стенд
+
+Стенд: `https://alpha-demo.dobryapi.online`, VM `my-vm`, каталог
+`/opt/counterparty`. Быстро закрыть демо заглушкой:
+`gh workflow run demo-deploy.yml --repo tengumi/counterparty --ref main -f action=maintenance_on`.
+Вернуть приложение: та же команда с `action=maintenance_off`. Полностью погасить
+стек: `ssh my-vm 'cd /opt/counterparty && docker compose -f compose.yaml -f compose.prod.yaml down'`.
+Workflow запускается только вручную; обычный push в `main` стенд не обновляет.
+
 - Секреты и реальные PII не коммитятся и не логируются; mock не выдаётся за
   актуальные сведения о компании.
 - Внутренняя структура модуля — часть acceptance, а не деталь на потом. Не
