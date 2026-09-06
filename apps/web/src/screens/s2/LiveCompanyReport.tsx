@@ -176,7 +176,9 @@ function SectionContent({
   );
 }
 const groups: readonly { id: string; title: string; sections: readonly SectionName[] }[] = [
-  { id: 'profile', title: 'Кто эта компания', sections: ['profile', 'status', 'activities', 'tax_systems'] },
+  // 'status' is left out on purpose: for the live report it carries only the
+  // source's snapshot date and a CURRENT/ARCHIVE flag, nothing about the company.
+  { id: 'profile', title: 'Кто эта компания', sections: ['profile', 'activities', 'tax_systems'] },
   { id: 'finance', title: 'Финансы', sections: ['financials', 'coefficients'] },
   { id: 'owners', title: 'Владельцы и управление', sections: ['founders'] },
   { id: 'courts', title: 'Судебные споры', sections: ['arbitration'] },
