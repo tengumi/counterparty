@@ -43,6 +43,14 @@ import type { ComposerStatus } from '../screens/s2/conversation/Composer';
 import type { ActivityStep } from '../mocks/types';
 import styles from '../screens/s2/conversation/Conversation.module.css';
 
+/** Run states that still tell the user something they should act on. */
+const NOTICE_STATUSES: ReadonlySet<RunStatus> = new Set([
+  'cancelling',
+  'awaiting_input',
+  'cancelled',
+  'interrupted',
+]);
+
 /** Product wording for a run state; never a library or protocol term. */
 const runLabels: Readonly<Record<RunStatus, string>> = {
   accepted: 'Помощник принял запрос',
@@ -189,12 +197,10 @@ function RunState({
       <span data-testid="run-status" hidden={true}>
         {run?.status ?? 'нет запуска'}
       </span>
-      {/* «completed» needs no line — the answer above it is the signal. */}
-      {showsRun &&
-      run !== null &&
-      run.status !== 'accepted' &&
-      run.status !== 'completed' &&
-      !run.error ? (
+      {/* A working or finished run is already shown — the activity dot while it
+          runs, the answer once it is done. Only the states that change what the
+          user should do get a line: needs input, stopping, stopped, broke. */}
+      {showsRun && run !== null && !run.error && NOTICE_STATUSES.has(run.status) ? (
         <p className={styles.notice} role="status">
           {runLabels[run.status]}
         </p>

@@ -78,9 +78,16 @@ describe('S2 composer states', () => {
     await user.click(stop);
     expect(onStop).toHaveBeenCalledTimes(1);
 
-    // A clarification can still be sent while the assistant works.
+    // A clarification can still be sent while the assistant works; the running
+    // state itself needs no line — the streamed activity already shows it.
     expect(screen.getByRole('button', { name: 'Отправить' })).toBeEnabled();
-    expect(screen.getByRole('status')).toHaveTextContent('Помощник работает');
+    expect(screen.getByRole('status')).toHaveTextContent('');
+  });
+
+  it('shows only the stop control while a run works and the field is empty', () => {
+    show('running', '', { onStop: vi.fn() });
+    expect(screen.getByRole('button', { name: 'Остановить' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Отправить' })).not.toBeInTheDocument();
   });
 
   it('does not let a cancel be asked for twice', () => {

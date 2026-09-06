@@ -45,11 +45,13 @@ scripts/import_reports   скрипт заполнения PostgreSQL из mock 
 tests                    общие contract/integration/e2e проверки
 ```
 
-У `web`, `ui_api`, `agent` и `mcp` собственные Dockerfile. Общий Compose
-создаётся позже, после самостоятельного запуска образов. Импортёр — скрипт, не
-сервис. Корневого Python-проекта нет: каждый Python-сервис — самостоятельный
-uv-проект на Python 3.13 со своим `pyproject.toml` и `uv.lock`; shared-пакеты
-имеют свои `pyproject.toml` и подключаются как локальные зависимости.
+У `web`, `ui_api`, `agent` и `mcp` собственные Dockerfile. `compose.yaml`
+поднимает весь контур; единая точка входа — корневой `Makefile`
+(`make up` / `seed` / `reset` / `test`), приложение на `http://localhost:5173`,
+детали — в `README.md`. Импортёр — скрипт, не сервис. Корневого Python-проекта
+нет: каждый Python-сервис — самостоятельный uv-проект на Python 3.13 со своим
+`pyproject.toml` и `uv.lock`; shared-пакеты имеют свои `pyproject.toml` и
+подключаются как локальные зависимости.
 
 PostgreSQL содержит схемы `reports` и `workspace`. UI Backend читает обе через
 repositories; MCP имеет read-only доступ только к `reports`; Agent Service

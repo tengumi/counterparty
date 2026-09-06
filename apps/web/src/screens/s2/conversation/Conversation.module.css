@@ -98,6 +98,7 @@
 
 .composer:focus-within { border-color: #2a77ef; }
 .send { min-height: 44px; width: 44px; min-width: 44px; padding: 0; border-radius: 10px; }
+.stopGlyph { width: 12px; height: 12px; border-radius: 3px; background: currentColor; display: block; }
 .evidence { position: relative; }
 .evidence::after { content: ''; position: absolute; width: 44px; height: 44px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
 @media (max-width: 640px) {

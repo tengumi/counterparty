@@ -33,7 +33,7 @@ interface Props {
 const hints: Readonly<Record<ComposerStatus, string>> = {
   idle: 'Enter отправляет, Shift+Enter переносит строку',
   sending: 'Отправляем сообщение…',
-  running: 'Помощник работает. Уточнение можно отправить сейчас',
+  running: '',
   cancelling: 'Останавливаем проверку…',
   error: 'Сообщение не отправлено. Текст сохранён — попробуйте ещё раз',
   unavailable: '',
@@ -50,7 +50,8 @@ export function Composer({
 }: Props) {
   const busy = status === 'running' || status === 'cancelling';
   const disabled = status === 'unavailable';
-  const canSend = value.trim().length > 0 && !disabled && status !== 'sending';
+  const hasText = value.trim().length > 0;
+  const canSend = hasText && !disabled && status !== 'sending';
 
   const placeholder = busy
     ? 'Добавьте уточнение — учту после текущего действия'
@@ -84,27 +85,34 @@ export function Composer({
           {disabled ? unavailableReason : hints[status]}
         </p>
         <div className={styles.composerActions}>
+          {/* While a run works, the action in the send slot stops it — unless
+              the user is typing a follow-up, then stop steps aside as the
+              secondary control and the follow-up sends. */}
           {busy ? (
             <Button
+              aria-label="Остановить"
+              className={styles.send}
               disabled={status === 'cancelling'}
               onClick={onStop}
               size={40}
-              view="secondary"
+              view={hasText ? 'secondary' : 'primary'}
             >
-              Остановить
+              <span aria-hidden={true} className={styles.stopGlyph} />
             </Button>
           ) : null}
-          <Button
-            aria-label="Отправить"
-            className={styles.send}
-            disabled={!canSend}
-            loading={status === 'sending'}
-            onClick={send}
-            size={40}
-            view="primary"
-          >
-            <ArrowUpMIcon aria-hidden={true} />
-          </Button>
+          {!busy || hasText ? (
+            <Button
+              aria-label="Отправить"
+              className={styles.send}
+              disabled={!canSend}
+              loading={status === 'sending'}
+              onClick={send}
+              size={40}
+              view="primary"
+            >
+              <ArrowUpMIcon aria-hidden={true} />
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>
