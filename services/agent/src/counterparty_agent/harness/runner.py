@@ -274,25 +274,39 @@ def create_harness_runner(
 
 
 _LEADING_REFS = re.compile(r"^\s*((?:\[evidence:[^\]]+\]\s*,?\s*)+)")
+# A line that is really the tail of the previous sentence, broken off by the
+# model: it opens with closing punctuation, a bare ``(2024)``-style
+# parenthetical, or a citation.
+_ORPHAN_TAIL = re.compile(r"^\s*(?:[.,;:)]|\(\d{4}\)|\[evidence:)")
 
 
 def _tidy_answer(text: str) -> str:
-    """Move an evidence citation that opens a line to the end of that line.
+    """Undo two things models do to a clean answer.
 
-    Models sometimes emit ``[evidence:X], <fact>`` instead of ``<fact> [evidence:X]``.
-    The citation still resolves and the UI still renders a chip, but a leading
-    chip reads backwards; put it back where it belongs.
+    A citation is moved from the start of a line to its end (some models emit
+    ``[evidence:X], <fact>``). And a line that is only the broken-off tail of
+    the sentence above it — opening with ``.``/``)``/``(2024)`` — is joined
+    back onto that sentence instead of standing as its own fragment.
     """
-    lines: list[str] = []
-    for line in text.splitlines():
+    joined: list[str] = []
+    for raw in text.splitlines():
+        line = raw.rstrip()
+        if joined and line.strip() and _ORPHAN_TAIL.match(line):
+            sep = "" if line.lstrip()[0] in ".,;:)" else " "
+            joined[-1] = f"{joined[-1].rstrip()}{sep}{line.lstrip()}"
+            continue
+        joined.append(line)
+
+    out: list[str] = []
+    for line in joined:
         match = _LEADING_REFS.match(line)
         rest = line[match.end() :].strip().rstrip(",").strip() if match else ""
         if match and rest:
             refs = " ".join(re.findall(r"\[evidence:[^\]]+\]", match.group(1)))
-            lines.append(f"{rest} {refs}")
+            out.append(f"{rest} {refs}")
         else:
-            lines.append(line)
-    return "\n".join(lines)
+            out.append(line)
+    return "\n".join(out)
 
 
 def _started_at(ctx: RunContext) -> str:

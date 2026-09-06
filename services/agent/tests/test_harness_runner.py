@@ -158,6 +158,29 @@ def test_a_citation_that_opens_a_line_is_moved_to_its_end() -> None:
     assert _tidy_answer(good) == good
 
 
+def test_a_sentence_broken_across_lines_is_joined_back() -> None:
+    """Orphan tails — ``. [ref]``, ``(2024) [ref]`` — rejoin the sentence above."""
+    from counterparty_agent.harness.runner import _tidy_answer
+
+    raw = "\n".join(
+        [
+            "Loss grew from -6M [evidence:report:r1:/finReports/1/common/profit]",
+            "(2024) to -28M",
+            ". [evidence:report:r1:/finReports/0/common/profit]",
+        ]
+    )
+    assert _tidy_answer(raw) == (
+        "Loss grew from -6M [evidence:report:r1:/finReports/1/common/profit] (2024) to -28M. "
+        "[evidence:report:r1:/finReports/0/common/profit]"
+    )
+    # Two proper sentences stay on their own lines.
+    two = (
+        "Equity is negative [evidence:report:r1:/a].\n"
+        "The report has no revenue [evidence:report:r1:/b]."
+    )
+    assert _tidy_answer(two) == two
+
+
 async def test_a_turn_with_no_tool_calls_shows_no_activity_trail(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
