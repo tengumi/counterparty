@@ -11,11 +11,13 @@
  * `Comparison`, which keep their own queries, evidence and discuss callbacks.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@alfalab/core-components/button';
+import { useQueryClient } from '@tanstack/react-query';
 import type { ApiProject } from '../../api/contracts';
 import type { DiscussionContext } from '../../api/reportContracts';
 import type { ProjectDetail } from '../../mocks/types';
+import { getReportSummary, reportKeys } from '../../api/reports';
 import { LiveCompanyReport } from './LiveCompanyReport';
 import { LiveEvidence } from './LiveEvidence';
 import { Comparison } from './Comparison';
@@ -43,6 +45,20 @@ export function ReportScreen({
 }: Props) {
   const withReport = project.companies.filter((company) => company.reportId);
   const canCompare = project.companies.length >= 2;
+
+  // The summary block takes ~15s to build. Warm every company's the moment the
+  // report opens, so switching tabs shows a ready block instead of a spinner.
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    for (const item of withReport) {
+      void queryClient.prefetchQuery({
+        queryKey: [...reportKeys.project(project.id), item.reportId, 'summary'],
+        queryFn: () => getReportSummary(project.id, item.reportId as string),
+        staleTime: 5 * 60 * 1000,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.id]);
   const [mode, setMode] = useState<Mode>(
     initialMode === 'comparison' && canCompare ? 'comparison' : 'company',
   );

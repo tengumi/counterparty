@@ -23,6 +23,9 @@ class AgentSettings(BaseSettings):
     """
 
     model_id: str = "counterparty-deterministic-v1"
+    summary_model_id: str | None = None
+    """Model for the report-screen orientation block only. A lighter model is
+    enough there and keeps the call fast; unset falls back to ``model_id``."""
     model_temperature: float = Field(default=0.0, ge=0.0, le=2.0)
     model_base_url: str | None = None
     model_api_key: SecretStr | None = None

@@ -119,7 +119,7 @@ async def build_report_summary(settings: AgentSettings, *, report_id: str) -> Re
     context = await _gather(settings, report_id)
     if not context:
         raise ValueError("no report data to summarise")
-    model = create_chat_model(settings)
+    model = create_chat_model(settings, model_id=settings.summary_model_id)
     question = f"Данные отчёта:\n{context}"
     try:
         structured = model.with_structured_output(ReportSummary)

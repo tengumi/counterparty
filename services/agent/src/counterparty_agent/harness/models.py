@@ -23,10 +23,15 @@ class _ConnectionOptions(TypedDict, total=False):
     max_tokens: int
 
 
-def create_chat_model(settings: AgentSettings) -> BaseChatModel:
-    """Build the chat model named by configuration."""
+def create_chat_model(settings: AgentSettings, *, model_id: str | None = None) -> BaseChatModel:
+    """Build the chat model named by configuration.
+
+    ``model_id`` overrides the configured id for a specific call site (the
+    report summary uses a lighter model); the provider and connection stay.
+    """
+    chosen = model_id or settings.model_id
     if settings.model_provider == DETERMINISTIC_PROVIDER:
-        return DeterministicChatModel(model_id=settings.model_id)
+        return DeterministicChatModel(model_id=chosen)
     from langchain.chat_models import init_chat_model
 
     options: _ConnectionOptions = {}
@@ -37,7 +42,7 @@ def create_chat_model(settings: AgentSettings) -> BaseChatModel:
     if settings.model_max_tokens is not None:
         options["max_tokens"] = settings.model_max_tokens
     return init_chat_model(
-        settings.model_id,
+        chosen,
         model_provider=settings.model_provider,
         temperature=settings.model_temperature,
         **options,
