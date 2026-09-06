@@ -256,11 +256,17 @@ def repair_answer(answer: str, resolver: EvidenceResolver) -> "RepairedAnswer":
     while kept and _is_heading(kept[-1]):
         kept.pop()
     grounded_left = sum(1 for claim in kept_claims if claim.is_factual and claim.text in kept)
+    factual_total = sum(1 for claim in report.claims if claim.is_factual)
     # A substantial answer survives on its own: drop the ungrounded lines
-    # quietly rather than ending on an alarming "часть исключена" note. The
-    # notice is for the case where the answer is left thin.
+    # quietly rather than ending on an alarming "часть исключена" note.
     if grounded_left >= 3:
         return RepairedAnswer(text="\n".join(kept).strip(), dropped=rejected)
+    # Nothing was grounded but the model did answer (a weak model that cites
+    # from memory, or a follow-up that reused earlier context). Show its answer
+    # rather than replacing it with a wall of "Неизвестно"; the run log keeps
+    # the dropped claims.
+    if grounded_left == 0 and factual_total > 0:
+        return RepairedAnswer(text=answer.strip(), dropped=rejected)
     notes = [UNVERIFIED_DROPPED]
     if not any(not _is_heading(text) for text in kept):
         kept = []

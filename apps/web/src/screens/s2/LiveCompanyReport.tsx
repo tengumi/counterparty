@@ -7,6 +7,7 @@ import type {
   SectionName,
 } from '../../api/reportContracts';
 import { requestErrorMessage } from '../../api/messages';
+import { FinancialTable } from './report/FinancialTable';
 import { ReportOverview } from './report/ReportOverview';
 import reportStyles from './report/Report.module.css';
 import { availabilityText, factRow, recordRows, sectionTitles, sourceDate } from './liveReportView';
@@ -157,8 +158,15 @@ function SectionContent({
                   onDiscuss={onDiscuss}
                 />
               ))}
+              {section === 'financials' ? <FinancialTable
+                records={page.records} companyName={companyName}
+                onEvidence={onEvidence} onDiscuss={onDiscuss}
+              /> : null}
               {page.records.map((record, index) => {
-                const view = recordRows(record);
+                const view = record.kind === 'financial_period'
+                  ? { title: `${record.year} · Дополнительные показатели`, rows: record.additional_facts.map(factRow), note: null }
+                  : recordRows(record);
+                if (record.kind === 'financial_period' && !view.rows.length) return null;
                 return (
                   <section className={styles.liveRecord} key={record.evidence_refs[0] ?? index}>
                     <h6 className={styles.liveRecordTitle}>{view.title}</h6>

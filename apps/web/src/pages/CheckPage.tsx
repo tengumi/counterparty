@@ -7,7 +7,7 @@
  * per-viewer convenience only.
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@alfalab/core-components/button';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -74,6 +74,16 @@ function ProjectScreen({ apiProject, project, threadId, fixtureMode }: { apiProj
 
   const activeChatId = threadId ?? project.lastThreadId;
   const activeChat = chats.find((chat) => chat.id === activeChatId);
+
+  // When the agent pins the first company (add_company_to_check), open its
+  // report card right away instead of leaving the strip half-filled.
+  const hadCompanies = useRef(project.companies.length > 0);
+  useEffect(() => {
+    if (!fixtureMode && !hadCompanies.current && project.companies.length > 0) {
+      setReport({ mode: 'company', companyId: project.companies[0]!.id });
+    }
+    hadCompanies.current = project.companies.length > 0;
+  }, [project.companies, fixtureMode]);
 
   const updateProject = (next: ApiProject) => {
     queryClient.setQueryData(workspaceKeys.project(project.id), next);

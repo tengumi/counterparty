@@ -51,11 +51,34 @@ _INN = re.compile(r"(?<![\dA-Fa-f-])(\d{10}|\d{12})(?![\dA-Fa-f-])")
 """An INN in free text, never a digit run inside a UUID."""
 
 _EXPLAIN = re.compile(
-    r"что\s+(?:такое|значит|означа|за\b)|как\s+(?:читать|понимать)|объясни|расшифру|"
-    r"чем\s+отлича",
+    r"что\s+(?:такое|значит|означа|показыва|за\b)|о\s*ч[её]м|про\s+что|"
+    r"как\s+(?:читать|понимать|это)|объясни|расшифру|чем\s+отлича|"
+    r"зачем\s+(?:нужн|это)|это\s+(?:вообще\s+)?что",
     re.IGNORECASE,
 )
 """A question about what a field/signal means, not a fact about a company."""
+
+_INDICATOR_TERMS = re.compile(
+    r"зск|светофор|риск\s*левел|risklevel|коэффициент|капитал|выручк|дебиторск|"
+    r"кредиторск|исполнительн(?:ое|ых)\s+производств|арбитраж|оквэд|массов|прибыл|актив",
+    re.IGNORECASE,
+)
+"""Terms the indicator guide covers; a short question about one is an explain."""
+
+_INTERROGATIVE = re.compile(r"[?]|\b(что|чем|как|зачем|почему|о\s*ч[её]м|это)\b", re.IGNORECASE)
+
+
+def _is_explain(prompt: str) -> bool:
+    if _INN.search(prompt) is not None:
+        return False
+    if _EXPLAIN.search(prompt) is not None:
+        return True
+    # A short question that names an indicator ("уровень ЗСК зелёный это о чём").
+    return (
+        len(prompt) < 160
+        and _INDICATOR_TERMS.search(prompt) is not None
+        and _INTERROGATIVE.search(prompt) is not None
+    )
 
 
 @tool("explain_indicator", description=EXPLAIN_TOOL_DESCRIPTION)
@@ -194,7 +217,7 @@ def create_harness_runner(
         msg_index, act_index, text_path = _assistant_paths(state)
         started = _started_at(ctx)
         stream = _ActivityStream(ctx, base=int(act_index), run_id=str(ctx.run.id))
-        explains = _EXPLAIN.search(ctx.prompt) is not None and _INN.search(ctx.prompt) is None
+        explains = _is_explain(ctx.prompt)
         ctx.set(("run", "status"), RunStatus.RUNNING.value)
         # No activity is seeded: the trail is what the model's tool calls
         # stream. A turn that answers from the dialogue alone shows none.
@@ -243,6 +266,21 @@ def create_harness_runner(
             # Specs 04 §3 caps tool calls per run; one model step per call plus
             # the final answer is the graph-level equivalent of that budget.
             config["recursion_limit"] = settings.max_tool_calls * 2 + 1
+
+            question = ctx.prompt
+            if explains:
+                # Put the guide in front of the model and show the step, so the
+                # answer visibly comes from the справочник, not the model's memory.
+                handle = stream.begin("explain_indicator", {})
+                guide = explain_indicator(ctx.prompt)
+                stream.finish(handle, ok=True)
+                question = (
+                    f"Справочник показателей:\n{guide}\n\n"
+                    f"Вопрос пользователя: {ctx.prompt}\n"
+                    "Ответь простыми словами, опираясь на справочник. Ссылки на "
+                    "основания [evidence:...] тут не нужны."
+                )
+
             ledger = RunEvidenceLedger()
             async with reports_toolset(settings) as report_tools:
                 tools: list[BaseTool] = [*report_tools, _explain_indicator_tool]
@@ -259,7 +297,7 @@ def create_harness_runner(
                 result = await asyncio.wait_for(
                     run_turn(
                         graph,
-                        question=ctx.prompt,
+                        question=question,
                         config=config,
                         ledger=ledger,
                         enforce_grounding=not explains,
