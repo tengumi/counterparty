@@ -7,12 +7,52 @@ character rules are disabled for this module alone in ``pyproject.toml``
 instead of being relaxed for the whole service.
 """
 
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from .knowledge import render_reference
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from .context import AgentContext
+
+_MONTHS_RU = (
+    "января",
+    "февраля",
+    "марта",
+    "апреля",
+    "мая",
+    "июня",
+    "июля",
+    "августа",
+    "сентября",
+    "октября",
+    "ноября",
+    "декабря",
+)
+_WEEKDAYS_RU = (
+    "понедельник",
+    "вторник",
+    "среда",
+    "четверг",
+    "пятница",
+    "суббота",
+    "воскресенье",
+)
+
+
+def _today_line(now: datetime | None = None) -> str:
+    """A one-line "you are here in time" note for the system prompt.
+
+    Report figures are dated; the agent needs to know which year "now" is to
+    say whether data is fresh or two years old.
+    """
+    moment = now or datetime.now(UTC)
+    return (
+        f"Сегодня {moment.day} {_MONTHS_RU[moment.month - 1]} {moment.year} года "
+        f"({_WEEKDAYS_RU[moment.weekday()]}). Финансовые данные в отчётах обычно "
+        "отстают на год-два — это нормально, учитывай год при оценке свежести."
+    )
+
 
 POLICY = """Ты — помощник по проверке контрагентов в Альфа-Бизнесе.
 
@@ -256,6 +296,8 @@ def render_system_prompt(context: "AgentContext") -> str:
     project = context.project
     lines = [
         POLICY,
+        "",
+        _today_line(),
         "",
         context.client.render(),
         "",
