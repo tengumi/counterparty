@@ -33,7 +33,6 @@ from .evidence import (
     RunEvidenceLedger,
     ValidationReport,
     repair_answer,
-    validate_answer,
 )
 from .filesystem import scoped_permissions
 from .middleware import ActivityTraceMiddleware, EvidenceLedgerMiddleware, ToolTrace
@@ -135,12 +134,13 @@ async def run_turn(
     history: Sequence[BaseMessage] = (),
     enforce_grounding: bool = True,
 ) -> TurnResult:
-    """Run one turn and let no ungrounded claim out of it.
+    """Run one turn and keep an ungrounded claim from leaving it.
 
-    The model gets exactly one chance to add the references it left out; the
-    second pass is deterministic and simply removes what is still ungrounded.
-    A repair turn is an ordinary turn of the same graph and thread, not a
-    private loop: it is checkpointed like any other message.
+    One model pass, then a deterministic, non-destructive grounding pass: a line
+    that cites a dead reference is dropped, everything else is shown as written.
+    There is no second model round — for the demo it roughly doubled the wait on
+    a full company analysis and the weak model rarely improved the answer with
+    it.
 
     ``history`` is the thread's earlier messages, passed in explicitly rather
     than left to the checkpointer to replay: the caller owns the durable
@@ -162,18 +162,10 @@ async def run_turn(
             dropped_claims=(),
             observed_refs=tuple(ledger.known_refs()),
         )
-    report = validate_answer(answer, ledger)
-    repaired = False
-    if not report.ok:
-        repaired = True
-        so_far = list(state["messages"])
-        so_far.append(HumanMessage(content=_repair_prompt(report, ledger)))
-        state = await graph.ainvoke({"messages": so_far}, config)
-        answer = final_text(state["messages"])
     outcome = repair_answer(answer, ledger)
     return TurnResult(
         answer=outcome.text,
-        model_repair_attempted=repaired,
+        model_repair_attempted=False,
         dropped_claims=outcome.dropped,
         observed_refs=tuple(ledger.known_refs()),
     )
