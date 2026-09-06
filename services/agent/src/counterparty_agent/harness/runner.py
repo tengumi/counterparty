@@ -13,6 +13,7 @@ Agents graph built in :mod:`counterparty_agent.harness.graph`.
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -26,6 +27,7 @@ from ..transport.runs import RunContext
 from .context import AgentContext, build_context
 from .evidence import RunEvidenceLedger
 from .graph import create_harness, run_turn
+from .knowledge import lookup, render_relevant
 from .models import create_chat_model
 from .prompts import ACTIVITY_READING_REPORT, RUN_FAILED_MESSAGE
 from .tools import reports_toolset
@@ -113,6 +115,7 @@ def create_harness_runner(
                 thread_id=UUID(str(state.thread_id)),
             )
             context = await context_loader(scope)
+            context = replace(context, relevant_notes=render_relevant(lookup(ctx.prompt)))
             config = await config_factory(scope)
             # Specs 04 §3 caps tool calls per run; one model step per call plus
             # the final answer is the graph-level equivalent of that budget.

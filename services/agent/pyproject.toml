@@ -46,10 +46,13 @@ line-length = 100
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "D"]
 
 [tool.ruff.lint.per-file-ignores]
-# The whole Russian prompt and answer corpus lives in one module. Russian words
-# built only from Latin-confusable letters are unavoidable there, so the
-# ambiguous-character rules are relaxed for that file instead of the service.
+# The Russian prompt corpus and the domain-knowledge reference are the two
+# modules that carry Russian text. Words built only from Latin-confusable
+# letters are unavoidable there, so the ambiguous-character rules are relaxed
+# for those files instead of for the whole service.
 "src/counterparty_agent/harness/prompts.py" = ["RUF001", "RUF002", "RUF003"]
+"src/counterparty_agent/harness/knowledge.py" = ["RUF001", "RUF002", "RUF003"]
+"tests/test_harness_knowledge.py" = ["RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

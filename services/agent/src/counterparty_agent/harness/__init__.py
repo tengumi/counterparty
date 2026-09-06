@@ -29,12 +29,23 @@ from .evidence import (
 )
 from .filesystem import scoped_permissions, thread_workspace_root
 from .graph import CompiledHarness, TurnResult, create_harness, final_text, run_turn
+from .knowledge import (
+    REFERENCE,
+    REFERENCE_VERSION,
+    KnowledgeEntry,
+    KnowledgeExample,
+    lookup,
+    render_reference,
+    render_relevant,
+)
 from .middleware import EvidenceLedgerMiddleware
 from .models import create_chat_model
 from .runner import create_harness_runner
 from .tools import reports_connection, reports_toolset
 
 __all__ = [
+    "REFERENCE",
+    "REFERENCE_VERSION",
     "AgentContext",
     "Claim",
     "CompanyContext",
@@ -43,6 +54,8 @@ __all__ = [
     "DeterministicChatModel",
     "EvidenceLedgerMiddleware",
     "EvidenceResolver",
+    "KnowledgeEntry",
+    "KnowledgeExample",
     "ProjectContext",
     "RepairedAnswer",
     "RunEvidenceLedger",
@@ -56,6 +69,9 @@ __all__ = [
     "create_harness",
     "create_harness_runner",
     "final_text",
+    "lookup",
+    "render_reference",
+    "render_relevant",
     "repair_answer",
     "reports_connection",
     "reports_toolset",

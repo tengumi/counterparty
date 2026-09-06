@@ -67,6 +67,10 @@ class AgentContext:
     thread: ThreadContext
     workspace_root: str
     domain_notes: str = field(default=DOMAIN_NOTES)
+    relevant_notes: str = ""
+    """Domain-reference fragments selected for the current question
+    (:func:`counterparty_agent.harness.knowledge.lookup`); empty until the
+    runner fills it, and empty when nothing matched."""
 
     def render(self) -> str:
         """Render the layered system prompt for this thread."""

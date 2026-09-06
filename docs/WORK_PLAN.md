@@ -131,7 +131,7 @@ typed mocks; скриншоты подтверждают сохранение п
 | AG-03 | Подключение MCP tools штатным механизмом Deep Agents, evidence-grounded answer и прикладной validator/repair | AG-02, MCP-02, D-02 | Agent | todo |
 | AG-04 | Persistent run registry, reconnect, cancel и public projection | AG-03, C-03 | Agent | todo |
 | AG-05 | Persistent follow-up inbox и safe-boundary apply | AG-04 | Agent | todo |
-| AG-06 | Справочник знаний агента по Specs 04 §6: version, источник, тестовые примеры и внутренний lookup без vector search | AG-03 | Agent/Domain | todo |
+| AG-06 | Справочник знаний агента по Specs 04 §6: version, источник, тестовые примеры и внутренний lookup без vector search | AG-03 | Agent/Domain | done (06.09.2026: втянут в MVP-фазу до web. `harness/knowledge.py` — 9 версионированных записей (по числу оговорок §6) с `source` (case/qa/verified_reference) и worked-примером; `lookup()` — детерминированный keyword-матч по topics без vector search; `DOMAIN_NOTES` теперь генерится из справочника, релевантные фрагменты подмешиваются в system prompt через `context.relevant_notes` в `runner`; agent 87 (+13), ruff/mypy чистые) |
 | DOC-01 | Upload/storage metadata и project-scoped access | API-02 | UI API/Data | todo |
 | DOC-02 | SkillExecutor, MarkItDown/PDF adapters, fragments и locators | DOC-01, AG-02 | Agent | todo |
 | DOC-03 | XLSX/DOCX/PDF parsing policies, cache и trace | DOC-02 | Agent/QA | todo |

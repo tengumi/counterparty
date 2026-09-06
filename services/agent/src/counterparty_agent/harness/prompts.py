@@ -9,6 +9,8 @@ instead of being relaxed for the whole service.
 
 from typing import TYPE_CHECKING
 
+from .knowledge import render_reference
+
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from .context import AgentContext
 
@@ -25,12 +27,11 @@ POLICY = """Ты — аналитик проверки контрагента в
 - Уточняй только то, что способно изменить вывод.
 - Файловые инструменты работают только в рабочей папке этого диалога."""
 
-DOMAIN_NOTES = """Предметные оговорки (Specs 04 §6):
-- Коды ОКВЭД идут с описаниями; «массовый ОКВЭД» — повод уточнить, не нарушение.
-- Банковский светофор — комплаенс-оценка, он может быть зелёным при отрицательном капитале.
-- Оценка ЗСК и банковский риск — разные сигналы; сырое значение сохраняется как есть.
-- Исполнительное производство на небольшую сумму не является автоматическим запретом.
-- Данные годовой отчётности не означают текущий остаток на счёте."""
+DOMAIN_NOTES = render_reference()
+"""Standing domain notes, generated from the versioned reference in
+:mod:`counterparty_agent.harness.knowledge` so provenance and tests stay
+attached. A question also pulls the fragments it touches through
+``knowledge.lookup`` and they are rendered by :func:`render_system_prompt`."""
 
 REPAIR_INSTRUCTION = """Ответ отклонён проверкой оснований.
 
@@ -95,4 +96,6 @@ def render_system_prompt(context: "AgentContext") -> str:
             f"- Рабочая папка диалога: {context.workspace_root}",
         ]
     )
+    if context.relevant_notes:
+        lines.extend(["", context.relevant_notes])
     return "\n".join(lines)
