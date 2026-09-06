@@ -33,7 +33,7 @@ import type { AgentConnection, AgentRuntimeOptions } from './useAgentTransport';
 import { useStoreValue } from './connectionStore';
 import type { ValueStore } from './connectionStore';
 import type { PublicActivity, PublicAgentState, RunStatus } from './publicAgentState';
-import { emptyAgentState } from './publicAgentState';
+import { emptyAgentState, TERMINAL_RUN_STATUSES } from './publicAgentState';
 import { useAgentProjection } from './useAgentProjection';
 import { EvidenceRefContext } from './evidenceContext';
 import { MarkdownText } from './MarkdownText';
@@ -83,6 +83,9 @@ interface ChatView {
   readonly autoSend?: string;
   /** Called right after the auto-sent task is dispatched. */
   readonly onAutoSent?: () => void;
+  /** Called once when a run reaches a terminal status — the agent may have
+      changed the check's composition (e.g. pinned a company by INN). */
+  readonly onRunSettled?: () => void;
   readonly layout?: (feed: ReactNode, composer: ReactNode) => ReactNode;
 }
 
@@ -101,17 +104,30 @@ function toStep(activity: PublicActivity): ActivityStep {
   };
 }
 
+const RUN_IN_FLIGHT: ReadonlySet<RunStatus> = new Set(['accepted', 'running', 'cancelling']);
+
 function LiveActivity({ state }: { state: PublicAgentState }) {
   if (state.activities.length === 0) return null;
 
+  const inFlight = state.run !== null && RUN_IN_FLIGHT.has(state.run.status);
   const running = state.activities.find((activity) => activity.status === 'running');
   const failed = state.activities.some((activity) => activity.status === 'failed');
-  // A clean finish speaks through the answer: no «Проверка завершена» line.
-  // The trail stays only while the run works or when something went wrong.
-  if (running === undefined && !failed) return null;
-
-  const label = running?.label ?? 'Часть сведений прочитать не удалось';
-  const status = running ? 'running' : 'failed';
+  // While the run works, always keep a current line: the running step, or the
+  // last step taken while the model thinks between tools — so it never blanks
+  // out and each action stays on screen long enough to read. When the run is
+  // done the whole trail stays, collapsed, under the answer.
+  const current = running ?? (inFlight ? state.activities[state.activities.length - 1] : undefined);
+  const status: 'running' | 'completed' | 'failed' = current
+    ? 'running'
+    : failed
+      ? 'failed'
+      : 'completed';
+  const label =
+    status === 'running'
+      ? (current?.label ?? 'Изучаю отчёт')
+      : status === 'failed'
+        ? 'Часть сведений прочитать не удалось'
+        : 'Что проверил помощник';
 
   return <ActivityBlock label={label} status={status} steps={state.activities.map(toStep)} />;
 }
@@ -316,10 +332,25 @@ function LiveTrail({
     <>
       {state.messages.length === 0 && state.run === null ? view.emptyState : null}
       <LiveActivity state={state} />
+      <RunSettledSignal state={state} />
       <ConnectionState connection={connection} onReconnect={onReconnect} />
       <RunState connection={connection} onRetry={retry} state={state} />
     </>
   );
+}
+
+/** Fires `onRunSettled` once per run once it reaches a terminal status. */
+function RunSettledSignal({ state }: { state: PublicAgentState }) {
+  const view = useContext(ChatViewContext);
+  const settled = useRef<string | null>(null);
+  const run = state.run;
+  useEffect(() => {
+    if (run === null || settled.current === run.id) return;
+    if (!TERMINAL_RUN_STATUSES.includes(run.status)) return;
+    settled.current = run.id;
+    view.onRunSettled?.();
+  }, [run, view]);
+  return null;
 }
 
 /**
@@ -442,6 +473,8 @@ export interface AgentChatProps extends AgentRuntimeOptions {
   readonly autoSend?: string;
   /** Called right after the auto-sent task is dispatched. */
   readonly onAutoSent?: () => void;
+  /** Called once a run settles; the check's composition may have changed. */
+  readonly onRunSettled?: () => void;
   /** Places the feed and the composer into the screen layout. */
   readonly layout?: (feed: ReactNode, composer: ReactNode) => ReactNode;
 }
@@ -455,6 +488,7 @@ export function AgentChat({
   onOpenEvidence,
   autoSend,
   onAutoSent,
+  onRunSettled,
   layout,
   ...options
 }: AgentChatProps) {
@@ -468,6 +502,7 @@ export function AgentChat({
     inputRef,
     autoSend,
     onAutoSent,
+    onRunSettled,
     layout,
   };
 

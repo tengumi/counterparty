@@ -81,21 +81,22 @@ describe('S2 conversation', () => {
     expect(steps[2]!).toHaveTextContent('Отчёт · срез 5 августа 2026');
   });
 
-  it('lists only the finished steps of a running check', async () => {
-    const user = userEvent.setup();
+  it('shows the running check building its step list in place', () => {
     openChat('/checks/demo-project/chats/terms-thread');
 
+    // While it works the current line is shown and the steps are visible
+    // without a toggle, so the user watches the trail grow.
     expect(screen.getByText('Сопоставляю условия оплаты и финансовые сведения')).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Что проверено' }));
+    expect(screen.queryByRole('button', { name: 'Что проверено' })).not.toBeInTheDocument();
 
-    const listId = screen
-      .getByRole('button', { name: 'Что проверено' })
-      .getAttribute('aria-controls')!;
-    const steps = within(document.getElementById(listId)!).getAllByRole('listitem');
-    expect(steps).toHaveLength(1);
-    expect(steps[0]!).toHaveTextContent('Прочитал условия проверки');
-    // The step in flight belongs to the current line, not to «Что проверено».
-    expect(steps[0]!).not.toHaveTextContent('Читаю финансовые сведения');
+    const trail = screen.getByRole('region', { name: 'Ход проверки' });
+    const steps = within(trail).getAllByRole('listitem');
+    expect(steps.map((step) => step.textContent)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('Прочитал условия проверки'),
+        expect.stringContaining('Читаю финансовые сведения'),
+      ]),
+    );
   });
 
   it('offers a short answer as an editable draft and never sends it by itself', async () => {

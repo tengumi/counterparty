@@ -43,6 +43,8 @@ interface Props {
   readonly onInsertDraftReady?: (insert: (text: string | DiscussionContext) => void) => void;
   /** What a returning user is told before the conversation itself. */
   readonly resume?: ApiProject;
+  /** Called when a run settles; the agent may have pinned a company by INN. */
+  readonly onCompositionChanged?: () => void;
 }
 
 const UNAVAILABLE =
@@ -55,6 +57,7 @@ export function ChatSurface({
   materialActions,
   onInsertDraftReady,
   resume,
+  onCompositionChanged,
   fixtureMode = false,
 }: Props) {
   const draftKey = `draft:${project.id}:${chat.id}`;
@@ -165,6 +168,7 @@ export function ChatSurface({
         onAutoSent={consumeAutoSend}
         onDraftChange={setDraft}
         onOpenEvidence={materialActions.onOpenEvidence}
+        onRunSettled={onCompositionChanged}
         projectId={project.id}
         threadId={chat.id}
       />

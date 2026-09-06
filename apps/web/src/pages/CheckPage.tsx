@@ -171,6 +171,11 @@ function ProjectScreen({ apiProject, project, threadId, fixtureMode }: { apiProj
               onOpenDocument: (documentId) => openMaterials({ kind: 'document', documentId }),
               onOpenSummary: () => openMaterials({ kind: 'summary' }),
             }}
+            onCompositionChanged={() => {
+              void queryClient.invalidateQueries({
+                queryKey: workspaceKeys.project(project.id),
+              });
+            }}
             onInsertDraftReady={registerInsert}
             project={project}
             resume={fixtureMode ? undefined : apiProject}

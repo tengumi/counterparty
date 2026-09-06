@@ -92,21 +92,22 @@ export function ActivityBlock({
 }) {
   const [open, setOpen] = useState(false);
   const listId = useId();
-  const done = steps.filter((step) => step.status !== 'running');
-  const failed = done.some((step) => step.status === 'failed');
+  const running = status === 'running';
+  // While the run works, watch the list build in place; once done, it collapses
+  // behind «Что проверено» and stays under the answer as a record of what the
+  // assistant actually looked at.
+  const visible = running ? steps : steps.filter((step) => step.status !== 'running');
 
-  // A finished run speaks for itself through its answer. Keep the trail while
-  // it works, when something went wrong, or when there is a real multi-step
-  // sequence worth inspecting — but not a bare «Проверка завершена» line under
-  // an answer that already stands on its own.
-  if (status === 'completed' && !failed && done.length < 2) return null;
+  if (visible.length === 0) return null;
+
+  const listOpen = running || open;
 
   return (
     <section aria-label="Ход проверки" className={styles.activity}>
       <p className={styles.activityLine}>
         <span aria-hidden="true" className={styles.dot} data-status={status} />
         <span>{label}</span>
-        {done.length > 0 ? (
+        {!running ? (
           <Button
             aria-controls={listId}
             aria-expanded={open}
@@ -118,22 +119,20 @@ export function ActivityBlock({
           </Button>
         ) : null}
       </p>
-      {done.length > 0 ? (
-        <ul className={styles.steps} hidden={!open} id={listId}>
-          {done.map((step) => (
-            <li className={styles.step} key={step.id}>
-              <span
-                className={styles.stepLabel}
-                data-kind={step.kind ?? undefined}
-                data-status={step.status}
-              >
-                {step.label}
-              </span>
-              <span className={styles.stepSource}>{step.source}</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <ul className={styles.steps} hidden={!listOpen} id={listId}>
+        {visible.map((step) => (
+          <li className={styles.step} key={step.id}>
+            <span
+              className={styles.stepLabel}
+              data-kind={step.kind ?? undefined}
+              data-status={step.status}
+            >
+              {step.label}
+            </span>
+            <span className={styles.stepSource}>{step.source}</span>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

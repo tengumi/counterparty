@@ -117,13 +117,18 @@ describe('V01 assistant-stream ↔ assistant-ui transport', () => {
     await waitFor(() => expect(activity).toHaveAttribute('data-status', 'failed'));
   });
 
-  it('does not leave a bare activity line under a clean answer', async () => {
+  it('keeps the trail of actions under a clean answer, collapsed', async () => {
+    const user = userEvent.setup();
     installFetch(answerSse);
     await send('Проверь условия');
 
     await screen.findByText(/Аванс 80%/);
-    expect(screen.queryByText('Читаю условия поставки')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Что проверено' })).not.toBeInTheDocument();
+    // The record of what the assistant looked at stays under the answer,
+    // collapsed behind «Что проверено».
+    const toggle = screen.getByRole('button', { name: 'Что проверено' });
+    expect(screen.getByText('Читаю условия поставки')).not.toBeVisible();
+    await user.click(toggle);
+    expect(screen.getByText('Читаю условия поставки')).toBeVisible();
   });
 
   it('surfaces a terminal error without losing the run status', async () => {

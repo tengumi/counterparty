@@ -35,6 +35,8 @@ export interface ProjectChatProps {
   readonly autoSend?: string;
   /** Called right after the auto-sent task is dispatched. */
   readonly onAutoSent?: () => void;
+  /** Called once a run settles; the check composition may have changed. */
+  readonly onRunSettled?: () => void;
   readonly layout: (feed: ReactNode, composer: ReactNode) => ReactNode;
 }
 
@@ -54,6 +56,7 @@ export function ProjectChat({
   onOpenEvidence,
   autoSend,
   onAutoSent,
+  onRunSettled,
   layout,
 }: ProjectChatProps) {
   const conversation = useQuery({
@@ -110,6 +113,7 @@ export function ProjectChat({
       initialState={restored?.state}
       autoSend={autoSend}
       onAutoSent={onAutoSent}
+      onRunSettled={onRunSettled}
       inputRef={inputRef}
       onOpenEvidence={onOpenEvidence}
       key={restored === undefined ? 'live' : 'restored'}
