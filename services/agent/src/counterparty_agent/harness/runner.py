@@ -394,6 +394,11 @@ def create_harness_runner(
     return run
 
 
+# The model sometimes writes "[evidence: report:… ]" with stray spaces around
+# the ref; normalise so both the frontend chip regex and the grounding check
+# see a clean "[evidence:<ref>]".
+_LOOSE_EVIDENCE = re.compile(r"\[\s*evidence:\s*([^\]\s]+)\s*\]")
+
 _LEADING_REFS = re.compile(r"^\s*((?:\[evidence:[^\]]+\]\s*,?\s*)+)")
 # A line that is really the tail of the previous sentence, broken off by the
 # model: it opens with closing punctuation, a bare ``(2024)``-style
@@ -409,6 +414,7 @@ def _tidy_answer(text: str) -> str:
     the sentence above it — opening with ``.``/``)``/``(2024)`` — is joined
     back onto that sentence instead of standing as its own fragment.
     """
+    text = _LOOSE_EVIDENCE.sub(r"[evidence:\1]", text)
     joined: list[str] = []
     for raw in text.splitlines():
         line = raw.rstrip()

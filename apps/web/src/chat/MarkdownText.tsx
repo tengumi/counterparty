@@ -17,7 +17,9 @@ import type { TextMessagePartComponent } from '@assistant-ui/react';
 import { EvidenceRefContext } from './evidenceContext';
 import styles from '../screens/s2/conversation/Conversation.module.css';
 
-const TOKEN = /\s*\[evidence:(report:[0-9a-fA-F-]+:\/[^\]\s]+)\]/g;
+// The model is not always tidy: `[evidence: report:… ]` with stray spaces
+// around the ref still has to collapse to a chip, not show as raw text.
+const TOKEN = /\s*\[\s*evidence:\s*(report:[0-9a-fA-F-]+:\/[^\]\s]+)\s*\]/g;
 // A private-use wrapper the Markdown parser carries through untouched: a plain
 // space would be trimmed at a line edge and orphan the digit.
 const WRAP = '';
