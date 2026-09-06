@@ -27,8 +27,9 @@ down: ## Stop the stack, keep the database volume
 restart: ## Recreate the long-running services without touching data
 	$(COMPOSE) up -d --wait ui_api agent mcp web proxy
 
-rebuild: ## Rebuild and restart the app services (web/ui_api/agent/mcp)
+rebuild: ## Rebuild and restart the app services (web/ui_api/agent/mcp) + refresh the proxy
 	$(COMPOSE) up -d --build --wait web ui_api agent mcp
+	$(COMPOSE) restart proxy
 	@echo "\nReady → $(URL)"
 
 reset: ## Wipe the database volume and bring everything up fresh (re-imports)
