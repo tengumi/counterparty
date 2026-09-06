@@ -50,6 +50,7 @@ export type PublicMessage = {
 
 export type PublicActivity = {
   id: string;
+  run_id?: string | null;
   kind: ActivityKind;
   label: string;
   status: 'running' | 'completed' | 'failed';

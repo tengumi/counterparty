@@ -61,6 +61,8 @@ class PublicActivity(PublicModel):
     """Safe activity label; never internal reasoning or raw tool arguments."""
 
     id: str = Field(min_length=1)
+    run_id: str | None = None
+    """The run that produced this step; the UI shows one run's trail at a time."""
     kind: ActivityKind
     label: str = Field(min_length=1)
     status: ActivityStatus

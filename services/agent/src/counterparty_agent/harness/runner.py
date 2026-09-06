@@ -22,7 +22,7 @@ from uuid import UUID
 from counterparty_contracts import RunStatus
 from counterparty_storage import ThreadScope
 from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import BaseTool
+from langchain_core.tools import BaseTool, tool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 
 from ..config import AgentSettings
@@ -31,12 +31,15 @@ from .client_profile import load_client_profile
 from .context import AgentContext, build_context
 from .evidence import RunEvidenceLedger
 from .graph import create_harness, run_turn
+from .indicator_guide import explain_indicator
 from .knowledge import lookup, render_relevant
 from .models import create_chat_model
 from .prompts import (
     ASK_TO_ADD_COMPANY,
     DEFAULT_TOOL_ACTIVITY,
+    EXPLAIN_TOOL_DESCRIPTION,
     RUN_FAILED_MESSAGE,
+    SECTION_ACTIVITY,
     TOOL_ACTIVITY,
 )
 from .provisioning import build_add_company_tool
@@ -46,6 +49,19 @@ logger = logging.getLogger(__name__)
 
 _INN = re.compile(r"(?<![\dA-Fa-f-])(\d{10}|\d{12})(?![\dA-Fa-f-])")
 """An INN in free text, never a digit run inside a UUID."""
+
+_EXPLAIN = re.compile(
+    r"что\s+(?:такое|значит|означа|за\b)|как\s+(?:читать|понимать)|объясни|расшифру|"
+    r"чем\s+отлича",
+    re.IGNORECASE,
+)
+"""A question about what a field/signal means, not a fact about a company."""
+
+
+@tool("explain_indicator", description=EXPLAIN_TOOL_DESCRIPTION)
+def _explain_indicator_tool(query: str) -> str:
+    return explain_indicator(query)
+
 
 # The assistant message index of a run that starts from a fresh thread (one
 # user message, no prior turns). ``_assistant_paths`` generalises it.
@@ -74,22 +90,27 @@ class _ActivityStream:
     onward, so seeded history above it is never touched.
     """
 
-    def __init__(self, ctx: RunContext, *, base: int) -> None:
+    def __init__(self, ctx: RunContext, *, base: int, run_id: str) -> None:
         self._ctx = ctx
         self._base = base
+        self._run_id = run_id
         self._next = count(base)
         self._open: list[int] = []
         self.count = 0
 
-    def begin(self, tool_name: str) -> int:
+    def begin(self, tool_name: str, args: dict[str, object] | None = None) -> int:
         """Append a running activity for a starting tool call."""
         kind, label = TOOL_ACTIVITY.get(tool_name, DEFAULT_TOOL_ACTIVITY)
+        if tool_name == "get_report_section":
+            section = str((args or {}).get("section", "")).strip().lower()
+            label = SECTION_ACTIVITY.get(section, label)
         index = next(self._next)
         now = datetime.now(UTC).isoformat()
         self._ctx.append_item(
             ("activities",),
             {
                 "id": f"activity-{index}",
+                "run_id": self._run_id,
                 "kind": kind,
                 "label": label,
                 "status": "running",
@@ -172,7 +193,8 @@ def create_harness_runner(
         state = ctx.run.initial_state
         msg_index, act_index, text_path = _assistant_paths(state)
         started = _started_at(ctx)
-        stream = _ActivityStream(ctx, base=int(act_index))
+        stream = _ActivityStream(ctx, base=int(act_index), run_id=str(ctx.run.id))
+        explains = _EXPLAIN.search(ctx.prompt) is not None and _INN.search(ctx.prompt) is None
         ctx.set(("run", "status"), RunStatus.RUNNING.value)
         # No activity is seeded: the trail is what the model's tool calls
         # stream. A turn that answers from the dialogue alone shows none.
@@ -222,7 +244,7 @@ def create_harness_runner(
             config["recursion_limit"] = settings.max_tool_calls * 2 + 1
             ledger = RunEvidenceLedger()
             async with reports_toolset(settings) as report_tools:
-                tools: list[BaseTool] = list(report_tools)
+                tools: list[BaseTool] = [*report_tools, _explain_indicator_tool]
                 if can_add and ctx.scope is not None:
                     tools.append(build_add_company_tool(settings, project_id=ctx.scope.project_id))
                 graph = create_harness(
@@ -234,7 +256,13 @@ def create_harness_runner(
                     trace=stream,
                 )
                 result = await asyncio.wait_for(
-                    run_turn(graph, question=ctx.prompt, config=config, ledger=ledger),
+                    run_turn(
+                        graph,
+                        question=ctx.prompt,
+                        config=config,
+                        ledger=ledger,
+                        enforce_grounding=not explains,
+                    ),
                     timeout=settings.run_timeout_seconds,
                 )
         except Exception:

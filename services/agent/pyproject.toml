@@ -54,6 +54,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "D"]
 "src/counterparty_agent/harness/prompts.py" = ["RUF001", "RUF002", "RUF003"]
 "src/counterparty_agent/harness/knowledge.py" = ["RUF001", "RUF002", "RUF003"]
 "src/counterparty_agent/harness/client_profile.py" = ["RUF001", "RUF002", "RUF003"]
+"src/counterparty_agent/harness/indicator_guide.py" = ["RUF001", "RUF002", "RUF003"]
 "tests/test_harness_knowledge.py" = ["RUF001", "RUF002", "RUF003"]
 "tests/test_provisioning.py" = ["RUF001", "RUF002", "RUF003"]
 

@@ -23,19 +23,39 @@
 /* S2-05 progress */
 .activity { display: flex; flex-direction: column; gap: 10px; }
 .activityLine { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: rgba(4, 4, 19, .55); }
-.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: #2a77ef; }
+.dot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: #2a77ef; }
 .dot[data-status='completed'] { background: #1f8c4d; }
 .dot[data-status='failed'] { background: #d91d0b; }
-.dot[data-status='running'] { animation: dotPulse 1.4s ease-in-out infinite; }
+.dot[data-status='running'] {
+  background: #2a77ef;
+  animation: dotPulse 1.15s ease-in-out infinite;
+}
+.activityLine[data-status='running'] { color: #05081d; }
 
 @keyframes dotPulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(42, 119, 239, .35); }
-  50% { opacity: .45; box-shadow: 0 0 0 5px rgba(42, 119, 239, 0); }
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(42, 119, 239, .5); }
+  70% { transform: scale(1.15); box-shadow: 0 0 0 7px rgba(42, 119, 239, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(42, 119, 239, 0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dot[data-status='running'] { animation: none; opacity: .7; }
+  .dot[data-status='running'] { animation: dotPulse 2s steps(2, jump-none) infinite; }
 }
+/* Collapsed "что было сделано" above a finished answer */
+.trailDone { margin: 0 0 8px; }
+.trailToggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: none; border: 0; padding: 2px 0; cursor: pointer;
+  font: inherit; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .55);
+}
+.trailToggle:hover { color: rgba(5, 8, 29, .82); }
+.trailCount {
+  min-width: 16px; padding: 0 5px; border-radius: 8px;
+  background: rgba(5, 8, 29, .06); color: rgba(5, 8, 29, .5);
+  font-size: 11px; line-height: 16px; text-align: center;
+}
+.trailDone .steps { margin-top: 8px; }
+
 .steps { list-style: none; margin: 0 0 0 18px; padding: 0 0 0 14px; border-left: 1px solid #e7e8eb; display: flex; flex-direction: column; gap: 8px; }
 .step { display: flex; gap: 12px; font-size: 13px; line-height: 18px; }
 .stepLabel { flex: 1; color: rgba(3, 3, 6, .88); }

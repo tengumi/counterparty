@@ -104,6 +104,7 @@ async def run_turn(
     question: str,
     config: RunnableConfig,
     ledger: RunEvidenceLedger,
+    enforce_grounding: bool = True,
 ) -> TurnResult:
     """Run one turn and let no ungrounded claim out of it.
 
@@ -111,9 +112,20 @@ async def run_turn(
     second pass is deterministic and simply removes what is still ungrounded.
     A repair turn is an ordinary turn of the same graph and thread, not a
     private loop: it is checkpointed like any other message.
+
+    ``enforce_grounding=False`` is for turns that answer with a *definition*
+    (what a report field means) rather than a fact about a company: there is
+    nothing to cite and the grounding pass would wrongly strip the answer.
     """
     state = await graph.ainvoke({"messages": [HumanMessage(content=question)]}, config)
     answer = final_text(state["messages"])
+    if not enforce_grounding:
+        return TurnResult(
+            answer=answer,
+            model_repair_attempted=False,
+            dropped_claims=(),
+            observed_refs=tuple(ledger.known_refs()),
+        )
     report = validate_answer(answer, ledger)
     repaired = False
     if not report.ok:

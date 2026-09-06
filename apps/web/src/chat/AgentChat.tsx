@@ -18,16 +18,19 @@
  * subtree through `ChatViewContext` instead of through the host's props.
  */
 
-import { createContext, memo, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  memo,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Button } from '@alfalab/core-components/button';
 import type { ReactNode, RefObject } from 'react';
-import {
-  AssistantRuntimeProvider,
-  MessagePrimitive,
-  ThreadPrimitive,
-  useAui,
-  useAuiState,
-} from '@assistant-ui/react';
+import { AssistantRuntimeProvider, ThreadPrimitive, useAui, useAuiState } from '@assistant-ui/react';
 import { useAgentTransport } from './useAgentTransport';
 import type { AgentConnection, AgentRuntimeOptions } from './useAgentTransport';
 import { useStoreValue } from './connectionStore';
@@ -36,11 +39,9 @@ import type { PublicActivity, PublicAgentState, RunStatus } from './publicAgentS
 import { emptyAgentState, TERMINAL_RUN_STATUSES } from './publicAgentState';
 import { useAgentProjection } from './useAgentProjection';
 import { EvidenceRefContext } from './evidenceContext';
-import { MarkdownText } from './MarkdownText';
-import { ActivityBlock } from '../screens/s2/conversation/ConversationFeed';
+import { MarkdownContent } from './MarkdownText';
 import { Composer } from '../screens/s2/conversation/Composer';
 import type { ComposerStatus } from '../screens/s2/conversation/Composer';
-import type { ActivityStep } from '../mocks/types';
 import styles from '../screens/s2/conversation/Conversation.module.css';
 
 /** Run states that still tell the user something they should act on. */
@@ -61,16 +62,6 @@ const runLabels: Readonly<Record<RunStatus, string>> = {
   failed: 'Помощник временно недоступен',
   cancelled: 'Проверка остановлена. Выполненные действия сохранены',
   interrupted: 'Проверка прервана. Сохранённые данные доступны',
-};
-
-/** Human source of a typed activity; MCP arguments are never shown. */
-const activitySources: Readonly<Record<string, string>> = {
-  reading_report: 'Отчёт компании',
-  reading_document: 'Документ проверки',
-  comparing: 'Сравнение сведений',
-  calculating: 'Расчёт по условиям',
-  updating_analysis: 'Обновление вывода',
-  skill_invocation: 'Навык помощника',
 };
 
 interface ChatView {
@@ -94,64 +85,112 @@ const ChatViewContext = createContext<ChatView>({
   onDraftChange: () => undefined,
 });
 
-function toStep(activity: PublicActivity): ActivityStep {
-  return {
-    id: activity.id,
-    kind: activity.kind,
-    label: activity.label,
-    source: activitySources[activity.kind] ?? 'Сведения проверки',
-    status: activity.status,
-  };
-}
-
 const RUN_IN_FLIGHT: ReadonlySet<RunStatus> = new Set(['accepted', 'running', 'cancelling']);
 
-function LiveActivity({ state }: { state: PublicAgentState }) {
-  if (state.activities.length === 0) return null;
+/**
+ * What the assistant did for one answer.
+ *
+ * While that run works it is a single live line — the current action, with a
+ * pulsing dot — never a growing list and never a trailing «Проверка завершена».
+ * Once the answer is in, it collapses to «Что было сделано», above the answer,
+ * as a record of which parts of the report were read.
+ */
+function MessageTrail({
+  activities,
+  inFlight,
+}: {
+  activities: readonly PublicActivity[];
+  inFlight: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const listId = useId();
+  if (activities.length === 0) return null;
 
-  const inFlight = state.run !== null && RUN_IN_FLIGHT.has(state.run.status);
-  const running = state.activities.find((activity) => activity.status === 'running');
-  const failed = state.activities.some((activity) => activity.status === 'failed');
-  // While the run works, always keep a current line: the running step, or the
-  // last step taken while the model thinks between tools — so it never blanks
-  // out and each action stays on screen long enough to read. When the run is
-  // done the whole trail stays, collapsed, under the answer.
-  const current = running ?? (inFlight ? state.activities[state.activities.length - 1] : undefined);
-  const status: 'running' | 'completed' | 'failed' = current
-    ? 'running'
-    : failed
-      ? 'failed'
-      : 'completed';
-  const label =
-    status === 'running'
-      ? (current?.label ?? 'Изучаю отчёт')
-      : status === 'failed'
-        ? 'Часть сведений прочитать не удалось'
-        : 'Что проверил помощник';
+  if (inFlight) {
+    const running = activities.find((activity) => activity.status === 'running');
+    const label = running?.label ?? activities[activities.length - 1]?.label ?? 'Изучаю отчёт';
+    return (
+      <p className={styles.activityLine} data-status="running">
+        <span aria-hidden="true" className={styles.dot} data-status="running" />
+        <span>{label}…</span>
+      </p>
+    );
+  }
 
-  return <ActivityBlock label={label} status={status} steps={state.activities.map(toStep)} />;
+  const failed = activities.some((activity) => activity.status === 'failed');
+  return (
+    <section aria-label="Что было сделано для ответа" className={styles.trailDone}>
+      <button
+        aria-controls={listId}
+        aria-expanded={open}
+        className={styles.trailToggle}
+        onClick={() => setOpen((value) => !value)}
+        type="button"
+      >
+        <span aria-hidden="true" className={styles.dot} data-status={failed ? 'failed' : 'completed'} />
+        <span>{failed ? 'Часть сведений прочитать не удалось' : 'Что было сделано'}</span>
+        <span className={styles.trailCount}>{activities.length}</span>
+      </button>
+      <ul className={styles.steps} hidden={!open} id={listId}>
+        {activities.map((activity) => (
+          <li className={styles.step} key={activity.id}>
+            <span
+              className={styles.stepLabel}
+              data-kind={activity.kind}
+              data-status={activity.status}
+            >
+              {activity.label}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
-function LiveMessages() {
+/** The live thread, rendered straight from the projection so each answer can
+ *  carry its own trail above it. */
+function LiveConversation({ fallback }: { fallback: PublicAgentState }) {
+  const state = useAgentProjection(fallback);
+  const activeRunId =
+    state.run !== null && RUN_IN_FLIGHT.has(state.run.status) ? state.run.id : null;
+  // Legacy / spike projections don't tag activities with a run; attribute the
+  // whole list to the last assistant message so its trail still shows.
+  const untagged = state.activities.every((activity) => activity.run_id == null);
+  const lastAssistantId = [...state.messages].reverse().find((m) => m.role === 'assistant')?.id;
+
   return (
-    <ThreadPrimitive.Messages
-      components={{
-        UserMessage: () => (
-          <div className={styles.user}>
-            <div className={styles.bubble}>
-              <MessagePrimitive.Parts />
+    <>
+      {state.messages.map((message) => {
+        if (message.role === 'user') {
+          return (
+            <div className={styles.user} key={message.id}>
+              <div className={styles.bubble}>
+                {message.blocks.map((block) => block.text).join('')}
+              </div>
             </div>
-          </div>
-        ),
-        AssistantMessage: () => (
-          <div className={styles.answer}>
+          );
+        }
+        if (message.role !== 'assistant') return null;
+        const runId = message.id.startsWith('assistant-')
+          ? message.id.slice('assistant-'.length)
+          : null;
+        const activities =
+          untagged && message.id === lastAssistantId
+            ? state.activities
+            : runId
+              ? state.activities.filter((activity) => activity.run_id === runId)
+              : [];
+        return (
+          <div className={styles.answer} key={message.id}>
+            <MessageTrail activities={activities} inFlight={runId !== null && runId === activeRunId} />
             <div className={styles.answerText}>
-              <MessagePrimitive.Parts components={{ Text: MarkdownText }} />
+              <MarkdownContent text={message.blocks.map((block) => block.text).join('')} />
             </div>
           </div>
-        ),
-      }}
-    />
+        );
+      })}
+    </>
   );
 }
 
@@ -331,7 +370,6 @@ function LiveTrail({
   return (
     <>
       {state.messages.length === 0 && state.run === null ? view.emptyState : null}
-      <LiveActivity state={state} />
       <RunSettledSignal state={state} />
       <ConnectionState connection={connection} onReconnect={onReconnect} />
       <RunState connection={connection} onRetry={retry} state={state} />
@@ -392,7 +430,7 @@ function ChatBody({
     <>
       {view.history}
       <AutoSend lastSentRef={lastSentRef} />
-      <LiveMessages />
+      <LiveConversation fallback={fallback} />
       <LiveTrail
         connection={connection}
         fallback={fallback}

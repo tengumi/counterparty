@@ -104,7 +104,7 @@ export function ActivityBlock({
 
   return (
     <section aria-label="Ход проверки" className={styles.activity}>
-      <p className={styles.activityLine}>
+      <p className={styles.activityLine} data-status={status}>
         <span aria-hidden="true" className={styles.dot} data-status={status} />
         <span>{label}</span>
         {!running ? (

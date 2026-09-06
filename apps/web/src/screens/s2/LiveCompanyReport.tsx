@@ -2,13 +2,13 @@ import { Button } from '@alfalab/core-components/button';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { getOverview, getSection, reportKeys } from '../../api/reports';
 import type {
-  Assessment,
   DiscussionContext,
   ReportWarning,
   SectionName,
 } from '../../api/reportContracts';
 import { requestErrorMessage } from '../../api/messages';
-import { usePersistentState } from './persisted';
+import { ReportOverview } from './report/ReportOverview';
+import reportStyles from './report/Report.module.css';
 import { availabilityText, factRow, recordRows, sectionTitles, sourceDate } from './liveReportView';
 import type { DisplayRow } from './liveReportView';
 import styles from './S2.module.css';
@@ -60,7 +60,7 @@ export function ReportFactRow({
 }) {
   const ref = row.refs[0];
   return (
-    <div className={styles.factRow}>
+    <div className={`${styles.factRow} ${reportStyles.factRow}`}>
       <span className={styles.factLabel}>{row.label}</span>
       <span className={styles.rowMain}>
         <span
@@ -80,7 +80,7 @@ export function ReportFactRow({
             size={32}
             view="text"
           >
-            Основание
+            <span className={reportStyles.helpIcon} aria-hidden="true">?</span>
           </Button>
           <Button
             aria-label={`Обсудить: ${row.label}`}
@@ -97,43 +97,6 @@ export function ReportFactRow({
             Обсудить
           </Button>
         </span>
-      ) : null}
-    </div>
-  );
-}
-function Signal({
-  label,
-  value,
-  onEvidence,
-}: {
-  label: string;
-  value: Assessment;
-  onEvidence: (ref: string) => void;
-}) {
-  return (
-    <div className={styles.signal}>
-      <span className={`${styles.signalDot} ${styles[`tone_${value.display_level}`]}`} />
-      <span className={styles.signalBody}>
-        <span className={styles.signalValue}>
-          {label} —{' '}
-          {value.availability === 'available' && value.evidence_refs.length
-            ? value.raw_value
-            : availabilityText[value.availability]}
-        </span>
-        <span className={styles.signalNote}>
-          {value.display_note ??
-            'Самостоятельный сигнал источника; не заменяет оценку финансового положения.'}
-        </span>
-      </span>
-      {value.evidence_refs[0] ? (
-        <Button
-          aria-label={`Основание: ${label}`}
-          onClick={() => onEvidence(value.evidence_refs[0] as string)}
-          size={32}
-          view="text"
-        >
-          Основание
-        </Button>
       ) : null}
     </div>
   );
@@ -243,29 +206,13 @@ function SectionContent({
   );
 }
 const groups: readonly { id: string; title: string; sections: readonly SectionName[] }[] = [
+  { id: 'profile', title: 'Кто эта компания', sections: ['profile', 'status', 'activities', 'tax_systems'] },
   { id: 'finance', title: 'Финансы', sections: ['financials', 'coefficients'] },
-  { id: 'courts', title: 'Суды', sections: ['arbitration'] },
-  { id: 'proceedings', title: 'Взыскания', sections: ['execution_proceedings'] },
-  {
-    id: 'activity',
-    title: 'Деятельность и разрешения',
-    sections: ['activities', 'licenses', 'inspections', 'procurements'],
-  },
-  {
-    id: 'other',
-    title: 'Другие сведения',
-    sections: [
-      'profile',
-      'status',
-      'founders',
-      'tax_systems',
-      'contacts',
-      'related_companies',
-      'branches',
-      'risk_signals',
-      'zsk',
-    ],
-  },
+  { id: 'owners', title: 'Владельцы и управление', sections: ['founders'] },
+  { id: 'courts', title: 'Судебные споры', sections: ['arbitration'] },
+  { id: 'proceedings', title: 'Долги у приставов', sections: ['execution_proceedings'] },
+  { id: 'experience', title: 'Опыт, разрешения и проверки', sections: ['procurements', 'licenses', 'inspections'] },
+  { id: 'other', title: 'Связи и другие сведения', sections: ['related_companies', 'branches', 'contacts', 'risk_signals', 'zsk'] },
 ];
 export function LiveCompanyReport({
   projectId,
@@ -283,84 +230,40 @@ export function LiveCompanyReport({
     queryFn: () => getOverview(reportId),
     retry: false,
   });
-  const [expanded, setExpanded] = usePersistentState<readonly string[]>(
-    `report-sections:${projectId}:${reportId}`,
-    [],
-    (value) =>
-      Array.isArray(value) && value.every((item) => typeof item === 'string') ? value : null,
-  );
   if (query.isPending) return <p role="status">Загружаем сведения компании…</p>;
   if (query.isError) return <ReadError error={query.error} onRetry={() => void query.refetch()} />;
   const report = query.data;
   return (
-    <div className={styles.detail}>
-      <p className={styles.rowMeta}>
-        ИНН {report.company.inn} · сведения на {sourceDate(report.report.source_report_at)}
-      </p>
-      <p className={styles.muted}>
-        Предоставленный учебный снимок. Сведения не обновляются из реестров и не являются актуальной
-        оценкой компании.
-      </p>
-      <div className={styles.signals}>
-        <Signal label="Риск по оценке банка" value={report.bank_risk} onEvidence={onEvidence} />
-        <Signal label="ЗСК" value={report.zsk} onEvidence={onEvidence} />
+    <div className={reportStyles.report}>
+      <div className={reportStyles.companyHeading}>
+        <h2>{report.company.short_name}</h2>
+        <span>ИНН {report.company.inn} · срез {sourceDate(report.report.source_report_at)}</span>
       </div>
-      <ReportFactRow
-        row={factRow({
-          key: 'status',
-          label: 'Статус источника',
-          value: report.status.raw_value,
-          value_type: 'enum',
-          availability: report.status.availability,
-          evidence_refs: report.status.evidence_refs,
-          warnings: [],
-        })}
-        companyName={report.company.short_name}
-        onEvidence={onEvidence}
-        onDiscuss={onDiscuss}
-      />
+      <ReportOverview report={report} onEvidence={onEvidence} />
+      <div className={reportStyles.sections}>
+        {groups.map((group) => (
+          <section className={reportStyles.section} key={group.id}>
+            <h3>{group.title}</h3>
+            {group.sections.map((section) => (
+              <SectionContent
+                key={section}
+                projectId={projectId}
+                reportId={reportId}
+                section={section}
+                enabled={true}
+                companyName={report.company.short_name}
+                groupTitle={group.title}
+                onEvidence={onEvidence}
+                onDiscuss={onDiscuss}
+              />
+            ))}
+          </section>
+        ))}
+      </div>
+      <p className={reportStyles.sourceNote}>
+        Предоставленный учебный снимок. Сведения не обновляются из реестров и не являются актуальной оценкой компании.
+      </p>
       <Warnings warnings={report.warnings} />
-      <div className={styles.panelGroups}>
-        {groups.map((group) => {
-          const open = expanded.includes(group.id);
-          const bodyId = `live-${reportId}-${group.id}`;
-          return (
-            <section className={styles.group} key={group.id}>
-              <h4 className={styles.sectionHeading}>
-                <button
-                  className={styles.groupHeader}
-                  aria-controls={bodyId}
-                  aria-expanded={open}
-                  onClick={() =>
-                    setExpanded((current) =>
-                      open ? current.filter((item) => item !== group.id) : [...current, group.id],
-                    )
-                  }
-                  type="button"
-                >
-                  <span className={styles.groupTitle}>{group.title}</span>
-                  <span className={styles.groupCount}>{open ? 'Свернуть' : 'Раскрыть'}</span>
-                </button>
-              </h4>
-              <div className={styles.groupBody} hidden={!open} id={bodyId}>
-                {group.sections.map((section) => (
-                  <SectionContent
-                    key={section}
-                    projectId={projectId}
-                    reportId={reportId}
-                    section={section}
-                    enabled={open}
-                    companyName={report.company.short_name}
-                    groupTitle={group.title}
-                    onEvidence={onEvidence}
-                    onDiscuss={onDiscuss}
-                  />
-                ))}
-              </div>
-            </section>
-          );
-        })}
-      </div>
     </div>
   );
 }

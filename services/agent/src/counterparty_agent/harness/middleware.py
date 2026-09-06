@@ -23,7 +23,7 @@ except ImportError:  # pragma: no cover
 class ToolTrace(Protocol):
     """Sink that turns each tool call into a streamed activity line."""
 
-    def begin(self, tool_name: str) -> object:
+    def begin(self, tool_name: str, args: dict[str, Any]) -> object:
         """Open an activity for a starting tool call; return its handle."""
         ...
 
@@ -32,15 +32,19 @@ class ToolTrace(Protocol):
         ...
 
 
-def _tool_name(request: Any) -> str:
-    """Best-effort tool name from a middleware request across langchain patches."""
+def _tool_call(request: Any) -> tuple[str, dict[str, Any]]:
+    """Best-effort ``(name, args)`` from a middleware request across langchain patches."""
     call = getattr(request, "tool_call", None)
+    name: object = None
+    args: object = None
     if isinstance(call, dict):
-        name = call.get("name")
-        if isinstance(name, str):
-            return name
-    tool_name = getattr(getattr(request, "tool", None), "name", None)
-    return tool_name if isinstance(tool_name, str) else "tool"
+        name, args = call.get("name"), call.get("args")
+    if not isinstance(name, str):
+        name = getattr(getattr(request, "tool", None), "name", None)
+    return (
+        name if isinstance(name, str) else "tool",
+        args if isinstance(args, dict) else {},
+    )
 
 
 class ActivityTraceMiddleware(AgentMiddleware[Any, Any]):
@@ -64,7 +68,8 @@ class ActivityTraceMiddleware(AgentMiddleware[Any, Any]):
         handler: Callable[[Any], ToolMessage | Command[Any]],
     ) -> ToolMessage | Command[Any]:
         """Bracket a synchronous tool call with an activity."""
-        handle = self.trace.begin(_tool_name(request))
+        name, args = _tool_call(request)
+        handle = self.trace.begin(name, args)
         ok = False
         try:
             result = handler(request)
@@ -79,7 +84,8 @@ class ActivityTraceMiddleware(AgentMiddleware[Any, Any]):
         handler: Callable[[Any], Awaitable[ToolMessage | Command[Any]]],
     ) -> ToolMessage | Command[Any]:
         """Bracket an asynchronous tool call with an activity."""
-        handle = self.trace.begin(_tool_name(request))
+        name, args = _tool_call(request)
+        handle = self.trace.begin(name, args)
         ok = False
         try:
             result = await handler(request)

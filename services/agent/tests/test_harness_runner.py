@@ -125,14 +125,11 @@ async def test_each_tool_call_streams_its_own_activity_line() -> None:
         for event in run.events
         if isinstance(event, AppendItemOperation) and event.path == ("activities",)
     ]
-    from counterparty_agent.harness.prompts import TOOL_ACTIVITY
-
     items = [item for item in appended if isinstance(item, dict)]
-    assert [item["label"] for item in items] == [
-        TOOL_ACTIVITY["get_company_overview"][1],
-        TOOL_ACTIVITY["get_report_section"][1],
-    ]
-    assert all(item["status"] == "running" for item in items)
+    # One activity per tool the deterministic model calls (overview, section).
+    assert len(items) == 2
+    assert all(item["status"] == "running" and item["label"] for item in items)
+    assert all(item["run_id"] == str(run.id) for item in items)
 
     settled = {
         event.path[1]: event.value

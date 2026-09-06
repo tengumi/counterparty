@@ -123,9 +123,9 @@ describe('V01 assistant-stream ↔ assistant-ui transport', () => {
     await send('Проверь условия');
 
     await screen.findByText(/Аванс 80%/);
-    // The record of what the assistant looked at stays under the answer,
-    // collapsed behind «Что проверено».
-    const toggle = screen.getByRole('button', { name: 'Что проверено' });
+    // The record of what the assistant looked at stays above the answer,
+    // collapsed behind «Что было сделано».
+    const toggle = screen.getByRole('button', { name: /Что было сделано/ });
     expect(screen.getByText('Читаю условия поставки')).not.toBeVisible();
     await user.click(toggle);
     expect(screen.getByText('Читаю условия поставки')).toBeVisible();
