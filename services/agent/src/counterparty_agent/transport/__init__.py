@@ -5,6 +5,7 @@ encoder; this package only decides *what* public projection is published.
 """
 
 from .durable import ActiveRunExists, DurableRuns
+from .projection import fold_projection
 from .public_state import (
     PublicActivity,
     PublicAgentState,
@@ -43,5 +44,6 @@ __all__ = [
     "TextBlock",
     "create_transport_router",
     "deterministic_agent",
+    "fold_projection",
     "initial_state",
 ]

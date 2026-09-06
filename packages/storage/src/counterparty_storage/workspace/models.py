@@ -444,6 +444,10 @@ class AgentRun(WorkspaceBase):
     finished_at: Mapped[datetime | None] = mapped_column()
     based_on_context_version: Mapped[int] = mapped_column(Integer, server_default="0")
     last_public_revision: Mapped[int] = mapped_column(Integer, server_default="0")
+    public_projection: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    """The final ``PublicAgentState`` a terminal run left behind, written by the
+    agent on its fenced owner connection. ``None`` while the run is active or
+    for a run that predates the projection column."""
 
 
 Index(

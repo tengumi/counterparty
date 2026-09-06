@@ -623,9 +623,9 @@ J влит. Что дал каждый срез и его известная д�
    - 70 тестов зелёные без изменений, mypy/ruff чистые, образ пересобран,
      контейнер `healthy`. `report_*` в `packages/domain` не выносил — по
      желанию, отдельно.
-7. **Сверка UI с макетом + персист истории диалога** — TODO, отдельным
-   заходом. Инфраструктура под оба уже есть, дописать «последнюю милю».
-   - **7a. UI ↔ `Проверка контрагентов v2.dc.html`.** Выравнивание S1/S2
+7. **Сверка UI с макетом + персист истории диалога** — 7b сделано 06.09.2026,
+   7a остаётся отдельным заходом.
+   - **7a. UI ↔ `Проверка контрагентов v2.dc.html`.** — TODO. Выравнивание S1/S2
      принято в WEB-07/срез H, но decisions/conversation/materials-панель
      (WEB-08/09/11 + `DecisionPanel`) легли позже и с макетом не сверялись.
      Пройтись по компонентам S2 (`DecisionPanel`, `AnalysisMemo`,
@@ -633,23 +633,33 @@ J влит. Что дал каждый срез и его известная д�
      HTML, поправить только внешний вид; один браузерный прогон
      390/1024/1440 + скриншоты, как в H2. Ownership `apps/web/**`,
      поведение и REST/RPC не трогать.
-   - **7b. Durable публичная проекция разговора.** Что уже есть:
-     контракт `ThreadConversationState` (= `PublicAgentState` + `active_run_id`);
-     эндпоинт `GET /api/v1/projects/{p}/threads/{t}/conversation` (сейчас
-     отдаёт пустую проекцию + lifecycle из `agent_runs`); durable
-     `workspace.agent_runs` (status, `last_public_revision`, `finished_at`);
-     LangGraph checkpointer персистит graph-state треда по ключу
-     `uuid5(tenant:project:thread)`; `RunRegistry` держит replayable
-     event-log (`Run.events`); web `getThreadConversation` + `ProjectChat.tsx`
-     restore-путь это уже потребляют. Чего не хватает: никто не сохраняет
-     сам публичный `PublicAgentState` (messages[]/activities[]) durably.
-     Заход: агент на завершении run пишет финальную проекцию (в `workspace`
-     — отдельная таблица или JSONB на run/thread) и отдаёт её по RPC
-     (`GET /rpc/agent/threads/{t}/conversation`), а ui_api-эндпоинт
-     проксирует её вместо пустой. Ревизии уже упорядочены
-     `last_public_revision`. Граница I7 (один writer на БД, saver на
-     owner-connection) сохраняется. Это же снимает «известное ограничение»
-     из `docs/DEMO_RUNBOOK.md` §4.
+   - **7b. Durable публичная проекция разговора (AG-07).** — ✅ сделано
+     06.09.2026.
+     - Миграция `0007`: nullable JSONB `workspace.agent_runs.public_projection`
+       (колонка наследует grants таблицы из `0005`/`0004`; отдельная таблица не
+       понадобилась).
+     - Агент: `transport/projection.py::fold_projection` сворачивает
+       in-memory event-log (`Run.events`) в `PublicAgentState` — non-streaming
+       двойник `delivery._deliver`. `RunRegistry._settle` вызывает его на
+       терминальном переходе (успех и `FAILED`), `DurableRuns.finalize`
+       пишет blob через `AgentRunRepository.set_status(..., projection=...)` на
+       той же fenced owner-connection (граница I7 не тронута; saver не менялся).
+       Фолд обёрнут в try/except → при сбое деградирует к обычному
+       `advance`-mirror.
+     - ui_api: `reads/views.py::as_thread_conversation` читает
+       `run.public_projection` своим `AgentRunReadRepository` (в отличие от
+       исходного плана — **без** нового HTTP-стыка ui_api→agent и RPC-эндпоинта
+       агента; репозиторный доступ к `workspace` уже штатный для ui_api).
+       Нечитаемый текущим контрактом blob → пустая история, не 500.
+       `run`/`active_run_id`/`revision`/`context_version` по-прежнему из
+       авторитетных строк, не из blob'а.
+     - Проверки: storage 88, agent 74 (+4: fold happy/partial/delta, durable
+       persist), ui_api 72 (+2: история из blob, деградация нечитаемого),
+       migrations 19 — зелёные на живом PostgreSQL. Живой прогон компании А
+       через proxy: `…/conversation` отдал полную grounded-историю
+       (18 evidence-строк + блок «Неизвестно» + `activities` с refs,
+       `save_status:saved`, `active_run_id:null`). Снят пункт §4
+       `docs/DEMO_RUNBOOK.md`.
 
 Независимый проверяющий — только на п. 2 и живой прогон п. 5.
 
@@ -661,8 +671,10 @@ J влит. Что дал каждый срез и его известная д�
 `eb944a3` (рефакторинг раскладки). Стек поднят на текущем коде, миграция
 `0006`, сквозной сценарий компании А отработал с grounded-evidence.
 
-Открытый пункт 7 (сверка UI с макетом + durable проекция разговора) —
-следующий заход; инфраструктура под него уже на месте.
+Пункт 7b (durable проекция разговора, AG-07) закрыт заходом 06.09.2026 —
+миграция `0007`, агент фолдит и персистит финальный `PublicAgentState`,
+ui_api отдаёт его из `agent_runs.public_projection`. Открытым остаётся
+только 7a (сверка S2-компонентов с макетом + один браузерный прогон).
 
 Осталось по плану: независимая проверка AG-04 и живого прогона приёмки;
 дожимание агентского сценария и UI/UX, подключение реальной модели —

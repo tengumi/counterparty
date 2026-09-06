@@ -276,17 +276,37 @@ class RunRegistry:
             )
             # Mirror the terminal state before the stream is allowed to close,
             # so a reader that follows the response sees a settled row.
-            await self._mirror(run.id, scope, RunStatus.FAILED)
+            await self._settle(run, scope, RunStatus.FAILED)
             run.finish()
         else:
-            await self._mirror(run.id, scope, run.status)
+            await self._settle(run, scope, run.status)
             run.finish()
 
     async def _mirror(self, run_id: RunId, scope: ThreadScope | None, status: RunStatus) -> None:
-        """Mirror one lifecycle transition when a durable scope is known."""
+        """Mirror one non-terminal lifecycle transition when a durable scope is known."""
         if self.durable is None or scope is None:
             return
         await self.durable.advance(scope, run_id, status)
+
+    async def _settle(self, run: Run, scope: ThreadScope | None, status: RunStatus) -> None:
+        """Mirror the terminal transition and store the folded public projection.
+
+        The projection is folded from the same in-memory event log the stream
+        replays; a fold that somehow fails must not keep the run from settling,
+        so it degrades to a plain lifecycle mirror.
+        """
+        if self.durable is None or scope is None:
+            return
+        # Deferred: projection.py folds the event types defined in this module.
+        from .projection import fold_projection
+
+        try:
+            projection = fold_projection(run.initial_state, run.events).model_dump(mode="json")
+        except Exception:
+            logger.exception("Run %s projection fold failed; mirroring lifecycle only", run.id)
+            await self.durable.advance(scope, run.id, status)
+            return
+        await self.durable.finalize(scope, run.id, status, projection)
 
     async def aclose(self) -> None:
         """Stop remaining tasks during a bounded graceful shutdown."""

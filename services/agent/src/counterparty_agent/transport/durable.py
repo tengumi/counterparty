@@ -88,6 +88,29 @@ class DurableRuns:
         except Exception:
             logger.exception("Run %s lifecycle mirror to %s failed", run_id, status)
 
+    async def finalize(
+        self,
+        scope: ThreadScope,
+        run_id: RunId,
+        status: RunStatus,
+        projection: dict[str, object],
+    ) -> None:
+        """Mirror the terminal transition and store the final public projection.
+
+        Same fenced owner connection and same fail-soft contract as
+        :meth:`advance`; the extra work is persisting ``messages`` and
+        ``activities`` so a reconnect after the run finished is not empty.
+        """
+        try:
+            async with self._owner.runs(scope) as repository:
+                await repository.set_status(
+                    UUID(str(run_id)), _storage_status(status), projection=projection
+                )
+        except (NotFoundError, ValueError, IntegrityError) as error:
+            logger.warning("Run %s finalize to %s skipped: %s", run_id, status, error)
+        except Exception:
+            logger.exception("Run %s finalize to %s failed", run_id, status)
+
     async def lookup(self, run_id: RunId) -> RunInfo | None:
         """Return the durable lifecycle of a run this process did not start."""
         row = await self._owner.find_run(UUID(str(run_id)))

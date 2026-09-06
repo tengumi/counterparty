@@ -18,6 +18,7 @@ Thumbs.db
 *.key
 *.p12
 *.pfx
+llm_add.md
 
 # Python
 __pycache__/

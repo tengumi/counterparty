@@ -76,6 +76,15 @@ def _status(admin: str, run_id: str) -> str | None:
     return None if row is None else str(row[0])
 
 
+def _projection(admin: str, run_id: str) -> dict[str, Any] | None:
+    """Read one run's stored public projection blob."""
+    with psycopg.connect(admin) as connection:
+        row = connection.execute(
+            "SELECT public_projection FROM workspace.agent_runs WHERE id = %s", (run_id,)
+        ).fetchone()
+    return None if row is None else row[0]
+
+
 def _body(scope: ThreadScope, text_: str, *, request_id: UUID | None = None) -> dict[str, Any]:
     return {
         "project_id": str(scope.project_id),
@@ -157,6 +166,22 @@ def test_a_completed_run_leaves_a_terminal_row(client: TestClient, seeded: Seede
 
     assert _materialize(sse)["run"]["status"] == "completed"
     assert _status(admin, run_id) == "completed"
+
+
+def test_a_completed_run_persists_its_public_projection(client: TestClient, seeded: Seeded) -> None:
+    """The final history is stored, so opening the chat later is not empty."""
+    admin, _, _, scope = seeded
+    sse = client.post("/rpc/agent/chat", json=_body(scope, "Проверь условия")).text
+    run_id = _run_id(sse)
+
+    stored = _projection(admin, run_id)
+    assert stored is not None
+    assert [message["role"] for message in stored["messages"]] == ["user", "assistant"]
+    assert stored["messages"][1]["status"] == "complete"
+    assert stored["messages"][1]["blocks"][0]["text"].strip() != ""
+    assert [activity["status"] for activity in stored["activities"]] == ["completed"]
+    assert stored["run"]["status"] == "completed"
+    assert stored["save_status"] == "saved"
 
 
 def test_an_unknown_project_or_thread_is_refused(client: TestClient, seeded: Seeded) -> None:

@@ -6,6 +6,7 @@ projection, and surface the run the UI can reconnect to.
 """
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import uuid4
 
 from conftest import ANALYST, SignIn
@@ -32,6 +33,7 @@ def _add_run(
     status: AgentRunStatus,
     started_at: datetime,
     revision: int = 0,
+    projection: dict[str, Any] | None = None,
 ) -> str:
     run_id = uuid4()
     finished = (
@@ -58,10 +60,63 @@ def _add_run(
                 finished_at=finished,
                 based_on_context_version=0,
                 last_public_revision=revision,
+                public_projection=projection,
             )
         )
         session.commit()
     return str(run_id)
+
+
+def _completed_projection(
+    *, project_id: str, thread_id: str, run_id: str, started_at: datetime
+) -> dict[str, Any]:
+    """The kind of blob the agent writes to ``agent_runs.public_projection``."""
+    return {
+        "schema_version": "0.1",
+        "project_id": project_id,
+        "thread_id": thread_id,
+        "run": {
+            "schema_version": "0.1",
+            "id": run_id,
+            "thread_id": thread_id,
+            "project_id": project_id,
+            "status": "completed",
+            "started_at": started_at.isoformat(),
+            "finished_at": (started_at + timedelta(minutes=1)).isoformat(),
+            "based_on_context_version": 0,
+            "last_public_revision": 1,
+        },
+        "revision": 1,
+        "messages": [
+            {
+                "id": "client-msg-1",
+                "role": "user",
+                "blocks": [{"type": "text", "text": "Проверь условия поставки"}],
+                "status": "complete",
+                "created_at": started_at.isoformat(),
+            },
+            {
+                "id": "assistant-1",
+                "role": "assistant",
+                "blocks": [{"type": "text", "text": "Аванс 80% — это 1,92 млн ₽ до отгрузки."}],
+                "status": "complete",
+                "created_at": started_at.isoformat(),
+            },
+        ],
+        "activities": [
+            {
+                "id": "activity-1",
+                "kind": "reading_document",
+                "label": "Читаю условия поставки",
+                "status": "completed",
+                "evidence_refs": [],
+                "started_at": started_at.isoformat(),
+                "finished_at": (started_at + timedelta(seconds=1)).isoformat(),
+            }
+        ],
+        "context_version": 0,
+        "save_status": "saved",
+    }
 
 
 def test_a_fresh_thread_has_an_empty_but_valid_projection(
@@ -152,3 +207,66 @@ def test_a_terminal_run_is_reported_but_is_not_an_active_target(
     assert body["run"]["id"] == finished
     assert body["run"]["status"] == "completed"
     assert body["active_run_id"] is None
+
+
+def test_a_finished_run_surfaces_its_stored_history(
+    client: TestClient, clean: Engine, sign_in: SignIn
+) -> None:
+    """The projection the agent persisted is returned, not an empty history."""
+    sign_in()
+    project = _project(client)
+    thread_id = str(project["default_thread_id"])
+    started = datetime.now(UTC) - timedelta(minutes=5)
+    run_id = uuid4()
+    _add_run(
+        clean,
+        project_id=str(project["id"]),
+        thread_id=thread_id,
+        status=AgentRunStatus.COMPLETED,
+        started_at=started,
+        revision=1,
+        projection=_completed_projection(
+            project_id=str(project["id"]),
+            thread_id=thread_id,
+            run_id=str(run_id),
+            started_at=started,
+        ),
+    )
+
+    body = client.get(f"/api/v1/projects/{project['id']}/threads/{thread_id}/conversation").json()
+
+    roles = [message["role"] for message in body["messages"]]
+    assert roles == ["user", "assistant"]
+    assert "1,92 млн ₽" in body["messages"][1]["blocks"][0]["text"]
+    assert [activity["kind"] for activity in body["activities"]] == ["reading_document"]
+    assert body["save_status"] == "saved"
+    assert body["revision"] == 1
+    # Lifecycle still comes from the authoritative row, not the stored blob.
+    assert body["run"]["status"] == "completed"
+    assert body["active_run_id"] is None
+
+
+def test_an_unreadable_stored_projection_degrades_to_an_empty_history(
+    client: TestClient, clean: Engine, sign_in: SignIn
+) -> None:
+    """A blob this contract version cannot validate is not a failed read."""
+    sign_in()
+    project = _project(client)
+    thread_id = str(project["default_thread_id"])
+    _add_run(
+        clean,
+        project_id=str(project["id"]),
+        thread_id=thread_id,
+        status=AgentRunStatus.COMPLETED,
+        started_at=datetime.now(UTC),
+        revision=1,
+        projection={"schema_version": "0.1", "messages": "not a list"},
+    )
+
+    response = client.get(f"/api/v1/projects/{project['id']}/threads/{thread_id}/conversation")
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["messages"] == []
+    assert body["activities"] == []
+    assert body["run"]["status"] == "completed"

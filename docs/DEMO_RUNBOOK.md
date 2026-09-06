@@ -22,7 +22,7 @@
 
 ```sh
 docker compose build          # 5 образов (web, ui_api, agent, mcp = 1 образ)
-docker compose up -d          # postgres → migrate(0006) → roles → import
+docker compose up -d          # postgres → migrate(0007) → roles → import
                               # → checkpoints → ui_api/mcp → agent → web → proxy
 docker compose ps             # шесть долгоживущих сервисов должны быть healthy
 ```
@@ -79,7 +79,9 @@ curl -s -b "$CJ" -X POST "$BASE/projects/$PID/decisions" -H 'content-type: appli
   "SELECT status FROM workspace.agent_runs WHERE thread_id='$TID'"` → `completed`.
 - 3.5 → `201`, тело `UserDecision` с `author_user_id` из сессии.
 - `GET $BASE/projects/$PID/threads/$TID/conversation` → `run.status:"completed"`,
-  `active_run_id:null`, `messages:[]` (см. границу ниже).
+  `active_run_id:null`, `save_status:"saved"` и полная история: `messages[]` с
+  вопросом и grounded-ответом, `activities[]` с разрешёнными `evidence_refs`.
+  Проекцию пишет агент на завершении run'а (см. §4).
 - `GET $BASE/projects/$PID/decisions` → список с записанным решением.
 
 ### Проверка живучести run'а (AG-04)
@@ -93,11 +95,14 @@ curl -s http://localhost:5173/agent/rpc/agent/runs/<run_id>   # → status из 
 
 ## 4. Границы каркаса (что работает не полностью)
 
-- **Публичная проекция разговора не персистится.** `agent_runs` хранит
-  lifecycle; messages/activities живут в памяти процесса агента. `…/conversation`
-  и `GET /runs/{id}` после рестарта отдают корректный lifecycle и пустую
-  историю сообщений — воспроизведение токенов MVP не требует (Specs 10 §7).
-  Полную durable-проекцию добавит отдельная задача.
+- **Публичная проекция разговора персистится на терминальном переходе**
+  (AG-07, 06.09.2026). Агент фолдит in-memory event-log в `PublicAgentState`
+  и пишет его в `workspace.agent_runs.public_projection` на той же fenced
+  owner-connection (граница I7 не нарушена); `…/conversation` отдаёт эту
+  историю. Живой поток токенов по-прежнему в памяти процесса — воспроизведение
+  токенов MVP не требует (Specs 10 §7); durably сохраняется финальная проекция,
+  не каждый дельта-кадр. Незавершённый до рестарта run остаётся без blob'а и
+  читается с пустой историей и честным lifecycle (`interrupted`).
 - **`GET /rpc/agent/runs/{id}` для ещё живущего в памяти run** отдаёт
   `finished_at:null` / `revision:0` (in-memory `_run_info` копирует только
   статус). Durable строка при этом корректна. Косметика, pre-existing.

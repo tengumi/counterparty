@@ -6,6 +6,7 @@ like. Nothing is invented here: a field the workspace does not hold yet is
 absent rather than defaulted to something reassuring.
 """
 
+import logging
 from uuid import UUID
 
 from counterparty_contracts import (
@@ -21,6 +22,7 @@ from counterparty_contracts import (
     PageInfo,
     Project,
     ProjectId,
+    PublicAgentState,
     ReportId,
     RunId,
     RunInfo,
@@ -37,8 +39,11 @@ from counterparty_storage.workspace.models import AgentRun as AgentRunRow
 from counterparty_storage.workspace.models import AnalysisArtifact as AnalysisArtifactRow
 from counterparty_storage.workspace.models import Project as ProjectRow
 from counterparty_storage.workspace.models import UserDecision as UserDecisionRow
+from pydantic import ValidationError
 
 from .models import ProjectDetails
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "as_analysis_artifact",
@@ -141,14 +146,18 @@ def as_thread_conversation(
 ) -> ThreadConversationState:
     """Render the stored projection of one thread.
 
-    Messages and activities are the agent service's durable projection, which
-    this service does not hold yet, so they are empty rather than invented.
-    ``active_run_id`` is filled from the run lifecycle the UI can reconnect to;
-    a terminal run is still reported in ``run`` but is not an active target.
+    ``messages`` and ``activities`` are the agent service's durable projection.
+    A finished run writes its final ``PublicAgentState`` to
+    ``agent_runs.public_projection`` on its owner connection; this reads it back
+    verbatim. A run still working, or one that predates the projection column,
+    has none, so the history is empty rather than invented. Run lifecycle
+    (``run``, ``active_run_id``, ``revision``) and ``context_version`` always
+    come from the authoritative rows, never from the stored blob.
     """
     run_info: RunInfo | None = None
     active_run_id: RunId | None = None
     revision = 0
+    stored = _stored_projection(run)
     if run is not None:
         run_info = RunInfo(
             id=RunId(run.id),
@@ -168,12 +177,30 @@ def as_thread_conversation(
         thread_id=thread_id,
         run=run_info,
         revision=revision,
-        messages=[],
-        activities=[],
+        messages=stored.messages if stored is not None else [],
+        activities=stored.activities if stored is not None else [],
+        pending_commands=stored.pending_commands if stored is not None else [],
+        pending_questions=stored.pending_questions if stored is not None else [],
+        artifact_refs=stored.artifact_refs if stored is not None else [],
         context_version=project.context_version,
-        save_status=SaveStatus.UNSAVED,
+        save_status=stored.save_status if stored is not None else SaveStatus.UNSAVED,
         active_run_id=active_run_id,
     )
+
+
+def _stored_projection(run: AgentRunRow | None) -> PublicAgentState | None:
+    """Parse the durable projection blob, or ``None`` if absent or unreadable.
+
+    The blob is written by another service; a shape this contract version can no
+    longer validate must degrade to an empty history, not a failed read.
+    """
+    if run is None or run.public_projection is None:
+        return None
+    try:
+        return PublicAgentState.model_validate(run.public_projection)
+    except ValidationError:
+        logger.warning("Unreadable stored projection for run %s; returning empty history", run.id)
+        return None
 
 
 def as_page[ItemT](items: list[ItemT], *, limit: int, next_cursor: str | None) -> Page[ItemT]:

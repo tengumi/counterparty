@@ -929,8 +929,20 @@ class AgentRunRepository:
         await self._session.flush()
         return run
 
-    async def set_status(self, run_id: UUID, status: AgentRunStatus) -> AgentRun:
-        """Advance this owner's active run; a terminal run can never be restarted implicitly."""
+    async def set_status(
+        self,
+        run_id: UUID,
+        status: AgentRunStatus,
+        *,
+        projection: dict[str, Any] | None = None,
+    ) -> AgentRun:
+        """Advance this owner's active run; a terminal run can never be restarted implicitly.
+
+        When ``projection`` is given, the final public ``PublicAgentState`` is
+        stored alongside the transition, so a client that opens the chat after
+        the run finished reads its real history instead of an empty one. It is
+        only meaningful on a terminal transition and is ignored otherwise.
+        """
         run = await self.get(run_id)
         if run is None or run.owner_id != self.owner_id:
             raise NotFoundError("run", run_id)
@@ -939,6 +951,8 @@ class AgentRunRepository:
         run.status = status
         run.finished_at = None if status in ACTIVE_RUN_STATUSES else datetime.now(UTC)
         run.last_public_revision += 1
+        if projection is not None and status not in ACTIVE_RUN_STATUSES:
+            run.public_projection = projection
         await self._session.flush()
         return run
 
