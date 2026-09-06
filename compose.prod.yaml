@@ -19,28 +19,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - letsencrypt:/letsencrypt
 
-  postgres:
-    ports:
-      - "127.0.0.1:${POSTGRES_PORT:-55432}:5432"
-
   ui_api:
     environment:
       UI_API_SESSION_COOKIE_SECURE: "true"
-    ports:
-      - "127.0.0.1:${UI_API_PORT:-8000}:8000"
-
-  agent:
-    ports:
-      - "127.0.0.1:${AGENT_PORT:-8001}:8000"
-
-  mcp:
-    ports:
-      - "127.0.0.1:${MCP_PORT:-8002}:8000"
 
   proxy:
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:${WEB_PORT:-5173}:80"
     labels:
       - traefik.enable=true
       - traefik.http.routers.counterparty.rule=Host(`${APP_DOMAIN}`)
