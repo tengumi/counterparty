@@ -4,6 +4,7 @@ import { CheckPage } from './pages/CheckPage';
 import { WorkspaceQueryProvider } from './api/QueryProvider';
 import type { ApiProject } from './api/contracts';
 import styles from './App.module.css';
+import { SessionGate } from './auth/SessionGate';
 
 function AppShell() {
   return (
@@ -21,9 +22,8 @@ function AppShell() {
   );
 }
 
-export function App({ initialProjects, fixtureMode = false }: { initialProjects?: readonly ApiProject[]; fixtureMode?: boolean }) {
-  return (
-    <WorkspaceQueryProvider initialProjects={initialProjects}>
+export function App({ initialProjects, fixtureMode = false, requireSession = false }: { initialProjects?: readonly ApiProject[]; fixtureMode?: boolean; requireSession?: boolean }) {
+  const routes = (
       <Routes>
         <Route element={<AppShell />}>
           <Route path="/" element={<Navigate to="/checks" replace />} />
@@ -38,6 +38,10 @@ export function App({ initialProjects, fixtureMode = false }: { initialProjects?
           } />
         </Route>
       </Routes>
+  );
+  return (
+    <WorkspaceQueryProvider initialProjects={initialProjects}>
+      {requireSession ? <SessionGate>{routes}</SessionGate> : routes}
     </WorkspaceQueryProvider>
   );
 }

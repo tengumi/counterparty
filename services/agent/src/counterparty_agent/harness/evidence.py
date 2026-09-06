@@ -39,7 +39,10 @@ from .prompts import (
 )
 
 CITATION = re.compile(r"\[evidence:([^\]\s]+)\]")
-_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
+# A currency symbol/code continues the amount, including abbreviated units.
+# Splitting "23 thousand-abbr. RUB [evidence:...]" would discard the number
+# while retaining the currency and citation as a misleading fragment.
+_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+(?!₽|RUB\b)")
 _BULLET = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s*")
 _DIGIT = re.compile(r"\d")
 _EVIDENCE_KEYS = ("evidence_refs", "evidence_ref_ids", "input_refs")

@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import pytest
 from counterparty_contracts import ClientRequestId, ProjectId, RunId, RunStatus, ThreadId
+from counterparty_storage import ThreadScope
 from harness_fixtures import INN, PROCEEDS_REF, report_tools
 from langchain_core.tools import BaseTool
 
@@ -26,6 +27,24 @@ from counterparty_agent.transport import (
 )
 
 SETTINGS = AgentSettings(mcp_url="http://mcp.internal/mcp")
+
+
+async def test_empty_persisted_project_returns_add_company_guidance_without_tools(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A missing report pin is an unmet precondition, not a long model run."""
+    from counterparty_agent.harness.prompts import ASK_TO_ADD_COMPANY
+
+    def forbidden_tools(_settings: AgentSettings) -> None:
+        raise AssertionError("No tools before a company is pinned")
+
+    monkeypatch.setattr(runner_module, "reports_toolset", forbidden_tools)
+    run = make_run("Check supplier")
+    run.scope = ThreadScope(tenant_id=uuid4(), project_id=uuid4(), thread_id=uuid4())
+    await create_harness_runner(SETTINGS)(RunContext(run))
+    texts = [event.text for event in run.events if isinstance(event, AppendTextOperation)]
+    assert texts == [ASK_TO_ADD_COMPANY]
+    assert not [event for event in run.events if isinstance(event, TerminalError)]
 
 
 @pytest.fixture(autouse=True)

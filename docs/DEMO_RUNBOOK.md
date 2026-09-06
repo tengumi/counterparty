@@ -31,6 +31,19 @@ docker compose ps             # шесть долгоживущих сервис
 вышли. Повторный `up -d` их безопасно перезапускает (import сообщает
 `changed_nothing`). Единственный origin для браузера — `http://localhost:5173`.
 
+### Реальная модель
+
+Скопируйте `.env.example` в `.env` и задайте `AGENT_MODEL_API_KEY` (либо
+существующий `APIKEY`). Выбран `deepseek-v4-flash` через OpenAI-совместимый
+NeuralDeep API; `openai` здесь — ID адаптера LangChain. Ключ получает только
+backend агента. Provider, model ID и base URL меняются переменными окружения.
+Без `.env` Compose по-прежнему использует deterministic adapter.
+
+После смены конфигурации выполните `docker compose build agent`,
+`docker compose stop`, затем `docker compose up -d --force-recreate`:
+обычный `restart` не применяет новые переменные окружения. Тома БД сохраняются.
+Healthcheck подтверждает запуск сервиса; модель проверяется сценарием ниже.
+
 ## 3. Пройти сценарий (компания А = ООО «СПОРТ», ИНН 9705152496)
 
 ```sh

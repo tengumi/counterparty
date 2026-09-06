@@ -11,7 +11,7 @@ if (!root) throw new Error('Application root is missing');
 createRoot(root).render(
   <StrictMode>
     <BrowserRouter>
-      <App />
+      <App requireSession />
     </BrowserRouter>
   </StrictMode>,
 );

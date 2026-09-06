@@ -208,3 +208,25 @@ def test_the_provider_comes_from_configuration(provider: str) -> None:
     """The provider comes from configuration."""
     settings = AgentSettings(model_provider=provider, model_id="custom-id")
     assert create_chat_model(settings).model_id == "custom-id"  # type: ignore[attr-defined]
+
+
+def test_real_provider_uses_configured_endpoint_and_secret() -> None:
+    """Configure an OpenAI-compatible provider without making a network call."""
+    from langchain_openai import ChatOpenAI
+    from pydantic import SecretStr
+
+    settings = AgentSettings(
+        model_provider="openai",
+        model_id="configured-model",
+        model_base_url="https://example.test/v1",
+        model_api_key=SecretStr("test-secret"),
+        model_max_tokens=4096,
+    )
+    model = create_chat_model(settings)
+    assert isinstance(model, ChatOpenAI)
+    assert model.model_name == "configured-model"
+    assert model.max_tokens == 4096
+    assert model.openai_api_base == "https://example.test/v1"
+    assert isinstance(model.openai_api_key, SecretStr)
+    assert model.openai_api_key.get_secret_value() == "test-secret"
+    assert "test-secret" not in repr(settings)

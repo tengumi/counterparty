@@ -133,3 +133,15 @@ def test_a_repaired_answer_always_validates() -> None:
     answer = "- Revenue doubled.\n- Capitals: -300000 [evidence:ev-invented]"
     outcome = repair_answer(answer, ledger())
     assert validate_answer(outcome.text, ledger()).ok
+
+
+def test_currency_after_abbreviation_stays_with_its_cited_amount() -> None:
+    """Repair must preserve amounts, but still reject a later uncited claim."""
+    for currency in ("₽", "RUB"):
+        answer = f"Profit: 23 thousand-abbr. {currency} [evidence:{PROCEEDS_REF}]."
+        assert validate_answer(answer, ledger()).ok
+        assert repair_answer(answer, ledger()).text == answer
+        combined = answer + " Unverified claim."
+        repaired = repair_answer(combined, ledger())
+        assert answer in repaired.text
+        assert "Unverified claim." not in repaired.text

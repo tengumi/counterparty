@@ -29,7 +29,12 @@ from .evidence import RunEvidenceLedger
 from .graph import create_harness, run_turn
 from .knowledge import lookup, render_relevant
 from .models import create_chat_model
-from .prompts import ACTIVITY_READING_REPORT, RUN_FAILED_MESSAGE
+from .prompts import (
+    ACTIVITY_CHECKING_CONTEXT,
+    ACTIVITY_READING_REPORT,
+    ASK_TO_ADD_COMPANY,
+    RUN_FAILED_MESSAGE,
+)
 from .tools import reports_toolset
 
 logger = logging.getLogger(__name__)
@@ -115,8 +120,13 @@ def create_harness_runner(
                 thread_id=UUID(str(state.thread_id)),
             )
             context = await context_loader(scope)
-            context = replace(context, relevant_notes=render_relevant(lookup(ctx.prompt)))
             config = await config_factory(scope)
+            if ctx.scope is not None and not context.project.companies:
+                ctx.set(("activities", "0", "label"), ACTIVITY_CHECKING_CONTEXT)
+                ctx.append_text(_TEXT_PATH, ASK_TO_ADD_COMPANY)
+                _finish(ctx, status=RunStatus.COMPLETED, message_status="complete", refs=())
+                return
+            context = replace(context, relevant_notes=render_relevant(lookup(ctx.prompt)))
             # Specs 04 §3 caps tool calls per run; one model step per call plus
             # the final answer is the graph-level equivalent of that budget.
             config["recursion_limit"] = settings.max_tool_calls * 2 + 1

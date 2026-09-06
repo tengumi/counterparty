@@ -7,7 +7,7 @@ export default defineConfig({
     // The Agent Service RPC is same-origin in production; proxy it during dev.
     proxy: {
       '/api/v1': { target: 'http://localhost:8000', changeOrigin: true },
-      '/rpc/agent': { target: 'http://localhost:8000', changeOrigin: true },
+      '/rpc/agent': { target: 'http://localhost:8001', changeOrigin: true },
     },
   },
   test: {
