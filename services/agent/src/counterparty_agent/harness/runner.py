@@ -46,7 +46,7 @@ from .prompts import (
     STEP_BUDGET_MESSAGE,
     TOOL_ACTIVITY,
 )
-from .provisioning import add_company_by_inn, build_add_company_tool
+from .provisioning import build_add_company_tool
 from .tools import reports_toolset
 
 logger = logging.getLogger(__name__)
@@ -270,12 +270,12 @@ def create_harness_runner(
                 and settings.ui_api_url is not None
                 and settings.ui_api_internal_token is not None
             )
-            inn_here = _INN.search(ctx.prompt)
             no_company = ctx.scope is not None and not context.project.companies
-            if no_company and inn_here is None and _WANTS_CHECK.search(ctx.prompt):
+            if no_company and _INN.search(ctx.prompt) is None and _WANTS_CHECK.search(ctx.prompt):
                 # Asked to check a company but gave no INN, and nothing is pinned:
                 # ask for the INN, no model run. A greeting, a definition question
-                # or anything else goes to the model.
+                # or anything else goes to the model. When an INN *is* present the
+                # model pins it itself with add_company_to_check.
                 ctx.append_text(text_path, ASK_TO_ADD_COMPANY)
                 _finish(
                     ctx,
@@ -286,16 +286,6 @@ def create_harness_runner(
                     stream=stream,
                 )
                 return
-            if no_company and can_add and inn_here is not None and ctx.scope is not None:
-                # The user named an INN and the check is empty. Pin it here rather
-                # than hoping a small model calls add_company_to_check — it often
-                # loops instead, insisting no INN was given.
-                handle = stream.begin("add_company_to_check", {})
-                await add_company_by_inn(
-                    settings, project_id=ctx.scope.project_id, inn=inn_here.group(1)
-                )
-                stream.finish(handle, ok=True)
-                context = await context_loader(scope)
             context = replace(
                 context,
                 client=load_client_profile(settings.client_profile_json),
