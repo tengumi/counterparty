@@ -1,22 +1,21 @@
 """One-shot "на что обратить внимание" block for the report screen.
 
 This is not a conversation turn: no graph, no checkpoint, no tool loop. It
-reads a few report sections straight from the MCP tools, hands them to the
-model once with the user's task, and parses a small JSON structure the report
-screen renders above the raw sections.
+reads a few report sections straight from the MCP tools and asks the model
+once, with the response schema passed to the model as structured output —
+no JSON-shaped prompt, no hand parsing.
 
 Kept deliberately small — the value is a plain-language orientation for the
 task at hand, not a second analysis engine.
 """
 
-import json
 import logging
 from collections.abc import Sequence
 from typing import Literal
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 
 from .config import AgentSettings
 from .harness.models import create_chat_model
@@ -36,30 +35,34 @@ _SYSTEM = (
     "для предпринимателя на практике (например: «денег на счетах 176 тыс. ₽ при "
     "долге поставщикам 171 млн ₽ — ваш аванс может уйти на чужие долги раньше, "
     "чем вам отгрузят товар»). Не выдумывай и не оценивай то, чего в данных нет.\n"
-    "Порядок: сначала самое существенное. Обычно первый пункт — главный риск или "
-    "главный плюс для сделки.\n"
-    'tone: "risk" — настораживает для этой задачи; "ok" — реально в пользу '
-    'компании; "neutral" — важный нейтральный факт или пробел в данных (пробел — '
-    "это «неизвестно», а не «всё чисто»).\n"
-    "caveat — одна фраза: это объяснение под задачу пользователя, а не оценка "
-    "банка; ниже идут факты как есть.\n"
-    'Верни СТРОГО JSON без пояснений: {"bullets":[{"tone":"risk|ok|neutral",'
-    '"text":"..."}],"caveat":"..."}'
+    "Сначала самое существенное: обычно первый пункт — главный риск или главный "
+    "плюс для сделки."
 )
 
 
 class SummaryBullet(BaseModel):
     """One line of the orientation block."""
 
-    tone: Literal["risk", "ok", "neutral"] = "neutral"
-    text: str = Field(min_length=1)
+    tone: Literal["risk", "ok", "neutral"] = Field(
+        description="risk — настораживает для этой сделки; ok — реально в пользу компании; "
+        "neutral — важный нейтральный факт или пробел в данных"
+    )
+    text: str = Field(
+        min_length=1,
+        description="1–2 предложения простым языком, с конкретными числами и их смыслом для сделки",
+    )
 
 
 class ReportSummary(BaseModel):
     """The orientation block shown above the raw report sections."""
 
-    bullets: list[SummaryBullet] = Field(default_factory=list)
-    caveat: str = ""
+    bullets: list[SummaryBullet] = Field(
+        description="3–4 пункта, самый важный первым", min_length=1, max_length=4
+    )
+    caveat: str = Field(
+        description="одна фраза: это объяснение под задачу пользователя, а не оценка банка; "
+        "ниже идут факты как есть"
+    )
 
 
 def _tool(tools: Sequence[BaseTool], name: str) -> BaseTool | None:
@@ -85,27 +88,13 @@ async def _gather(settings: AgentSettings, report_id: str) -> str:
     return "\n\n".join(parts)
 
 
-def _parse(raw: str) -> ReportSummary:
-    text = raw.strip()
-    if text.startswith("```"):
-        text = text.split("```", 2)[1] if "```" in text[3:] else text.strip("`")
-        text = text.removeprefix("json").strip()
-    start, end = text.find("{"), text.rfind("}")
-    if start != -1 and end != -1:
-        text = text[start : end + 1]
-    data = json.loads(text)
-    summary = ReportSummary.model_validate(data)
-    summary.bullets = summary.bullets[:4]
-    return summary
-
-
 async def build_report_summary(
     settings: AgentSettings, *, report_id: str, task: str
 ) -> ReportSummary:
-    """Read the report, ask the model once, return the orientation block.
+    """Read the report, ask the model once with a response schema, return the block.
 
     Raises:
-        ValueError: if the model does not return parseable JSON.
+        ValueError: if the report has no data or the model call fails.
     """
     context = await _gather(settings, report_id)
     if not context:
@@ -115,8 +104,13 @@ async def build_report_summary(
         f"Задача пользователя: {task or 'оценка контрагента для сделки'}\n\n"
         f"Данные отчёта:\n{context}"
     )
-    response = await model.ainvoke([SystemMessage(content=_SYSTEM), HumanMessage(content=question)])
     try:
-        return _parse(str(response.text))
-    except (json.JSONDecodeError, ValidationError, ValueError) as error:
-        raise ValueError(f"model did not return a usable summary: {error}") from error
+        structured = model.with_structured_output(ReportSummary)
+        result = await structured.ainvoke(
+            [SystemMessage(content=_SYSTEM), HumanMessage(content=question)]
+        )
+    except Exception as error:
+        raise ValueError(f"summary model call failed: {error}") from error
+    if not isinstance(result, ReportSummary):
+        result = ReportSummary.model_validate(result)
+    return result
