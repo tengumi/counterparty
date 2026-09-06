@@ -15,15 +15,18 @@
 .negative { background: #d6242a; }
 /* Tabular report: spacing, type and colours follow the designer's rsections. */
 .sections { margin-top: 28px; container-type: inline-size; }
-.section { border-top: 1px solid #e7e8eb; padding: 16px 0 4px; }
-.section h3 { margin: 0 0 4px; font-size: 16px; line-height: 24px; font-weight: 500; }
+.section { border-top: 2px solid #e3e4e9; padding: 22px 0 6px; }
+.section h3 {
+  margin: 0 0 10px; font-size: 17px; line-height: 24px; font-weight: 600; color: #1a1a1f;
+}
 .section h5 { margin: 12px 8px 4px; color: rgba(4, 4, 19, .55); font-size: 13px; line-height: 18px; font-weight: 400; }
 .section h6 { margin: 10px 8px 0; font-size: 13px; line-height: 18px; font-weight: 500; }
 .section section { border: 0; }
 .section p { margin: 8px; color: rgba(5, 8, 29, .38); font-size: 13px; line-height: 18px; }
-.fact { border-radius: 10px; }
+.fact { border-radius: 10px; border-bottom: 1px solid #f0f0f2; }
+.fact:last-child { border-bottom: 0; }
 .fact:hover { background: rgba(15, 25, 55, .03); }
-.factRow { display: grid; grid-template-columns: minmax(120px, 2fr) minmax(160px, 3fr) 112px; align-items: baseline; gap: 12px; padding: 10px 8px; font-size: 14px; line-height: 20px; }
+.factRow { display: grid; grid-template-columns: minmax(120px, 2fr) minmax(160px, 3fr) 112px; align-items: baseline; gap: 12px; padding: 11px 8px; font-size: 14px; line-height: 20px; }
 .factLabel { min-width: 0; border: 0; background: none; padding: 0; color: rgba(3, 3, 6, .88); font: inherit; text-align: left; text-wrap: pretty; overflow-wrap: anywhere; }
 button.factLabel { cursor: pointer; }
 .factValue { min-width: 0; text-align: right; text-wrap: pretty; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }

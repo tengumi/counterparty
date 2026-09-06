@@ -71,7 +71,13 @@ const sectionTopics: Partial<Record<SectionName, string>> = {
   "contacts": "Филиалы и контакты"
 };
 
-export function reportHelp(label: string, section?: SectionName): string | undefined {
-  const topic = aliases[label] ?? label;
-  return explanations[topic] ?? (section ? explanations[sectionTopics[section] ?? ''] : undefined);
+export function reportHelp(label: string, _section?: SectionName): string | undefined {
+  // Only a "?" that explains *this* line. The section-topic fallback put the
+  // same explanation on every row of a section, which read as noise.
+  return explanations[aliases[label] ?? label];
+}
+
+/** The one section-level explanation, for a "?" on the section heading. */
+export function sectionHelp(section: SectionName): string | undefined {
+  return explanations[sectionTopics[section] ?? ''];
 }

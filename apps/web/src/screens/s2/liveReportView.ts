@@ -177,6 +177,20 @@ export function sourceDate(value: string): string {
   if (Number.isNaN(date.valueOf())) return 'Дата не указана';
   return `${new Intl.DateTimeFormat('ru-RU', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' }).format(date)} (UTC)`;
 }
+
+const _DATE = /^\d{4}-\d\d-\d\d(?:[T ]|$)/;
+
+/** A stored date/timestamp shown to a person: "2 марта 2023", never an ISO string. */
+export function prettyDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return value;
+  return new Intl.DateTimeFormat('ru-RU', {
+    timeZone: 'UTC',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(date);
+}
 export function factText(fact: FactValue): string {
   if (fact.availability !== 'available') return availabilityText[fact.availability];
   if (!fact.evidence_refs.length) return 'Значение не показываем: основание недоступно';
@@ -187,6 +201,8 @@ export function factText(fact: FactValue): string {
       : 'Число в неизвестном формате';
   if (typeof fact.value === 'boolean') return fact.value ? 'Да' : 'Нет';
   if (fact.value === 'available') return 'Данные предоставлены';
+  if (typeof fact.value === 'string' && (fact.value_type === 'date' || _DATE.test(fact.value)))
+    return prettyDate(fact.value);
   return String(fact.value);
 }
 export function factLabel(fact: FactValue): string {
@@ -321,14 +337,8 @@ export function recordRows(record: ReportRecord): {
       };
     case 'risk_signal':
       return {
-        title:
-          record.polarity === 'positive'
-            ? 'Положительный сигнал источника'
-            : 'Отрицательный сигнал источника',
-        rows: fields([
-          ['Код', record.code],
-          ['Формулировка источника', record.source_name],
-        ]),
+        title: record.polarity === 'positive' ? 'В пользу компании' : 'Настораживает',
+        rows: fields([['Сигнал', record.source_name]]),
         note: record.interpretation_note,
       };
   }

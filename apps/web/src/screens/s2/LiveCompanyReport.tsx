@@ -123,7 +123,14 @@ function SectionContent({
                 records={page.records} companyName={companyName}
                 onEvidence={onEvidence} onDiscuss={onDiscuss}
               /> : null}
-              {page.records.map((record, index) => {
+              {(section === 'risk_signals'
+                ? [...page.records].sort((a, b) => {
+                    const w = (r: typeof a) =>
+                      r.kind === 'risk_signal' && r.polarity === 'negative' ? 0 : 1;
+                    return w(a) - w(b);
+                  })
+                : page.records
+              ).map((record, index) => {
                 const view = record.kind === 'financial_period'
                   ? { title: `${record.year} · Дополнительные показатели`, rows: record.additional_facts.map(factRow), note: null }
                   : recordRows(record);

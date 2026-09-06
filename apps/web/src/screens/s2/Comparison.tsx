@@ -111,10 +111,6 @@ export function Comparison({
   return (
     <div className={styles.detail}>
       <p className={styles.rowMeta}>Сравнение для: {project.title}</p>
-      <p className={styles.muted}>
-        Факты из закреплённых отчётов. Неизвестные условия не считаются худшими; автоматического
-        победителя нет.
-      </p>
       <fieldset className={styles.comparisonOptions}>
         <legend>Компании для сравнения — от 2 до 20</legend>
         {project.companies.map((company) => (
