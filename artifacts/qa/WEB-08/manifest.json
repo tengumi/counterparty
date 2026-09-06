@@ -1,0 +1,547 @@
+{
+  "scope": "WEB-08",
+  "sourceSHA": "2dce68498b4a914b150f722db70539250456d06e",
+  "sourceDirty": false,
+  "createdAt": "2026-09-05T19:14:01.688Z",
+  "browser": "150.0.7871.115",
+  "transport": "Playwright connectOverCDP",
+  "baseURL": "http://127.0.0.1:5173",
+  "dataset": "Live REST / approved imported mock snapshot; no browser interception",
+  "checks": [
+    {
+      "name": "Unavailable agent is explicit; draft remains editable",
+      "viewport": "desktop",
+      "verdict": "pass"
+    },
+    {
+      "name": "No document horizontal overflow",
+      "viewport": "desktop",
+      "verdict": "pass",
+      "details": "{\"client\":1440,\"scroll\":1440}"
+    },
+    {
+      "name": "Composer remains visible",
+      "viewport": "desktop",
+      "verdict": "pass",
+      "details": "{\"x\":467,\"y\":729,\"width\":732,\"height\":48}"
+    },
+    {
+      "name": "Created server project and pinned two reports",
+      "viewport": "desktop",
+      "verdict": "pass",
+      "details": "84dff673-9d2f-4976-89e9-6bd2919def47"
+    },
+    {
+      "name": "No document horizontal overflow",
+      "viewport": "desktop",
+      "verdict": "pass",
+      "details": "{\"client\":1440,\"scroll\":1440}"
+    },
+    {
+      "name": "Panel has usable width and stays in viewport",
+      "viewport": "desktop",
+      "verdict": "pass",
+      "details": "{\"x\":1040,\"y\":0,\"width\":400,\"height\":900}"
+    },
+    {
+      "name": "No document horizontal overflow",
+      "viewport": "tablet",
+      "verdict": "pass",
+      "details": "{\"client\":1024,\"scroll\":1024}"
+    },
+    {
+      "name": "Panel has usable width and stays in viewport",
+      "viewport": "tablet",
+      "verdict": "pass",
+      "details": "{\"x\":624,\"y\":56,\"width\":400,\"height\":712}"
+    },
+    {
+      "name": "Report is pinned and displays raw ZSK",
+      "viewport": "desktop",
+      "verdict": "pass"
+    },
+    {
+      "name": "Financial amount and year match server DTO",
+      "viewport": "desktop",
+      "verdict": "pass",
+      "details": "period=2023; report_id=a5e848d5-f198-4311-b8aa-984e31b75af4"
+    },
+    {
+      "name": "Evidence resolves exact report ref and period",
+      "viewport": "desktop",
+      "verdict": "pass",
+      "details": "report:a5e848d5-f198-4311-b8aa-984e31b75af4:/finReports/2/common/proceeds"
+    },
+    {
+      "name": "Evidence source fragment is rendered",
+      "viewport": "desktop",
+      "verdict": "pass"
+    },
+    {
+      "name": "No document horizontal overflow",
+      "viewport": "desktop",
+      "verdict": "pass",
+      "details": "{\"client\":1440,\"scroll\":1440}"
+    },
+    {
+      "name": "Panel has usable width and stays in viewport",
+      "viewport": "desktop",
+      "verdict": "pass",
+      "details": "{\"x\":1040,\"y\":0,\"width\":400,\"height\":900}"
+    },
+    {
+      "name": "Discuss restores draft focus without sending",
+      "viewport": "desktop",
+      "verdict": "pass"
+    },
+    {
+      "name": "Evidence context chip is present",
+      "viewport": "desktop",
+      "verdict": "pass"
+    },
+    {
+      "name": "Comparison is computed by server for pinned reports/year",
+      "viewport": "desktop",
+      "verdict": "pass"
+    },
+    {
+      "name": "All server company rows appear",
+      "viewport": "desktop",
+      "verdict": "pass"
+    },
+    {
+      "name": "No document horizontal overflow",
+      "viewport": "desktop",
+      "verdict": "pass",
+      "details": "{\"client\":1440,\"scroll\":1440}"
+    },
+    {
+      "name": "Panel has usable width and stays in viewport",
+      "viewport": "desktop",
+      "verdict": "pass",
+      "details": "{\"x\":1040,\"y\":0,\"width\":400,\"height\":900}"
+    },
+    {
+      "name": "Comparison context retains draft",
+      "viewport": "desktop",
+      "verdict": "pass"
+    },
+    {
+      "name": "Reload retains draft and both typed contexts",
+      "viewport": "desktop",
+      "verdict": "pass"
+    },
+    {
+      "name": "No document horizontal overflow",
+      "viewport": "desktop",
+      "verdict": "pass",
+      "details": "{\"client\":1440,\"scroll\":1440}"
+    },
+    {
+      "name": "Composer remains visible",
+      "viewport": "desktop",
+      "verdict": "pass",
+      "details": "{\"x\":467,\"y\":729,\"width\":732,\"height\":48}"
+    },
+    {
+      "name": "Reload restores comparison selection/result from REST",
+      "viewport": "desktop",
+      "verdict": "pass"
+    },
+    {
+      "name": "Close returns focus to materials opener",
+      "viewport": "desktop",
+      "verdict": "pass"
+    },
+    {
+      "name": "No chat message sent by discussion actions",
+      "viewport": "desktop",
+      "verdict": "pass"
+    },
+    {
+      "name": "Mobile Enter inserts newline",
+      "viewport": "mobile",
+      "verdict": "pass"
+    },
+    {
+      "name": "Unavailable agent is explicit; draft remains editable",
+      "viewport": "mobile",
+      "verdict": "pass"
+    },
+    {
+      "name": "No document horizontal overflow",
+      "viewport": "mobile",
+      "verdict": "pass",
+      "details": "{\"client\":390,\"scroll\":390}"
+    },
+    {
+      "name": "Composer remains visible",
+      "viewport": "mobile",
+      "verdict": "pass",
+      "details": "{\"x\":31,\"y\":607,\"width\":330,\"height\":48}"
+    },
+    {
+      "name": "Created server project and pinned two reports",
+      "viewport": "mobile",
+      "verdict": "pass",
+      "details": "84ca20f6-b1c3-4389-a991-1f11c96ddce8"
+    },
+    {
+      "name": "No document horizontal overflow",
+      "viewport": "mobile",
+      "verdict": "pass",
+      "details": "{\"client\":390,\"scroll\":390}"
+    },
+    {
+      "name": "Panel has usable width and stays in viewport",
+      "viewport": "mobile",
+      "verdict": "pass",
+      "details": "{\"x\":0,\"y\":0,\"width\":390,\"height\":844}"
+    },
+    {
+      "name": "Report is pinned and displays raw ZSK",
+      "viewport": "mobile",
+      "verdict": "pass"
+    },
+    {
+      "name": "Financial amount and year match server DTO",
+      "viewport": "mobile",
+      "verdict": "pass",
+      "details": "period=2023; report_id=a5e848d5-f198-4311-b8aa-984e31b75af4"
+    },
+    {
+      "name": "Evidence resolves exact report ref and period",
+      "viewport": "mobile",
+      "verdict": "pass",
+      "details": "report:a5e848d5-f198-4311-b8aa-984e31b75af4:/finReports/2/common/proceeds"
+    },
+    {
+      "name": "Evidence source fragment is rendered",
+      "viewport": "mobile",
+      "verdict": "pass"
+    },
+    {
+      "name": "No document horizontal overflow",
+      "viewport": "mobile",
+      "verdict": "pass",
+      "details": "{\"client\":390,\"scroll\":390}"
+    },
+    {
+      "name": "Panel has usable width and stays in viewport",
+      "viewport": "mobile",
+      "verdict": "pass",
+      "details": "{\"x\":0,\"y\":0,\"width\":390,\"height\":844}"
+    },
+    {
+      "name": "Discuss restores draft focus without sending",
+      "viewport": "mobile",
+      "verdict": "pass"
+    },
+    {
+      "name": "Evidence context chip is present",
+      "viewport": "mobile",
+      "verdict": "pass"
+    },
+    {
+      "name": "Comparison is computed by server for pinned reports/year",
+      "viewport": "mobile",
+      "verdict": "pass"
+    },
+    {
+      "name": "All server company rows appear",
+      "viewport": "mobile",
+      "verdict": "pass"
+    },
+    {
+      "name": "No document horizontal overflow",
+      "viewport": "mobile",
+      "verdict": "pass",
+      "details": "{\"client\":390,\"scroll\":390}"
+    },
+    {
+      "name": "Panel has usable width and stays in viewport",
+      "viewport": "mobile",
+      "verdict": "pass",
+      "details": "{\"x\":0,\"y\":0,\"width\":390,\"height\":844}"
+    },
+    {
+      "name": "Comparison context retains draft",
+      "viewport": "mobile",
+      "verdict": "pass"
+    },
+    {
+      "name": "Reload retains draft and both typed contexts",
+      "viewport": "mobile",
+      "verdict": "pass"
+    },
+    {
+      "name": "No document horizontal overflow",
+      "viewport": "mobile",
+      "verdict": "pass",
+      "details": "{\"client\":390,\"scroll\":390}"
+    },
+    {
+      "name": "Composer remains visible",
+      "viewport": "mobile",
+      "verdict": "pass",
+      "details": "{\"x\":31,\"y\":607,\"width\":330,\"height\":48}"
+    },
+    {
+      "name": "Reload restores comparison selection/result from REST",
+      "viewport": "mobile",
+      "verdict": "pass"
+    },
+    {
+      "name": "Close returns focus to materials opener",
+      "viewport": "mobile",
+      "verdict": "pass"
+    },
+    {
+      "name": "No chat message sent by discussion actions",
+      "viewport": "mobile",
+      "verdict": "pass"
+    }
+  ],
+  "captures": [
+    {
+      "name": "s1",
+      "file": "desktop/s1.png",
+      "width": 1440,
+      "height": 900,
+      "url": "http://127.0.0.1:5173/checks"
+    },
+    {
+      "name": "materials",
+      "file": "desktop/materials.png",
+      "width": 1440,
+      "height": 900,
+      "url": "http://127.0.0.1:5173/checks/84dff673-9d2f-4976-89e9-6bd2919def47/chats/4a9c563f-9826-4859-bfee-2ac98e8b66c3"
+    },
+    {
+      "name": "materials",
+      "file": "tablet/materials.png",
+      "width": 1024,
+      "height": 768,
+      "url": "http://127.0.0.1:5173/checks/84dff673-9d2f-4976-89e9-6bd2919def47/chats/4a9c563f-9826-4859-bfee-2ac98e8b66c3"
+    },
+    {
+      "name": "report",
+      "file": "desktop/report.png",
+      "width": 1440,
+      "height": 900,
+      "url": "http://127.0.0.1:5173/checks/84dff673-9d2f-4976-89e9-6bd2919def47/chats/4a9c563f-9826-4859-bfee-2ac98e8b66c3"
+    },
+    {
+      "name": "evidence",
+      "file": "desktop/evidence.png",
+      "width": 1440,
+      "height": 900,
+      "url": "http://127.0.0.1:5173/checks/84dff673-9d2f-4976-89e9-6bd2919def47/chats/4a9c563f-9826-4859-bfee-2ac98e8b66c3"
+    },
+    {
+      "name": "comparison",
+      "file": "desktop/comparison.png",
+      "width": 1440,
+      "height": 900,
+      "url": "http://127.0.0.1:5173/checks/84dff673-9d2f-4976-89e9-6bd2919def47/chats/4a9c563f-9826-4859-bfee-2ac98e8b66c3"
+    },
+    {
+      "name": "draft-reloaded",
+      "file": "desktop/draft-reloaded.png",
+      "width": 1440,
+      "height": 900,
+      "url": "http://127.0.0.1:5173/checks/84dff673-9d2f-4976-89e9-6bd2919def47/chats/4a9c563f-9826-4859-bfee-2ac98e8b66c3"
+    },
+    {
+      "name": "s1",
+      "file": "mobile/s1.png",
+      "width": 390,
+      "height": 844,
+      "url": "http://127.0.0.1:5173/checks"
+    },
+    {
+      "name": "materials",
+      "file": "mobile/materials.png",
+      "width": 390,
+      "height": 844,
+      "url": "http://127.0.0.1:5173/checks/84ca20f6-b1c3-4389-a991-1f11c96ddce8/chats/4ac4af26-8497-4be8-ac68-91e8d51264ae"
+    },
+    {
+      "name": "report",
+      "file": "mobile/report.png",
+      "width": 390,
+      "height": 844,
+      "url": "http://127.0.0.1:5173/checks/84ca20f6-b1c3-4389-a991-1f11c96ddce8/chats/4ac4af26-8497-4be8-ac68-91e8d51264ae"
+    },
+    {
+      "name": "evidence",
+      "file": "mobile/evidence.png",
+      "width": 390,
+      "height": 844,
+      "url": "http://127.0.0.1:5173/checks/84ca20f6-b1c3-4389-a991-1f11c96ddce8/chats/4ac4af26-8497-4be8-ac68-91e8d51264ae"
+    },
+    {
+      "name": "comparison",
+      "file": "mobile/comparison.png",
+      "width": 390,
+      "height": 844,
+      "url": "http://127.0.0.1:5173/checks/84ca20f6-b1c3-4389-a991-1f11c96ddce8/chats/4ac4af26-8497-4be8-ac68-91e8d51264ae"
+    },
+    {
+      "name": "draft-reloaded",
+      "file": "mobile/draft-reloaded.png",
+      "width": 390,
+      "height": 844,
+      "url": "http://127.0.0.1:5173/checks/84ca20f6-b1c3-4389-a991-1f11c96ddce8/chats/4ac4af26-8497-4be8-ac68-91e8d51264ae"
+    }
+  ],
+  "projects": [
+    {
+      "id": "84dff673-9d2f-4976-89e9-6bd2919def47",
+      "viewport": "desktop",
+      "reportIds": [
+        "a5e848d5-f198-4311-b8aa-984e31b75af4",
+        "e55f9575-6538-47aa-bd81-8c94a33e10cd"
+      ]
+    },
+    {
+      "id": "84ca20f6-b1c3-4389-a991-1f11c96ddce8",
+      "viewport": "mobile",
+      "reportIds": [
+        "a5e848d5-f198-4311-b8aa-984e31b75af4",
+        "e55f9575-6538-47aa-bd81-8c94a33e10cd"
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/api/v1/projects",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects",
+      "status": 201
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/84dff673-9d2f-4976-89e9-6bd2919def47/companies",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports/a5e848d5-f198-4311-b8aa-984e31b75af4/overview",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports/a5e848d5-f198-4311-b8aa-984e31b75af4/sections/financials",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports/a5e848d5-f198-4311-b8aa-984e31b75af4/sections/coefficients",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/84dff673-9d2f-4976-89e9-6bd2919def47/evidence/report%3Aa5e848d5-f198-4311-b8aa-984e31b75af4%3A%2FfinReports%2F2%2Fcommon%2Fproceeds",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/84dff673-9d2f-4976-89e9-6bd2919def47/comparisons",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/84dff673-9d2f-4976-89e9-6bd2919def47/evidence/report%3Aa5e848d5-f198-4311-b8aa-984e31b75af4%3A%2FbaseInfo%2FriskLevel",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/84dff673-9d2f-4976-89e9-6bd2919def47",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/84dff673-9d2f-4976-89e9-6bd2919def47/comparisons",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects",
+      "status": 201
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/84ca20f6-b1c3-4389-a991-1f11c96ddce8/companies",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports/a5e848d5-f198-4311-b8aa-984e31b75af4/overview",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports/a5e848d5-f198-4311-b8aa-984e31b75af4/sections/coefficients",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports/a5e848d5-f198-4311-b8aa-984e31b75af4/sections/financials",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/84ca20f6-b1c3-4389-a991-1f11c96ddce8/evidence/report%3Aa5e848d5-f198-4311-b8aa-984e31b75af4%3A%2FfinReports%2F2%2Fcommon%2Fproceeds",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/84ca20f6-b1c3-4389-a991-1f11c96ddce8/comparisons",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/84ca20f6-b1c3-4389-a991-1f11c96ddce8/evidence/report%3Aa5e848d5-f198-4311-b8aa-984e31b75af4%3A%2FbaseInfo%2FriskLevel",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/84ca20f6-b1c3-4389-a991-1f11c96ddce8",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/84ca20f6-b1c3-4389-a991-1f11c96ddce8/comparisons",
+      "status": 200
+    }
+  ],
+  "consoleErrors": [
+    "desktop: Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "limitations": [
+    "Provided snapshots are mock source data, not current registry checks.",
+    "Agent conversation, documents and user decisions remain unavailable; this run does not certify WEB-09 or AG-04.",
+    "Comparison selection is persisted locally; no saved comparison artifact is claimed.",
+    "Desktop headless Chrome emulates mobile viewport/touch; native OS keyboard and 200% zoom are not covered."
+  ]
+}

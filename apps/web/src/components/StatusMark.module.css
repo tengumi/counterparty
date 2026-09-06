@@ -1,0 +1,5 @@
+.mark { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; line-height: 18px; white-space: nowrap; }
+.dot { width: 6px; height: 6px; border-radius: 50%; flex: none; background: rgba(5, 8, 29, .38); }
+.dot[data-tone='attention'] { background: #b2670a; }
+.dot[data-tone='positive'] { background: #1f8c4d; }
+.dot[data-tone='progress'] { background: #2a77ef; }

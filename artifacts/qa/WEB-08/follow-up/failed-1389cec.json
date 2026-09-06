@@ -1,0 +1,38 @@
+{
+  "sourceSHA": "1389cecca83fb97422e878372fdfa8083ca48dfa",
+  "originalSourceSHA": "2dce68498b4a914b150f722db70539250456d06e",
+  "scope": "Mobile draft targets + favicon only; no full flow repeat",
+  "projectId": "84ca20f6-b1c3-4389-a991-1f11c96ddce8",
+  "browser": "150.0.7871.115",
+  "consoleErrors": [],
+  "pageErrors": [],
+  "targets": [
+    {
+      "name": "Открыть",
+      "width": 59.3125,
+      "height": 20
+    },
+    {
+      "name": "Убрать материал: Выручка · ООО \"ТЕХПРОФ\" · 2023",
+      "width": 48.296875,
+      "height": 20
+    },
+    {
+      "name": "Убрать материал: Сравнение 2 компаний",
+      "width": 48.296875,
+      "height": 20
+    }
+  ],
+  "favicon": {
+    "path": "",
+    "status": 0
+  },
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "overflow": 0,
+  "composerVisible": false,
+  "screenshot": "mobile-draft.png",
+  "verdict": "fail"
+}

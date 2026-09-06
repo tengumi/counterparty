@@ -1,0 +1,14 @@
+@import '@alfalab/core-components/vars/index.css';
+@import '@alfalab/core-components/themes/corp.css';
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; color: rgba(3, 3, 6, .88); background: #fff; font-size: 14px; line-height: 20px; -webkit-font-smoothing: antialiased; }
+a { color: #2a77ef; text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 2px solid #2a77ef; outline-offset: 4px; }
+
+button, input, textarea { font: inherit; }
+
+/* Знак финансового значения. Ноль и неизвестное значение остаются нейтральными. */
+[data-amount-tone='positive'] { color: var(--color-light-text-positive, #16824b); }
+[data-amount-tone='negative'] { color: var(--color-light-text-negative, #d6242a); }

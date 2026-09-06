@@ -1,0 +1,34 @@
+.shell { height: 100dvh; min-height: 100dvh; display: flex; overflow: hidden; }
+.sidebar { width: 224px; flex-shrink: 0; border-right: 1px solid #e7e8eb; padding: 20px 8px; display: flex; flex-direction: column; background: #fcfcfd; }
+.brand { display: flex; align-items: center; gap: 8px; padding: 0 10px 20px; font-weight: 600; }
+.brand span { width: 18px; height: 18px; background: #ef3124; border-radius: 5px; }
+.navLink { min-height: 44px; display: flex; align-items: center; padding: 10px; background: rgba(15, 25, 55, .06); border-radius: 8px; color: inherit; font-weight: 500; }
+.demo { margin-top: auto; padding: 10px; font-size: 12px; color: rgba(4, 4, 19, .55); }
+.main { container: workspace / inline-size; flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.content { max-width: 784px; margin: 0 auto; padding: 96px 32px 64px; }
+.content h1 { margin: 0; font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -.2px; }
+.subtitle { margin-top: 8px; font-size: 16px; line-height: 24px; color: rgba(4, 4, 19, .55); }
+.card { margin-top: 32px; border: 1px solid #e7e8eb; border-radius: 16px; padding: 24px; }
+.card h2 { margin: 0; font-size: 18px; line-height: 26px; }
+.muted { color: rgba(4, 4, 19, .55); }
+.header { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; min-height: 56px; border-bottom: 1px solid #e7e8eb; padding: 12px 20px; }
+.header span { overflow-wrap: anywhere; }
+.skipLink { position: absolute; left: 8px; top: -80px; padding: 12px; background: white; z-index: 1; }
+.skipLink:focus { top: 8px; }
+@media (max-width: 1100px) {
+  .shell { flex-direction: column; }
+  .sidebar { flex: none; width: 100%; height: 56px; flex-direction: row; align-items: center; gap: 24px; border-right: 0; border-bottom: 1px solid #e7e8eb; padding: 0 20px; }
+  .brand { flex: none; padding: 0; }
+  .navLink { padding: 8px 10px; }
+  .demo { margin: 0 0 0 auto; padding: 0; }
+  .content { padding-top: 48px; }
+}
+@media (max-width: 640px) {
+  /* Fullscreen panels are fixed to the viewport, not a query container. */
+  .main { container-type: normal; }
+  .sidebar { height: 48px; gap: 12px; padding: 0 16px; }
+  .sidebar nav { display: none; }
+  .demo { max-width: 125px; font-size: 11px; line-height: 14px; text-align: right; }
+  .content { padding: 32px 20px; }
+  .card { padding: 20px; }
+}

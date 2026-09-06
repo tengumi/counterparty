@@ -1,0 +1,139 @@
+{
+  "scope": "WEB-07",
+  "target": "availability",
+  "sourceSHA": "6942d5a001c8a345fe92d21aebdf5441a775fa65",
+  "sourceDirty": false,
+  "createdAt": "2026-09-05T18:25:20.329Z",
+  "browser": "150.0.7871.115",
+  "transport": "Playwright connectOverCDP",
+  "baseURL": "http://127.0.0.1:5173",
+  "reference": {
+    "file": "artifacts/Design TZ для экранов/Проверка контрагентов v2.dc.html",
+    "sha256": "43549cff7ab6e87d44105363c93a67c5699010d4f8275f289e111d7e987e551b",
+    "supportSHA256": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe"
+  },
+  "checks": [
+    {
+      "name": "Mobile idle hides desktop keyboard hint",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "P1 width follows breakpoint",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"x\":0,\"y\":0,\"width\":390,\"height\":844}"
+    },
+    {
+      "name": "Финансы: source state remains distinct",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Взыскания: source state remains distinct",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Деятельность и разрешения: source state remains distinct",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Другие сведения: source state remains distinct",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Report availability: no horizontal overflow",
+      "viewport": "mobile",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"viewport\":390,\"content\":390}"
+    },
+    {
+      "name": "P1 width follows breakpoint",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"x\":1040,\"y\":0,\"width\":400,\"height\":900}"
+    },
+    {
+      "name": "Финансы: source state remains distinct",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Взыскания: source state remains distinct",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Деятельность и разрешения: source state remains distinct",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Другие сведения: source state remains distinct",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass"
+    },
+    {
+      "name": "Report availability: no horizontal overflow",
+      "viewport": "desktop",
+      "source": "typed-fixtures",
+      "verdict": "pass",
+      "details": "{\"viewport\":1440,\"content\":1440}"
+    }
+  ],
+  "captures": [
+    {
+      "name": "s2-conversation",
+      "file": "typed-fixtures/mobile/s2-conversation.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks/demo-project/chats/demo-thread"
+    },
+    {
+      "name": "report-availability",
+      "file": "typed-fixtures/mobile/report-availability.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks/demo-project/chats/demo-thread"
+    },
+    {
+      "name": "report-availability",
+      "file": "typed-fixtures/desktop/report-availability.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "source": "typed-fixtures",
+      "url": "http://127.0.0.1:5173/checks/demo-project/chats/demo-thread"
+    }
+  ],
+  "consoleErrors": [],
+  "limitations": [
+    "Typed fixture screenshots verify WEB-07 presentation only; report/materials/conversation data remains mock and does not close WEB-08/09.",
+    "Text zoom check doubles computed font sizes to emulate 200% text-only zoom; OS virtual keyboard and native Chrome zoom are not emulated.",
+    "Design reference is the unchanged HTML with its own support.js and pinned unpkg CDN dependencies; its narrow-screen shell differs from Specs 07 responsive requirements.",
+    "Document source screen is the existing honest preview placeholder, not document reading acceptance.",
+    "Live CRUD uses real REST and server-generated UUIDs in a disposable demo database; it does not validate live report/agent screens."
+  ]
+}

@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "counterparty-import-reports"
+version = "0.1.0"
+description = "Idempotent import of the approved report snapshot into PostgreSQL"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "counterparty-contracts",
+  "counterparty-domain",
+  "counterparty-storage",
+  "psycopg[binary]>=3.2,<4",
+  "sqlalchemy>=2.0.36,<3",
+]
+
+[dependency-groups]
+dev = [
+  "mypy>=1.18,<2",
+  "pytest>=8.4,<10",
+  "ruff>=0.13,<0.16",
+]
+
+[tool.uv.sources]
+counterparty-contracts = { path = "../../packages/contracts" }
+counterparty-domain = { path = "../../packages/domain", editable = true }
+counterparty-storage = { path = "../../packages/storage", editable = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/import_reports"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+# `packages/domain` ships no `py.typed` marker yet, so mypy treats it as an
+# untyped installed package. Its source is available here, so it is analysed
+# rather than ignored: `ignore_missing_imports` would silently drop type
+# checking of every call into the domain layer. Remove this block once the
+# marker is added there.
+[[tool.mypy.overrides]]
+module = ["counterparty_domain.*"]
+follow_untyped_imports = true

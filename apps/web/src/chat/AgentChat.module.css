@@ -1,0 +1,13 @@
+.root { display: flex; flex-direction: column; gap: 12px; }
+.viewport { display: flex; flex-direction: column; gap: 8px; min-height: 80px; }
+.user, .assistant { padding: 8px 12px; border-radius: 12px; white-space: pre-wrap; }
+.user { align-self: flex-end; background: #eef1f6; }
+.assistant { align-self: flex-start; background: #f7f8fa; }
+.trail { font-size: 13px; color: #63676f; }
+.activities { list-style: none; margin: 0 0 4px; padding: 0; }
+.activities li[data-status='failed'] { color: #a4262c; }
+.error { color: #a4262c; margin: 4px 0; }
+.status { margin: 0; }
+.composer { display: flex; gap: 8px; align-items: center; }
+.input { flex: 1; padding: 8px 12px; border: 1px solid #d8dae0; border-radius: 10px; font: inherit; }
+.send { padding: 8px 14px; border: 0; border-radius: 10px; background: #ef3124; color: #fff; font: inherit; cursor: pointer; }

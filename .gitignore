@@ -1,23 +1,86 @@
+# Operating systems and editors
 .DS_Store
+Thumbs.db
+.thumbnail
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
+*~
+
+# Secrets and local configuration
 .env
-.venv/
-.tools/
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+llm_add.md
+
+# Python
 __pycache__/
 *.py[cod]
-*.log
-*.sqlite
-*.sqlite3
-.mypy_cache/
-.pytest_cache/
-.ruff_cache/
-.coverage
-htmlcov/
+*.pyd
+*.so
+.python-version
+.venv/
+venv/
+env/
+.uv-cache/
+*.egg-info/
+.eggs/
 build/
 dist/
-tmp/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
 
-# Исходные отчёты могут содержать реквизиты компаний и персональные данные.
-data/*.csv
-data/*.json
-data/*.parquet
-!data/README.md
+# Node / frontend
+node_modules/
+.vite/
+.turbo/
+.parcel-cache/
+.eslintcache
+coverage/
+playwright-report/
+test-results/
+blob-report/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime state and generated files
+*.log
+*.pid
+*.sqlite
+*.sqlite3
+*.db
+/tmp/
+/temp/
+/uploads/
+/storage/
+/postgres-data/
+
+# Local source data. Approved mock inputs under artifacts/ stay tracked.
+/data/
+
+# Docker and tooling overrides
+compose.override.yaml
+docker-compose.override.yml
+.tools/
+/.worktrees/
+
+# Local verification screenshots
+/.screenshots/

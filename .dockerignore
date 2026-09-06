@@ -1,0 +1,30 @@
+# The build context of every Python service is the repository root, because a
+# service depends on packages/ by path and a narrower context cannot see them.
+# Everything a build does not need is excluded here rather than copied and then
+# ignored: a stray host virtualenv is built for another platform, and the mock
+# corpus is data that belongs in a volume, never inside an image.
+
+.git
+.gitignore
+.worktrees
+
+**/.venv
+**/__pycache__
+**/*.py[cod]
+**/.mypy_cache
+**/.ruff_cache
+**/.pytest_cache
+
+**/node_modules
+apps/web/dist
+
+artifacts
+docs
+tests
+migrations
+scripts
+
+.env
+.env.*
+**/*.pem
+**/*.key

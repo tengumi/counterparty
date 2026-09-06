@@ -1,0 +1,78 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "counterparty-agent"
+version = "0.1.0"
+description = "Agent runtime service for Counterparty Workspace"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "assistant-stream>=0.0.36,<0.1",
+  "counterparty-contracts",
+  "counterparty-storage",
+  "deepagents>=0.7.13,<0.8",
+  "fastapi>=0.128,<1",
+  "langchain>=1.4,<2",
+  "langchain-mcp-adapters>=0.3.2,<0.4",
+  "langchain-openai>=1,<2",
+  "langgraph>=1.0,<2",
+  "langgraph-checkpoint-postgres>=3.0,<4",
+  "psycopg[binary]>=3.2,<4",
+  "pydantic-settings>=2.12,<3",
+  "uvicorn[standard]>=0.40,<1",
+]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28,<1",
+  "mypy>=1.18,<2",
+  "pytest>=8.4,<10",
+  "pytest-asyncio>=1.3,<2",
+  "ruff>=0.13,<0.16",
+]
+
+[tool.uv.sources]
+counterparty-contracts = { path = "../../packages/contracts" }
+counterparty-storage = { path = "../../packages/storage", editable = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/counterparty_agent"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "D"]
+
+[tool.ruff.lint.per-file-ignores]
+# The Russian prompt corpus and the domain-knowledge reference are the two
+# modules that carry Russian text. Words built only from Latin-confusable
+# letters are unavoidable there, so the ambiguous-character rules are relaxed
+# for those files instead of for the whole service.
+"src/counterparty_agent/harness/prompts.py" = ["RUF001", "RUF002", "RUF003"]
+"src/counterparty_agent/harness/knowledge.py" = ["RUF001", "RUF002", "RUF003"]
+"src/counterparty_agent/harness/client_profile.py" = ["RUF001", "RUF002", "RUF003"]
+"src/counterparty_agent/harness/indicator_guide.py" = ["RUF001", "RUF002", "RUF003"]
+"src/counterparty_agent/harness/runner.py" = ["RUF001", "RUF002", "RUF003"]
+"src/counterparty_agent/summary.py" = ["RUF001", "RUF002", "RUF003"]
+"tests/test_provisioning.py" = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+# assistant-stream ships no py.typed marker; the local boundary in
+# transport/delivery.py keeps the untyped surface to one module.
+module = ["assistant_stream.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

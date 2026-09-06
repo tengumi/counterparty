@@ -1,0 +1,52 @@
+import type { ApiProject, ApiProjectCompany, ProjectCompaniesResponse } from './contracts';
+import type { ChatSummary, CompanyRef, ProjectDetail, ProjectStatus, ProjectSummary } from '../mocks/types';
+import { findProject } from '../mocks/workspace';
+import { formatDateTime } from '../lib/formatDate';
+
+const statusMap: Readonly<Record<ApiProject['workflow_status'], ProjectStatus>> = {
+  in_progress: 'in_progress',
+  needs_information: 'needs_input',
+  decision_recorded: 'decision_recorded',
+};
+
+function companyView(company: ApiProjectCompany): CompanyRef {
+  return { id: company.company_id, reportId: company.report_id, name: company.short_name, inn: company.inn };
+}
+
+export function projectSummary(project: ApiProject): ProjectSummary {
+  return {
+    id: project.id,
+    title: project.title,
+    status: statusMap[project.workflow_status],
+    continuation: project.last_open_question,
+    lastActivityLabel: formatDateTime(project.updated_at),
+    lastActivityAt: project.updated_at,
+    lastThreadId: project.default_thread_id,
+  };
+}
+
+export function projectDetail(project: ApiProject, fixtureMode = false): ProjectDetail {
+  const mock = fixtureMode ? findProject(project.id) : undefined;
+  const defaultChat: ChatSummary = {
+    id: project.default_thread_id,
+    title: project.title,
+    hint: 'История разговора пока недоступна',
+    status: 'ready',
+  };
+  return {
+    ...projectSummary(project),
+    companies: project.companies.map(companyView),
+    chats: mock?.chats ?? [defaultChat],
+    saveState: 'saved',
+    isDemo: mock?.isDemo ?? false,
+  };
+}
+
+export function withCompanies(project: ApiProject, response: ProjectCompaniesResponse): ApiProject {
+  return { ...project, companies: response.companies, context_version: response.context_version };
+}
+
+export const workspaceKeys = {
+  all: ['workspace', 'projects'] as const,
+  project: (projectId: string) => ['workspace', 'projects', projectId] as const,
+};

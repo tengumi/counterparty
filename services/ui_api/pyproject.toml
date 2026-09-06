@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "counterparty-ui-api"
+version = "0.1.0"
+description = "Deterministic UI backend for Counterparty Workspace"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "counterparty-contracts",
+  "counterparty-domain",
+  "counterparty-storage",
+  "fastapi>=0.116,<1",
+  "httpx>=0.28,<1",
+  "psycopg[binary]>=3.2,<4",
+  "uvicorn>=0.35,<1",
+]
+
+[dependency-groups]
+dev = [
+  "mypy>=1.18,<2",
+  "pytest>=8.4,<10",
+  "pytest-asyncio>=1.0,<2",
+  "ruff>=0.13,<0.16",
+]
+
+[tool.uv.sources]
+counterparty-contracts = { path = "../../packages/contracts" }
+counterparty-domain = { path = "../../packages/domain" }
+counterparty-storage = { path = "../../packages/storage" }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/counterparty_ui_api"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+files = ["src", "tests"]
+mypy_path = "../../packages/contracts/src:../../packages/storage/src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"

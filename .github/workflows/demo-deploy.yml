@@ -1,0 +1,72 @@
+name: Demo deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: What to do on the demo VM
+        required: true
+        type: choice
+        default: deploy
+        options:
+          - deploy
+          - maintenance_on
+          - maintenance_off
+  push:
+    branches: [main]
+
+concurrency:
+  group: counterparty-demo
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: demo
+    steps:
+      - uses: actions/checkout@v4
+        if: github.event_name == 'push' || inputs.action == 'deploy'
+
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DEMO_SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ vars.DEMO_SSH_HOST }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload release
+        if: github.event_name == 'push' || inputs.action == 'deploy'
+        env:
+          SSH_HOST: ${{ vars.DEMO_SSH_HOST }}
+          SSH_USER: ${{ vars.DEMO_SSH_USER }}
+        run: |
+          rsync -az --delete \
+            --exclude .git/ --exclude .env --exclude letsencrypt/ \
+            ./ "$SSH_USER@$SSH_HOST:/opt/counterparty/"
+
+      - name: Install environment and deploy
+        if: github.event_name == 'push' || inputs.action == 'deploy'
+        env:
+          DEPLOY_ENV_B64: ${{ secrets.DEMO_ENV_B64 }}
+          SSH_HOST: ${{ vars.DEMO_SSH_HOST }}
+          SSH_USER: ${{ vars.DEMO_SSH_USER }}
+        run: |
+          printf '%s' "$DEPLOY_ENV_B64" | base64 --decode | ssh "$SSH_USER@$SSH_HOST" 'umask 077; cat > /opt/counterparty/.env'
+          ssh "$SSH_USER@$SSH_HOST" 'cd /opt/counterparty && docker compose -f compose.yaml -f compose.prod.yaml up -d --build --wait'
+
+      - name: Enable maintenance page
+        if: inputs.action == 'maintenance_on'
+        env:
+          SSH_HOST: ${{ vars.DEMO_SSH_HOST }}
+          SSH_USER: ${{ vars.DEMO_SSH_USER }}
+        run: ssh "$SSH_USER@$SSH_HOST" 'cd /opt/counterparty && docker compose -f compose.yaml -f compose.prod.yaml --profile maintenance up -d maintenance traefik'
+
+      - name: Disable maintenance page
+        if: inputs.action == 'maintenance_off'
+        env:
+          SSH_HOST: ${{ vars.DEMO_SSH_HOST }}
+          SSH_USER: ${{ vars.DEMO_SSH_USER }}
+        run: ssh "$SSH_USER@$SSH_HOST" 'cd /opt/counterparty && docker compose -f compose.yaml -f compose.prod.yaml --profile maintenance stop maintenance'

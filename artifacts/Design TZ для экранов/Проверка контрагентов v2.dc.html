@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html,body{margin:0;padding:0}
+  body{background:#fff;-webkit-font-smoothing:antialiased}
+  *{box-sizing:border-box}
+  a{color:#2a77ef;text-decoration:none}
+  a:hover{color:#2c64d4}
+  button,textarea,input{font:inherit;color:inherit}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:rgba(9,12,37,.18);border-radius:8px;border:3px solid transparent;background-clip:content-box}
+  @keyframes dcPulse{0%,100%{opacity:1}50%{opacity:.3}}
+  @keyframes dcFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  @keyframes dcPanel{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</helmet>
+
+<div style="display:flex;height:100vh;min-height:720px;overflow:hidden;font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;color:rgba(3,3,6,.88);font-size:14px;line-height:20px;background:#fff">
+
+  <sc-if value="{{ shell }}" hint-placeholder-val="{{ true }}">
+  <aside style="width:224px;flex:none;border-right:1px solid #e7e8eb;display:flex;flex-direction:column;padding:16px 8px;background:#fcfcfd">
+    <div style="display:flex;align-items:center;gap:8px;padding:2px 10px 18px">
+      <span style="width:18px;height:18px;border-radius:5px;background:#ef3124;flex:none"></span>
+      <span style="font-size:14px;line-height:20px;font-weight:600;letter-spacing:-.1px">Альфа‑Бизнес</span>
+    </div>
+    <nav style="display:flex;flex-direction:column;gap:2px">
+      <div style="display:flex;align-items:center;height:34px;padding:0 10px;border-radius:8px;color:rgba(4,4,19,.55)">Главная</div>
+      <div style="display:flex;align-items:center;height:34px;padding:0 10px;border-radius:8px;color:rgba(4,4,19,.55)">Счёт и платежи</div>
+      <div style="display:flex;align-items:center;height:34px;padding:0 10px;border-radius:8px;background:rgba(15,25,55,.06);font-weight:500">Проверка контрагентов</div>
+      <div style="display:flex;align-items:center;height:34px;padding:0 10px;border-radius:8px;color:rgba(4,4,19,.55)">Документы</div>
+    </nav>
+    <div style="margin-top:auto;padding:10px;font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">Демонстрационная оболочка</div>
+  </aside>
+  </sc-if>
+
+  <main style="flex:1;min-width:0;display:flex;position:relative;overflow:hidden">
+
+    <sc-if value="{{ isS1 }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;min-width:0;overflow:auto">
+      <div style="max-width:720px;margin:0 auto;padding:96px 32px 64px">
+        <h1 style="margin:0;font-size:24px;line-height:32px;font-weight:600;letter-spacing:-.2px">Проверка контрагентов</h1>
+        <p style="margin:8px 0 0;font-size:16px;line-height:24px;color:rgba(4,4,19,.55)">Разберитесь, готовы ли вы работать с компанией и на каких условиях</p>
+
+        <div style="margin-top:32px;border:1px solid #e7e8eb;border-radius:16px;padding:14px 14px 10px;box-shadow:0 1px 2px rgba(9,12,37,.04)">
+          <textarea onChange="{{ onDraft }}" onKeyDown="{{ onKey }}" value="{{ draft }}" placeholder="Напишите вопрос или вставьте ИНН" rows="2" style="width:100%;border:none;outline:none;resize:none;background:none;font-size:16px;line-height:24px;min-height:48px"></textarea>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button onClick="{{ attachStart }}" style="display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px 0 8px;border:none;border-radius:10px;background:none;cursor:pointer;color:rgba(4,4,19,.55)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex:none"><path fill-rule="evenodd" clip-rule="evenodd" d="M4 3C4 2.44772 4.44772 2 5 2H12.185C13.9599 2 15.3468 3.53245 15.1701 5.29851L15.0243 6.75677C15.0117 6.88251 15.1175 6.98825 15.2432 6.97568L16.7015 6.82985C18.4675 6.65325 20 8.0401 20 9.81496V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V3ZM12.875 18.9961H11.125V15.8802H8V14.1302H11.125V11.0078H12.875V14.1302H16V15.8802H12.875V18.9961Z" fill="currentColor"></path></svg>
+              Прикрепить
+            </button>
+            <button onClick="{{ send }}" style="margin-left:auto;width:36px;height:36px;border:none;border-radius:10px;background:{{ sendBg }};cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:#fff">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M11 7.49997V19H13V7.49997L16.5 11L18 9.49997L12 4L6 9.49997L7.5 11L11 7.49997Z" fill="currentColor"></path></svg>
+            </button>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <button onClick="{{ ex1 }}" style="height:32px;padding:0 12px;border:1px solid #e7e8eb;border-radius:99px;background:none;cursor:pointer;color:rgba(4,4,19,.75)">Хочу проверить поставщика</button>
+          <button onClick="{{ ex2 }}" style="height:32px;padding:0 12px;border:1px solid #e7e8eb;border-radius:99px;background:none;cursor:pointer;color:rgba(4,4,19,.75)">Хочу сравнить компании</button>
+        </div>
+
+        <div style="margin-top:56px;font-size:13px;line-height:18px;color:rgba(5,8,29,.38);letter-spacing:.2px">Проверки</div>
+        <div style="margin-top:8px;display:flex;flex-direction:column">
+          <button onClick="{{ openSaved }}" style="text-align:left;background:none;border:none;border-top:1px solid #e7e8eb;padding:16px 4px;cursor:pointer;display:flex;gap:16px;align-items:flex-start">
+            <span style="flex:1;min-width:0">
+              <span style="display:block;font-size:16px;line-height:24px">Поставка оборудования к 20 сентября</span>
+              <span style="display:block;font-size:13px;line-height:18px;color:rgba(4,4,19,.55);margin-top:2px">Ждём подтверждение наличия товара</span>
+            </span>
+            <span style="flex:none;display:flex;align-items:center;gap:12px">
+              <span style="font-size:13px;line-height:18px;color:rgba(5,8,29,.38)">Сегодня, 14:20</span>
+              <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:18px"><span style="width:6px;height:6px;border-radius:50%;background:#b2670a"></span>Нужны сведения</span>
+            </span>
+          </button>
+          <div style="border-top:1px solid #e7e8eb;padding:16px 4px;display:flex;gap:16px;align-items:flex-start;color:rgba(4,4,19,.55)">
+            <span style="flex:1;min-width:0;font-size:16px;line-height:24px">Логистика на Урал, 2 квартал</span>
+            <span style="flex:none;display:flex;align-items:center;gap:12px">
+              <span style="font-size:13px;line-height:18px;color:rgba(5,8,29,.38)">27 августа</span>
+              <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:18px"><span style="width:6px;height:6px;border-radius:50%;background:#1f8c4d"></span>Решение записано</span>
+            </span>
+          </div>
+          <div style="border-top:1px solid #e7e8eb;padding:16px 4px;display:flex;gap:16px;align-items:flex-start;color:rgba(4,4,19,.55)">
+            <span style="flex:1;min-width:0;font-size:16px;line-height:24px">Проверка · ИНН 7714497158</span>
+            <span style="flex:none;display:flex;align-items:center;gap:12px">
+              <span style="font-size:13px;line-height:18px;color:rgba(5,8,29,.38)">14 августа</span>
+              <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:18px"><span style="width:6px;height:6px;border-radius:50%;background:rgba(5,8,29,.38)"></span>В работе</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isS2 }}">
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+
+      <header style="flex:none;border-bottom:1px solid #e7e8eb;height:56px;display:flex;align-items:center;gap:12px;padding:0 20px">
+        <button onClick="{{ goS1 }}" style="display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 8px;border:none;border-radius:8px;background:none;cursor:pointer;color:rgba(4,4,19,.55);white-space:nowrap;flex:none">← Все проверки</button>
+        <span style="width:1px;height:20px;background:#e7e8eb"></span>
+        <span style="font-size:14px;line-height:20px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Поставка оборудования к 20 сентября</span>
+        <span style="font-size:13px;line-height:18px;color:rgba(5,8,29,.38);flex:none">Сохранено</span>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex:none;position:relative">
+          <button onClick="{{ toggleChats }}" style="display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:1px solid #e7e8eb;border-radius:8px;background:none;cursor:pointer">
+            <span>{{ chatName }}</span>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="color:rgba(5,8,29,.38)"><path d="M8 8.9375L3.875 4.8125L2.75 5.9375C5.09315 8.42707 8 11.1875 8 11.1875C8 11.1875 10.9069 8.42707 13.25 5.9375L12.125 4.8125L8 8.9375Z" fill="currentColor"></path></svg>
+          </button>
+          <button onClick="{{ toggleMat }}" style="height:32px;padding:0 12px;border:1px solid #e7e8eb;border-radius:8px;background:{{ matBg }};cursor:pointer">Материалы</button>
+          <sc-if value="{{ chatsOpen }}">
+          <div style="position:absolute;top:38px;right:0;width:280px;background:#fff;border:1px solid #e7e8eb;border-radius:12px;box-shadow:0 8px 24px rgba(9,12,37,.12);padding:6px;z-index:5;animation:dcFade .12s ease-out">
+            <sc-for list="{{ chatList }}" as="c" hint-placeholder-count="2">
+              <button onClick="{{ c.pick }}" style="width:100%;text-align:left;border:none;background:{{ c.bg }};border-radius:8px;padding:8px 10px;cursor:pointer;display:block">
+                <span style="display:block;line-height:20px">{{ c.name }}</span>
+                <span style="display:block;font-size:12px;line-height:16px;color:rgba(5,8,29,.38);margin-top:1px">{{ c.hint }}</span>
+              </button>
+            </sc-for>
+            <button onClick="{{ newChat }}" style="width:100%;text-align:left;border:none;background:none;border-radius:8px;padding:8px 10px;cursor:pointer;color:#2a77ef;margin-top:2px">Новый чат</button>
+          </div>
+          </sc-if>
+        </div>
+      </header>
+
+      <div style="flex:none;height:44px;display:flex;align-items:center;gap:10px;padding:0 20px;border-bottom:1px solid #e7e8eb;color:rgba(4,4,19,.55);white-space:nowrap;overflow:hidden">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex:none"><path d="M11.9999 8.68016L10.9999 11.6802H12.9899L12.0399 8.68016H11.9999Z" fill="currentColor"></path><path d="M22.4995 9.24841V7.25L11.9995 2.25L1.49961 7.25V9.25H3.49955L3.49902 17.2536C3.49902 17.2536 1.49911 17.2536 1.49902 19.25V20.75H22.4999V19.25C22.4999 17.2487 20.4995 17.2487 20.4995 17.2487V9.24841H22.4995ZM12.0799 7.04516C12.8899 7.04516 13.1249 7.52516 13.3299 8.13516L15.4699 14.4502H13.9049L13.4049 12.9502H10.5699L10.0699 14.4502H8.56994L10.7899 8.13516C10.9999 7.52516 11.2699 7.04516 12.0799 7.04516ZM15.9999 17.5002H7.99994V16.0002H15.9999V17.5002Z" fill="currentColor"></path></svg>
+        <button onClick="{{ openCompany }}" style="border:none;background:none;padding:0;cursor:pointer;color:rgba(3,3,6,.88);flex:none">Компания А — Поставка</button>
+        <sc-if value="{{ showDemo }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px;line-height:16px;color:rgba(5,8,29,.38);border:1px solid #e7e8eb;border-radius:6px;padding:1px 6px">Учебный пример</span></sc-if>
+        <span style="color:rgba(5,8,29,.38)">{{ moreCompanies }}</span>
+        <button onClick="{{ openAdd }}" style="border:none;background:none;padding:0;cursor:pointer;color:#2a77ef;margin-left:4px">Добавить</button>
+        <sc-if value="{{ canCompare }}"><button onClick="{{ openCompare }}" style="border:none;background:none;padding:0;cursor:pointer;color:#2a77ef">Сравнить</button></sc-if>
+        <span style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:18px"><span style="width:6px;height:6px;border-radius:50%;background:{{ statusDot }}"></span>{{ status }}</span>
+      </div>
+
+      <div data-feed="1" style="flex:1;min-height:0;overflow:auto">
+        <div style="max-width:760px;margin:0 auto;padding:28px 24px 8px;display:flex;flex-direction:column;gap:24px">
+
+          <sc-if value="{{ resume }}">
+          <div style="border:1px solid #e7e8eb;border-radius:14px;padding:16px 18px">
+            <div style="font-size:13px;line-height:18px;color:rgba(5,8,29,.38)">Остановились на…</div>
+            <div style="font-size:16px;line-height:24px;margin-top:6px">Ждём подтверждение наличия товара. Решение «Готов при условиях» записано 5 сентября.</div>
+            <button onClick="{{ continueWork }}" style="margin-top:12px;height:36px;padding:0 16px;border:none;border-radius:10px;background:#212124;color:#fff;cursor:pointer;font-weight:500">Продолжить</button>
+          </div>
+          </sc-if>
+
+          <sc-for list="{{ msgs }}" as="m" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;animation:dcFade .18s ease-out">
+
+            <sc-if value="{{ m.user }}">
+            <div style="align-self:flex-end;max-width:84%;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+              <sc-if value="{{ m.ctx }}">
+              <div style="display:inline-flex;align-items:center;gap:8px;border:1px solid #e7e8eb;border-radius:8px;padding:5px 10px;font-size:13px;line-height:18px;color:rgba(4,4,19,.55)">{{ m.ctx }}</div>
+              </sc-if>
+              <sc-if value="{{ m.text }}">
+              <div style="background:rgba(15,25,55,.06);border-radius:14px;padding:10px 14px;font-size:16px;line-height:24px">{{ m.text }}</div>
+              </sc-if>
+              <sc-if value="{{ m.file }}">
+              <div style="display:flex;align-items:center;gap:10px;border:1px solid #e7e8eb;border-radius:12px;padding:10px 12px;min-width:280px">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex:none;color:rgba(5,8,29,.38)"><path fill-rule="evenodd" clip-rule="evenodd" d="M5 2C4.44772 2 4 2.44772 4 3V21C4 21.5523 4.44772 22 5 22H19C19.5523 22 20 21.5523 20 21V9.81496C20 8.0401 18.4675 6.65325 16.7015 6.82985L15.2432 6.97568C15.1175 6.98825 15.0117 6.88251 15.0243 6.75677L15.1701 5.29851C15.3468 3.53245 13.9599 2 12.185 2H5Z" fill="currentColor"></path></svg>
+                <span style="flex:1;min-width:0">
+                  <span style="display:block;line-height:20px">{{ m.file }}</span>
+                  <span style="display:block;font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">{{ m.fileState }}</span>
+                </span>
+                <button onClick="{{ m.openFile }}" style="border:none;background:none;padding:0;cursor:pointer;color:#2a77ef;flex:none">Открыть</button>
+              </div>
+              </sc-if>
+            </div>
+            </sc-if>
+
+            <sc-if value="{{ m.notice }}">
+            <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:18px;color:rgba(4,4,19,.55);border-left:2px solid #e7e8eb;padding:2px 0 2px 12px">
+              <span style="flex:1">{{ m.text }}</span>
+              <sc-if value="{{ m.link }}"><button onClick="{{ m.act }}" style="border:none;background:none;padding:0;cursor:pointer;color:#2a77ef;flex:none">{{ m.link }}</button></sc-if>
+            </div>
+            </sc-if>
+
+            <sc-if value="{{ m.progress }}">
+            <div>
+              <div style="display:flex;align-items:center;gap:10px;color:rgba(4,4,19,.55)">
+                <sc-if value="{{ m.running }}"><span style="width:8px;height:8px;border-radius:50%;background:#2a77ef;flex:none;animation:dcPulse 1.2s infinite"></span></sc-if>
+                <sc-if value="{{ m.done }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex:none;color:#1f8c4d"><path d="M12 22C17.5229 22 22 17.5228 22 12C22 6.47715 17.5229 2 12 2C6.47717 2 2.00002 6.47715 2.00002 12C2.00002 17.5228 6.47717 22 12 22ZM12 20C7.58174 20 4.00002 16.4183 4.00002 12C4.00002 7.58172 7.58174 4 12 4C16.4183 4 20 7.58172 20 12C20 16.4183 16.4183 20 12 20ZM10.3897 16.1916L17.1079 9.47341L15.6928 8.05859L10.3897 13.3631L7.91423 10.8876L6.50002 12.3019L10.3897 16.1916Z" fill="currentColor"></path></svg>
+                </sc-if>
+                <span>{{ m.text }}</span>
+                <button onClick="{{ m.toggle }}" style="border:none;background:none;padding:0;cursor:pointer;color:#2a77ef;font-size:13px;line-height:18px">{{ m.toggleLabel }}</button>
+                <sc-if value="{{ m.running }}"><button onClick="{{ m.stop }}" style="border:none;background:none;padding:0;cursor:pointer;color:rgba(4,4,19,.55);font-size:13px;line-height:18px">Остановить</button></sc-if>
+              </div>
+              <sc-if value="{{ m.open }}">
+              <div style="margin-top:10px;margin-left:18px;display:flex;flex-direction:column;gap:8px;border-left:1px solid #e7e8eb;padding-left:14px">
+                <sc-for list="{{ m.steps }}" as="s" hint-placeholder-count="2">
+                <div style="display:flex;gap:12px;font-size:13px;line-height:18px">
+                  <span style="flex:1;color:rgba(3,3,6,.88)">{{ s.label }}</span>
+                  <span style="flex:none;color:rgba(5,8,29,.38)">{{ s.source }}</span>
+                </div>
+                </sc-for>
+              </div>
+              </sc-if>
+            </div>
+            </sc-if>
+
+            <sc-if value="{{ m.answer }}">
+            <div style="font-size:16px;line-height:24px">
+              <div style="text-wrap:pretty">{{ m.text }}</div>
+              <sc-if value="{{ m.hasBullets }}">
+              <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+                <sc-for list="{{ m.bullets }}" as="b" hint-placeholder-count="3">
+                <div style="display:flex;gap:10px">
+                  <span style="flex:none;color:rgba(5,8,29,.38);width:10px">—</span>
+                  <div style="flex:1;font-size:15px;line-height:22px;text-wrap:pretty">{{ b.text }}<button onClick="{{ b.open }}" style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:6px;padding:0 4px;border:none;border-radius:5px;background:rgba(42,119,239,.1);color:#2a77ef;font-size:12px;line-height:16px;cursor:pointer;vertical-align:2px">{{ b.n }}</button></div>
+                </div>
+                </sc-for>
+              </div>
+              </sc-if>
+              <sc-if value="{{ m.followUp }}">
+              <div style="margin-top:16px;text-wrap:pretty">{{ m.followUp }}</div>
+              </sc-if>
+              <sc-if value="{{ m.hasChips }}">
+              <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+                <sc-for list="{{ m.chips }}" as="c" hint-placeholder-count="2">
+                <button onClick="{{ c.act }}" style="height:34px;padding:0 14px;border:1px solid #e7e8eb;border-radius:99px;background:none;cursor:pointer;font-size:14px;line-height:20px">{{ c.label }}</button>
+                </sc-for>
+              </div>
+              </sc-if>
+              <sc-if value="{{ m.hasCta }}">
+              <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+                <button onClick="{{ m.cta }}" style="height:38px;padding:0 18px;border:none;border-radius:10px;background:#212124;color:#fff;font-weight:500;cursor:pointer">{{ m.ctaLabel }}</button>
+                <sc-if value="{{ m.cta2Label }}"><button onClick="{{ m.cta2 }}" style="height:38px;padding:0 18px;border:1px solid #e7e8eb;border-radius:10px;background:none;cursor:pointer">{{ m.cta2Label }}</button></sc-if>
+              </div>
+              </sc-if>
+            </div>
+            </sc-if>
+
+            <sc-if value="{{ m.conclusion }}">
+            <div style="border:1px solid #e7e8eb;border-radius:16px;padding:20px 22px">
+              <div style="font-size:13px;line-height:18px;color:rgba(5,8,29,.38)">Вывод по вашей задаче</div>
+              <sc-if value="{{ m.stale }}">
+              <div style="margin-top:8px;font-size:13px;line-height:18px;color:#b2670a">Сделан для прежних условий</div>
+              </sc-if>
+              <div style="margin-top:8px;font-size:16px;line-height:24px;text-wrap:pretty">{{ m.text }}</div>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
+                <sc-for list="{{ m.bullets }}" as="b" hint-placeholder-count="2">
+                <div style="display:flex;gap:10px;font-size:15px;line-height:22px">
+                  <span style="flex:none;color:rgba(5,8,29,.38);width:10px">—</span>
+                  <div style="flex:1;text-wrap:pretty">{{ b.text }}<button onClick="{{ b.open }}" style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:6px;padding:0 4px;border:none;border-radius:5px;background:rgba(42,119,239,.1);color:#2a77ef;font-size:12px;line-height:16px;cursor:pointer;vertical-align:2px">{{ b.n }}</button></div>
+                </div>
+                </sc-for>
+              </div>
+              <div style="margin-top:16px;padding-top:14px;border-top:1px solid #e7e8eb;font-size:13px;line-height:18px;color:rgba(4,4,19,.55)">Не подтверждено: наличие товара на складе · дата комплектации заказа</div>
+              <button onClick="{{ m.cta }}" style="margin-top:16px;height:38px;padding:0 18px;border:none;border-radius:10px;background:#212124;color:#fff;font-weight:500;cursor:pointer">{{ m.ctaLabel }}</button>
+            </div>
+            </sc-if>
+
+          </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="flex:none;padding:8px 24px 18px">
+        <div style="max-width:760px;margin:0 auto">
+          <sc-if value="{{ suggest }}">
+          <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+            <button onClick="{{ uploadWarehouse }}" style="height:32px;padding:0 12px;border:1px solid #e7e8eb;border-radius:99px;background:none;cursor:pointer;color:rgba(4,4,19,.75);font-size:13px;line-height:18px">Загрузить «Складская-справка.pdf»</button>
+          </div>
+          </sc-if>
+          <div style="border:1px solid #e7e8eb;border-radius:16px;padding:12px 12px 10px 14px;box-shadow:0 1px 2px rgba(9,12,37,.04);position:relative">
+            <sc-if value="{{ ctx }}">
+            <div style="display:inline-flex;align-items:center;gap:8px;border:1px solid #e7e8eb;border-radius:8px;padding:4px 6px 4px 10px;font-size:13px;line-height:18px;color:rgba(4,4,19,.55);margin-bottom:8px">
+              <span>{{ ctx }}</span>
+              <button onClick="{{ clearCtx }}" style="border:none;background:none;padding:0;cursor:pointer;display:inline-flex;color:rgba(5,8,29,.38)">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M7.05724 8.00006L4 11L5 12L8.00005 8.94287L11 12L12 11L8.94286 8.00006L12 5L11 4L8.00005 7.05725L5 4L4 5L7.05724 8.00006Z" fill="currentColor"></path></svg>
+              </button>
+            </div>
+            </sc-if>
+            <textarea onChange="{{ onDraft }}" onKeyDown="{{ onKey }}" value="{{ draft }}" placeholder="{{ composerPlaceholder }}" rows="1" style="width:100%;border:none;outline:none;resize:none;background:none;font-size:16px;line-height:24px;min-height:24px;max-height:120px;display:block"></textarea>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+              <button onClick="{{ toggleAttach }}" style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:none;border-radius:9px;background:{{ attachBg }};cursor:pointer;color:rgba(4,4,19,.55)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M4 3C4 2.44772 4.44772 2 5 2H12.185C13.9599 2 15.3468 3.53245 15.1701 5.29851L15.0243 6.75677C15.0117 6.88251 15.1175 6.98825 15.2432 6.97568L16.7015 6.82985C18.4675 6.65325 20 8.0401 20 9.81496V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V3ZM12.875 18.9961H11.125V15.8802H8V14.1302H11.125V11.0078H12.875V14.1302H16V15.8802H12.875V18.9961Z" fill="currentColor"></path></svg>
+              </button>
+              <sc-if value="{{ busy }}">
+              <span style="font-size:13px;line-height:18px;color:rgba(4,4,19,.55)">Добавьте уточнение — учту после текущего действия</span>
+              </sc-if>
+              <button onClick="{{ send }}" style="margin-left:auto;width:34px;height:34px;border:none;border-radius:9px;background:{{ sendBg }};cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:#fff">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M11 7.49997V19H13V7.49997L16.5 11L18 9.49997L12 4L6 9.49997L7.5 11L11 7.49997Z" fill="currentColor"></path></svg>
+              </button>
+            </div>
+            <sc-if value="{{ attachOpen }}">
+            <div style="position:absolute;bottom:56px;left:8px;width:300px;background:#fff;border:1px solid #e7e8eb;border-radius:12px;box-shadow:0 8px 24px rgba(9,12,37,.12);padding:6px;z-index:5;animation:dcFade .12s ease-out">
+              <button onClick="{{ uploadFile }}" style="width:100%;text-align:left;border:none;background:none;border-radius:8px;padding:9px 10px;cursor:pointer;display:block">Загрузить файл</button>
+              <button onClick="{{ attachMaterial }}" style="width:100%;text-align:left;border:none;background:none;border-radius:8px;padding:9px 10px;cursor:pointer;display:block">Прикрепить материал проверки</button>
+            </div>
+            </sc-if>
+          </div>
+          <div style="margin-top:10px;text-align:center;font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">AI может ошибаться. Проверяйте основания; решение принимаете вы. <a href="#" onClick="{{ noop }}">Как работает помощник</a></div>
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{ panelOpen }}">
+    <aside style="{{ panelStyle }}">
+      <div style="flex:none;height:56px;display:flex;align-items:center;gap:10px;padding:0 12px 0 16px;border-bottom:1px solid #e7e8eb">
+        <sc-if value="{{ panelBack }}">
+        <button onClick="{{ back }}" style="border:none;background:none;padding:0;cursor:pointer;color:#2a77ef">{{ backLabel }}</button>
+        </sc-if>
+        <sc-if value="{{ panelTitleShown }}">
+        <span style="font-size:16px;line-height:24px;font-weight:500">{{ panelTitle }}</span>
+        </sc-if>
+        <button onClick="{{ closePanel }}" style="margin-left:auto;width:32px;height:32px;border:none;border-radius:8px;background:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:rgba(4,4,19,.55)">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M7.05724 8.00006L4 11L5 12L8.00005 8.94287L11 12L12 11L8.94286 8.00006L12 5L11 4L8.00005 7.05725L5 4L4 5L7.05724 8.00006Z" fill="currentColor"></path></svg>
+        </button>
+      </div>
+
+      <div style="flex:1;min-height:0;overflow:auto;padding:16px 20px 32px">
+
+        <sc-if value="{{ pList }}">
+        <div style="display:flex;flex-direction:column">
+          <div style="border-bottom:1px solid #e7e8eb;padding-bottom:12px">
+            <button onClick="{{ tg1 }}" style="width:100%;display:flex;align-items:center;gap:10px;border:none;background:none;padding:6px 0;cursor:pointer;text-align:left">
+              <span style="flex:1;font-size:14px;line-height:20px;font-weight:500">Компании</span>
+              <span style="color:rgba(5,8,29,.38);font-size:13px">{{ nCompanies }}</span>
+              <sc-if value="{{ g1 }}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="color:rgba(5,8,29,.38);transform:rotate(180deg)"><path d="M8 8.9375L3.875 4.8125L2.75 5.9375C5.09315 8.42707 8 11.1875 8 11.1875C8 11.1875 10.9069 8.42707 13.25 5.9375L12.125 4.8125L8 8.9375Z" fill="currentColor"></path></svg></sc-if>
+              <sc-if value="{{ g1c }}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="color:rgba(5,8,29,.38)"><path d="M8 8.9375L3.875 4.8125L2.75 5.9375C5.09315 8.42707 8 11.1875 8 11.1875C8 11.1875 10.9069 8.42707 13.25 5.9375L12.125 4.8125L8 8.9375Z" fill="currentColor"></path></svg></sc-if>
+            </button>
+            <sc-if value="{{ g1 }}">
+            <div style="display:flex;flex-direction:column;gap:2px;margin-top:6px">
+              <sc-for list="{{ companies }}" as="c" hint-placeholder-count="3">
+              <button onClick="{{ c.open }}" style="width:100%;text-align:left;border:none;background:none;padding:8px 8px;margin:0 -8px;border-radius:8px;cursor:pointer;display:flex;gap:10px;align-items:baseline">
+                <span style="flex:1;min-width:0"><span style="display:block;line-height:20px">{{ c.name }}</span><span style="display:block;font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">ИНН {{ c.inn }}</span></span>
+                <span style="flex:none;font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">{{ c.mark }}</span>
+              </button>
+              </sc-for>
+              <button onClick="{{ openAdd }}" style="text-align:left;border:none;background:none;padding:8px;margin:0 -8px;cursor:pointer;color:#2a77ef">Добавить компанию</button>
+            </div>
+            </sc-if>
+          </div>
+
+          <div style="border-bottom:1px solid #e7e8eb;padding:12px 0">
+            <button onClick="{{ tg2 }}" style="width:100%;display:flex;align-items:center;gap:10px;border:none;background:none;padding:6px 0;cursor:pointer;text-align:left">
+              <span style="flex:1;font-size:14px;line-height:20px;font-weight:500">Условия</span>
+              <span style="color:rgba(5,8,29,.38);font-size:13px">{{ nTerms }}</span>
+              <sc-if value="{{ g2 }}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="color:rgba(5,8,29,.38);transform:rotate(180deg)"><path d="M8 8.9375L3.875 4.8125L2.75 5.9375C5.09315 8.42707 8 11.1875 8 11.1875C8 11.1875 10.9069 8.42707 13.25 5.9375L12.125 4.8125L8 8.9375Z" fill="currentColor"></path></svg></sc-if>
+              <sc-if value="{{ g2c }}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="color:rgba(5,8,29,.38)"><path d="M8 8.9375L3.875 4.8125L2.75 5.9375C5.09315 8.42707 8 11.1875 8 11.1875C8 11.1875 10.9069 8.42707 13.25 5.9375L12.125 4.8125L8 8.9375Z" fill="currentColor"></path></svg></sc-if>
+            </button>
+            <sc-if value="{{ g2 }}">
+            <div style="display:flex;flex-direction:column;margin-top:4px">
+              <sc-for list="{{ terms }}" as="t" hint-placeholder-count="4">
+              <div style="display:flex;gap:12px;align-items:baseline;padding:8px 0;border-top:1px solid #f1f2f4">
+                <span style="width:96px;flex:none;font-size:13px;line-height:18px;color:rgba(4,4,19,.55)">{{ t.label }}</span>
+                <span style="flex:1;min-width:0"><span style="display:block;line-height:20px;color:{{ t.color }}">{{ t.value }}</span><span style="display:block;font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">{{ t.source }}</span></span>
+                <button onClick="{{ t.edit }}" style="flex:none;border:none;background:none;padding:0;cursor:pointer;color:#2a77ef;font-size:13px">Изменить</button>
+              </div>
+              </sc-for>
+            </div>
+            </sc-if>
+          </div>
+
+          <div style="border-bottom:1px solid #e7e8eb;padding:12px 0">
+            <button onClick="{{ tg5 }}" style="width:100%;display:flex;align-items:center;gap:10px;border:none;background:none;padding:6px 0;cursor:pointer;text-align:left">
+              <span style="flex:1;font-size:14px;line-height:20px;font-weight:500">Отчёты</span>
+              <span style="color:rgba(5,8,29,.38);font-size:13px">{{ nReports }}</span>
+              <sc-if value="{{ g5 }}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="color:rgba(5,8,29,.38);transform:rotate(180deg)"><path d="M8 8.9375L3.875 4.8125L2.75 5.9375C5.09315 8.42707 8 11.1875 8 11.1875C8 11.1875 10.9069 8.42707 13.25 5.9375L12.125 4.8125L8 8.9375Z" fill="currentColor"></path></svg></sc-if>
+              <sc-if value="{{ g5c }}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="color:rgba(5,8,29,.38)"><path d="M8 8.9375L3.875 4.8125L2.75 5.9375C5.09315 8.42707 8 11.1875 8 11.1875C8 11.1875 10.9069 8.42707 13.25 5.9375L12.125 4.8125L8 8.9375Z" fill="currentColor"></path></svg></sc-if>
+            </button>
+            <sc-if value="{{ g5 }}">
+            <div style="display:flex;flex-direction:column;margin-top:4px">
+              <sc-for list="{{ reports }}" as="r" hint-placeholder-count="2">
+              <div style="display:flex;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid #f1f2f4">
+                <button onClick="{{ r.open }}" style="flex:1;min-width:0;text-align:left;border:none;background:none;padding:0;cursor:pointer">
+                  <span style="display:block;line-height:20px">{{ r.name }}</span>
+                  <span style="display:block;font-size:12px;line-height:16px;color:rgba(5,8,29,.38);margin-top:1px">Обновлён {{ r.updated }}</span>
+                </button>
+                <button onClick="{{ r.refresh }}" style="flex:none;border:none;background:none;padding:0;cursor:pointer;color:#2a77ef;font-size:13px">Обновить</button>
+              </div>
+              </sc-for>
+            </div>
+            </sc-if>
+          </div>
+
+          <div style="border-bottom:1px solid #e7e8eb;padding:12px 0">
+            <button onClick="{{ tg3 }}" style="width:100%;display:flex;align-items:center;gap:10px;border:none;background:none;padding:6px 0;cursor:pointer;text-align:left">
+              <span style="flex:1;font-size:14px;line-height:20px;font-weight:500">Документы</span>
+              <span style="color:rgba(5,8,29,.38);font-size:13px">{{ nDocs }}</span>
+              <sc-if value="{{ g3 }}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="color:rgba(5,8,29,.38);transform:rotate(180deg)"><path d="M8 8.9375L3.875 4.8125L2.75 5.9375C5.09315 8.42707 8 11.1875 8 11.1875C8 11.1875 10.9069 8.42707 13.25 5.9375L12.125 4.8125L8 8.9375Z" fill="currentColor"></path></svg></sc-if>
+              <sc-if value="{{ g3c }}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="color:rgba(5,8,29,.38)"><path d="M8 8.9375L3.875 4.8125L2.75 5.9375C5.09315 8.42707 8 11.1875 8 11.1875C8 11.1875 10.9069 8.42707 13.25 5.9375L12.125 4.8125L8 8.9375Z" fill="currentColor"></path></svg></sc-if>
+            </button>
+            <sc-if value="{{ g3 }}">
+            <div style="display:flex;flex-direction:column;margin-top:4px">
+              <sc-for list="{{ docs }}" as="d" hint-placeholder-count="2">
+              <button onClick="{{ d.open }}" style="width:100%;text-align:left;border:none;background:none;padding:8px;margin:0 -8px;border-radius:8px;cursor:pointer;display:flex;gap:10px;align-items:baseline">
+                <span style="flex:1;min-width:0"><span style="display:block;line-height:20px">{{ d.name }}</span><span style="display:block;font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">{{ d.meta }}</span></span>
+                <span style="flex:none;font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">{{ d.state }}</span>
+              </button>
+              </sc-for>
+              <sc-if value="{{ noDocs }}">
+              <div style="padding:8px 0;font-size:13px;line-height:18px;color:rgba(5,8,29,.38)">Файлы не загружены. Проверку можно закончить без них.</div>
+              </sc-if>
+            </div>
+            </sc-if>
+          </div>
+
+          <div style="padding:12px 0">
+            <button onClick="{{ tg4 }}" style="width:100%;display:flex;align-items:center;gap:10px;border:none;background:none;padding:6px 0;cursor:pointer;text-align:left">
+              <span style="flex:1;font-size:14px;line-height:20px;font-weight:500">Итог</span>
+              <span style="color:rgba(5,8,29,.38);font-size:13px">{{ memoShort }}</span>
+              <sc-if value="{{ g4 }}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="color:rgba(5,8,29,.38);transform:rotate(180deg)"><path d="M8 8.9375L3.875 4.8125L2.75 5.9375C5.09315 8.42707 8 11.1875 8 11.1875C8 11.1875 10.9069 8.42707 13.25 5.9375L12.125 4.8125L8 8.9375Z" fill="currentColor"></path></svg></sc-if>
+              <sc-if value="{{ g4c }}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="color:rgba(5,8,29,.38)"><path d="M8 8.9375L3.875 4.8125L2.75 5.9375C5.09315 8.42707 8 11.1875 8 11.1875C8 11.1875 10.9069 8.42707 13.25 5.9375L12.125 4.8125L8 8.9375Z" fill="currentColor"></path></svg></sc-if>
+            </button>
+            <sc-if value="{{ g4 }}">
+            <div style="margin-top:6px">
+              <button onClick="{{ openMemo }}" style="width:100%;text-align:left;border:none;background:none;padding:8px;margin:0 -8px;border-radius:8px;cursor:pointer;font-size:14px;line-height:20px">{{ memoLine }}</button>
+            </div>
+            </sc-if>
+          </div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ pCompany }}">
+        <div>
+          <div style="font-size:20px;line-height:28px;font-weight:500">Компания А — Поставка</div>
+          <div style="margin-top:4px;font-size:13px;line-height:18px;color:rgba(4,4,19,.55)">ИНН 7449088645 · данные на 5 августа 2026</div>
+          <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;gap:10px;align-items:flex-start;border:1px solid #e7e8eb;border-radius:12px;padding:12px 14px">
+              <span style="width:8px;height:8px;border-radius:50%;background:#1f8c4d;flex:none;margin-top:6px"></span>
+              <span style="flex:1"><span style="display:block;line-height:20px">Риск по оценке банка — низкий</span><span style="display:block;font-size:12px;line-height:16px;color:rgba(5,8,29,.38);margin-top:2px">Не заменяет оценку финансового положения</span></span>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start;border:1px solid #e7e8eb;border-radius:12px;padding:12px 14px">
+              <span style="width:8px;height:8px;border-radius:50%;background:#1f8c4d;flex:none;margin-top:6px"></span>
+              <span style="flex:1"><span style="display:block;line-height:20px">ЗСК — зелёный</span><span style="display:block;font-size:12px;line-height:16px;color:rgba(5,8,29,.38);margin-top:2px">Светофор Банка России: уровень риска вовлечённости в подозрительные операции</span></span>
+            </div>
+          </div>
+          <div style="margin-top:20px;display:flex;flex-direction:column">
+            <sc-for list="{{ sections }}" as="s" hint-placeholder-count="5">
+            <div style="border-top:1px solid #e7e8eb">
+              <button onClick="{{ s.toggle }}" style="width:100%;display:flex;align-items:center;gap:10px;border:none;background:none;padding:12px 0;cursor:pointer;text-align:left">
+                <span style="flex:1;font-size:14px;line-height:20px;font-weight:500">{{ s.title }}</span>
+                <span style="font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">{{ s.hint }}</span>
+              </button>
+              <sc-if value="{{ s.open }}">
+              <div style="padding-bottom:12px;display:flex;flex-direction:column">
+                <sc-for list="{{ s.rows }}" as="r" hint-placeholder-count="2">
+                <div style="display:flex;gap:12px;align-items:baseline;padding:7px 0">
+                  <span style="flex:1;min-width:0;font-size:13px;line-height:18px;color:rgba(4,4,19,.55)">{{ r.k }}</span>
+                  <span style="flex:none;line-height:20px;text-align:right;color:{{ r.color }}">{{ r.v }}</span>
+                  <button onClick="{{ r.discuss }}" style="flex:none;border:none;background:none;padding:0;cursor:pointer;color:#2a77ef;font-size:13px">Обсудить</button>
+                </div>
+                </sc-for>
+              </div>
+              </sc-if>
+            </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ pEvidence }}">
+        <div>
+          <div style="font-size:13px;line-height:18px;color:rgba(5,8,29,.38)">Основание {{ evN }}</div>
+          <div style="margin-top:6px;font-size:20px;line-height:28px;font-weight:500">{{ evValue }}</div>
+          <div style="margin-top:8px;font-size:16px;line-height:24px;text-wrap:pretty">{{ evTitle }}</div>
+          <div style="margin-top:20px;display:flex;flex-direction:column">
+            <div style="display:flex;gap:12px;padding:10px 0;border-top:1px solid #e7e8eb"><span style="width:120px;flex:none;font-size:13px;line-height:20px;color:rgba(4,4,19,.55)">Компания</span><span style="flex:1;line-height:20px">{{ evCompany }}</span></div>
+            <div style="display:flex;gap:12px;padding:10px 0;border-top:1px solid #e7e8eb"><span style="width:120px;flex:none;font-size:13px;line-height:20px;color:rgba(4,4,19,.55)">Период</span><span style="flex:1;line-height:20px">{{ evPeriod }}</span></div>
+            <div style="display:flex;gap:12px;padding:10px 0;border-top:1px solid #e7e8eb"><span style="width:120px;flex:none;font-size:13px;line-height:20px;color:rgba(4,4,19,.55)">Откуда</span><span style="flex:1;line-height:20px">{{ evSource }}</span></div>
+            <div style="display:flex;gap:12px;padding:10px 0;border-top:1px solid #e7e8eb;border-bottom:1px solid #e7e8eb"><span style="width:120px;flex:none;font-size:13px;line-height:20px;color:rgba(4,4,19,.55)">Дата среза</span><span style="flex:1;line-height:20px">{{ evCut }}</span></div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+            <sc-if value="{{ evHasFile }}"><button onClick="{{ openFileFromEv }}" style="height:36px;padding:0 14px;border:1px solid #e7e8eb;border-radius:10px;background:none;cursor:pointer">Открыть документ</button></sc-if>
+            <button onClick="{{ discussEv }}" style="height:36px;padding:0 14px;border:1px solid #e7e8eb;border-radius:10px;background:none;cursor:pointer">Обсудить</button>
+          </div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ pFile }}">
+        <div>
+          <div style="font-size:20px;line-height:28px;font-weight:500">{{ fileName }}</div>
+          <div style="margin-top:4px;font-size:13px;line-height:18px;color:rgba(4,4,19,.55)">{{ fileMeta }}</div>
+          <div style="margin-top:16px;border:1px solid #e7e8eb;border-radius:12px;padding:20px 18px;background:#fcfcfd;font-size:13px;line-height:20px;color:rgba(4,4,19,.75)">
+            <div style="font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">Страница 1 из 2</div>
+            <div style="margin-top:12px;font-weight:600;color:rgba(3,3,6,.88)">{{ fileHead }}</div>
+            <div style="margin-top:10px">{{ fileP1 }}</div>
+            <div style="margin-top:10px;background:rgba(42,119,239,.12);border-radius:4px;padding:2px 4px;display:inline-block;color:rgba(3,3,6,.88)">{{ fileQuote }}</div>
+            <div style="margin-top:10px">{{ fileP2 }}</div>
+          </div>
+          <div style="margin-top:12px;font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">Точная цитата и номер страницы; координаты выделения известны только для этого фрагмента.</div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ pTerm }}">
+        <div>
+          <div style="font-size:20px;line-height:28px;font-weight:500">{{ termLabel }}</div>
+          <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+            <div style="font-size:13px;line-height:18px;color:rgba(4,4,19,.55)">Было</div>
+            <div style="line-height:20px">{{ termOld }}</div>
+          </div>
+          <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+            <div style="font-size:13px;line-height:18px;color:rgba(4,4,19,.55)">Станет</div>
+            <input onChange="{{ onTermVal }}" value="{{ termVal }}" style="height:44px;border:1px solid #e7e8eb;border-radius:10px;padding:0 12px;font-size:16px;outline:none;width:100%">
+          </div>
+          <div style="margin-top:12px;font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">«Не указано» не равно нулю. После сохранения предыдущий вывод будет помечен как сделанный для прежних условий.</div>
+          <div style="margin-top:16px;display:flex;gap:8px">
+            <button onClick="{{ saveTerm }}" style="height:38px;padding:0 16px;border:none;border-radius:10px;background:#212124;color:#fff;font-weight:500;cursor:pointer">Сохранить</button>
+            <button onClick="{{ back }}" style="height:38px;padding:0 16px;border:1px solid #e7e8eb;border-radius:10px;background:none;cursor:pointer">Отмена</button>
+          </div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ pAdd }}">
+        <div>
+          <div style="font-size:20px;line-height:28px;font-weight:500">Добавить компанию</div>
+          <input onChange="{{ noop }}" placeholder="ИНН или название" style="margin-top:16px;height:44px;border:1px solid #e7e8eb;border-radius:10px;padding:0 12px;font-size:16px;outline:none;width:100%">
+          <div style="margin-top:16px;font-size:13px;line-height:18px;color:rgba(4,4,19,.55)">Добавить списком — по одной строке, запятой или точке с запятой</div>
+          <textarea onChange="{{ noop }}" rows="4" value="7714497158
+6673210324
+5024152657
+7449088645
+77144971" style="margin-top:8px;width:100%;border:1px solid #e7e8eb;border-radius:10px;padding:10px 12px;font-size:14px;line-height:20px;outline:none;resize:none"></textarea>
+          <div style="margin-top:10px;font-size:13px;line-height:18px;color:rgba(4,4,19,.55)">Добавятся: 3 · Уже есть: 1 · Ошибки: 1</div>
+          <div style="margin-top:8px;font-size:13px;line-height:18px;color:#b2670a">77144971 — проверьте ИНН: нужно 10 цифр для юрлица или 12 для ИП</div>
+          <button onClick="{{ addCompanies }}" style="margin-top:16px;height:38px;padding:0 16px;border:none;border-radius:10px;background:#212124;color:#fff;font-weight:500;cursor:pointer">Добавить 3 компании</button>
+          <div style="margin-top:12px;font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">В проверке можно хранить до 20 компаний. Поиск по названию работает по демонстрационной базе.</div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ pMemo }}">
+        <div>
+          <div style="font-size:20px;line-height:28px;font-weight:500">Итог проверки</div>
+          <div style="margin-top:12px;display:inline-flex;align-items:center;gap:8px;font-size:13px;line-height:18px;color:rgba(4,4,19,.55)">{{ memoKind }}</div>
+          <div style="margin-top:12px;border:1px solid #e7e8eb;border-radius:12px;padding:16px 18px">
+            <div style="font-size:16px;line-height:24px;font-weight:500">{{ memoTitle }}</div>
+            <div style="margin-top:8px;font-size:15px;line-height:22px;text-wrap:pretty">{{ memoWhy }}</div>
+            <div style="margin-top:14px;padding-top:12px;border-top:1px solid #e7e8eb;font-size:13px;line-height:20px;color:rgba(4,4,19,.55)">
+              <div>Условия: 2 400 000 ₽ · аванс 80% · 21 день · срок критичен</div>
+              <div>Не подтверждено: наличие товара, дата комплектации</div>
+              <div>Записано: 5 сентября 2026, вами</div>
+            </div>
+          </div>
+          <sc-if value="{{ memoStale }}">
+          <div style="margin-top:12px;display:flex;gap:10px;border:1px solid #e7e8eb;border-radius:12px;padding:12px 14px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex:none;color:#b2670a"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM11 13V7H13V13H11ZM11 17V15H13V17H11Z" fill="currentColor"></path></svg>
+            <span style="flex:1;font-size:13px;line-height:18px">После решения появились новые сведения: «Складская-справка.pdf» оформлена на другое юрлицо.</span>
+          </div>
+          </sc-if>
+          <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+            <button onClick="{{ openDecision }}" style="height:38px;padding:0 16px;border:1px solid #e7e8eb;border-radius:10px;background:none;cursor:pointer">Изменить решение</button>
+            <button onClick="{{ noop }}" style="height:38px;padding:0 16px;border:1px solid #e7e8eb;border-radius:10px;background:none;cursor:pointer">История</button>
+          </div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ pDecision }}">
+        <div>
+          <div style="font-size:20px;line-height:28px;font-weight:500">Записать решение</div>
+          <div style="margin-top:12px;border-left:2px solid #e7e8eb;padding-left:12px;font-size:13px;line-height:18px;color:rgba(4,4,19,.55);text-wrap:pretty">Предложение помощника: {{ agentProposal }}</div>
+          <div style="margin-top:20px;display:flex;flex-direction:column;gap:2px">
+            <sc-for list="{{ options }}" as="o" hint-placeholder-count="4">
+            <button onClick="{{ o.pick }}" style="width:100%;text-align:left;border:none;background:none;padding:10px 8px;margin:0 -8px;border-radius:8px;cursor:pointer;display:flex;gap:10px;align-items:center">
+              <span style="width:18px;height:18px;border-radius:50%;border:1.5px solid {{ o.border }};flex:none;display:inline-flex;align-items:center;justify-content:center"><span style="width:8px;height:8px;border-radius:50%;background:{{ o.dot }}"></span></span>
+              <span style="flex:1;font-size:16px;line-height:24px">{{ o.label }}</span>
+            </button>
+            </sc-for>
+          </div>
+          <div style="margin-top:20px;font-size:13px;line-height:18px;color:rgba(4,4,19,.55)">Почему</div>
+          <textarea onChange="{{ onReason }}" value="{{ reason }}" rows="5" style="margin-top:8px;width:100%;border:1px solid #e7e8eb;border-radius:10px;padding:10px 12px;font-size:15px;line-height:22px;outline:none;resize:none"></textarea>
+          <div style="margin-top:10px;font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">Для решения с условиями нужна хотя бы одна конкретная запись. Помощник рекомендует, решение записываете вы.</div>
+          <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+            <button onClick="{{ saveDecision }}" style="height:38px;padding:0 16px;border:none;border-radius:10px;background:{{ saveBg }};color:#fff;font-weight:500;cursor:pointer">Записать решение</button>
+            <button onClick="{{ closePanel }}" style="height:38px;padding:0 16px;border:1px solid #e7e8eb;border-radius:10px;background:none;cursor:pointer">Вернуться к разговору</button>
+          </div>
+          <sc-if value="{{ needMore }}">
+          <button onClick="{{ noop }}" style="margin-top:12px;height:36px;padding:0 14px;border:1px solid #e7e8eb;border-radius:10px;background:none;cursor:pointer">Скопировать вопросы</button>
+          </sc-if>
+        </div>
+        </sc-if>
+
+      </div>
+    </aside>
+    </sc-if>
+
+    <sc-if value="{{ pReport }}">
+    <div style="position:absolute;inset:0;background:#fff;display:flex;flex-direction:column;animation:dcFade .16s ease-out">
+      <div style="flex:none;height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;border-bottom:1px solid #e7e8eb;white-space:nowrap">
+        <button onClick="{{ closeReport }}" style="border:none;background:none;padding:0;cursor:pointer;color:#2a77ef;flex:none">← К разговору</button>
+        <span style="width:1px;height:20px;background:#e7e8eb;flex:none"></span>
+        <span style="font-size:16px;line-height:24px;font-weight:500;flex:none">Отчёт</span>
+        <div style="display:flex;gap:2px;padding:2px;border:1px solid #e7e8eb;border-radius:9px;margin-left:8px;flex:none">
+          <button onClick="{{ modeOne }}" style="height:28px;padding:0 12px;border:none;border-radius:7px;background:{{ oneBg }};cursor:pointer;font-size:13px;line-height:18px">Компания А</button>
+          <button onClick="{{ modeCompare }}" style="height:28px;padding:0 12px;border:none;border-radius:7px;background:{{ cmpBg }};cursor:pointer;font-size:13px;line-height:18px">Сравнение · {{ nCompanies }}</button>
+        </div>
+        <span style="margin-left:auto;display:inline-flex;align-items:center;gap:10px;font-size:13px;line-height:18px;color:rgba(4,4,19,.55);min-width:0;flex:1;justify-content:flex-end">
+          <span style="min-width:0;overflow:hidden;text-overflow:ellipsis">Данные обновлены {{ updated }}</span>
+          <button onClick="{{ refreshData }}" style="border:none;background:none;padding:0;cursor:pointer;color:#2a77ef;flex:none">Обновить</button>
+        </span>
+      </div>
+
+      <div style="flex:1;min-height:0;overflow:auto;padding:24px 24px 96px">
+        <div style="max-width:1080px;margin:0 auto">
+
+          <div style="border:1px solid #e7e8eb;border-radius:16px;padding:20px 22px">
+            <div style="font-size:13px;line-height:18px;color:rgba(5,8,29,.38)">На что обратить внимание</div>
+            <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
+              <sc-for list="{{ summary }}" as="i" hint-placeholder-count="3">
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <span style="width:7px;height:7px;border-radius:50%;flex:none;margin-top:9px;background:{{ i.dot }}"></span>
+                <div style="flex:1;min-width:0;font-size:16px;line-height:24px;text-wrap:pretty">{{ i.text }}</div>
+                <button onClick="{{ i.discuss }}" style="flex:none;border:none;background:none;padding:0;cursor:pointer;color:#2a77ef;font-size:13px;line-height:24px">Обсудить</button>
+              </div>
+              </sc-for>
+            </div>
+            <div style="margin-top:14px;padding-top:12px;border-top:1px solid #e7e8eb;font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">Это объяснение помощника по вашей задаче, а не оценка банка. Факты ниже приведены как есть, с датой среза.</div>
+          </div>
+
+          <sc-if value="{{ rOne }}">
+          <div>
+            <div style="display:flex;align-items:baseline;gap:10px;margin-top:28px;flex-wrap:wrap">
+              <span style="font-size:20px;line-height:28px;font-weight:500">Компания А — Поставка</span>
+              <span style="font-size:13px;line-height:18px;color:rgba(4,4,19,.55)">ИНН 7449088645 · срез {{ updated }}</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:12px;margin-top:16px">
+              <sc-for list="{{ metrics }}" as="c" hint-placeholder-count="6">
+              <div style="border:1px solid {{ c.bc }};border-radius:14px;padding:14px 16px;background:{{ c.bg }};display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span style="flex:1;min-width:0;font-size:13px;line-height:18px;color:rgba(4,4,19,.55)">{{ c.label }}</span>
+                  <button onClick="{{ c.help }}" title="Что это значит" style="width:20px;height:20px;flex:none;border:none;border-radius:50%;background:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:rgba(5,8,29,.38)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.0017 8.39501C11.6281 8.39501 11.2838 8.55796 11.0378 8.8365L10.376 9.58589L8.83957 8.29469L9.50139 7.5453C10.1064 6.86022 10.9989 6.41674 12.0017 6.41674C13.8813 6.41674 15.3396 7.94992 15.3396 9.76095C15.3396 10.6253 15.0108 11.4198 14.4656 12.0173C14.3035 12.1949 14.1566 12.3465 14.02 12.4875C13.7911 12.7237 13.5909 12.9304 13.3957 13.1803C13.1115 13.5443 13.0157 13.7977 13.0157 14.0001H10.9877C10.9877 13.1619 11.3905 12.4836 11.7823 11.9818C12.0381 11.6542 12.3751 11.3043 12.6485 11.0205C12.7643 10.9003 12.8688 10.7917 12.9508 10.7019C13.172 10.4595 13.3116 10.1307 13.3116 9.76095C13.3116 8.97063 12.689 8.39501 12.0017 8.39501Z" fill="currentColor"></path><path d="M13 18V16H11V18H13Z" fill="currentColor"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12ZM20 12C20 16.4183 16.4183 20 12 20C7.58172 20 4 16.4183 4 12C4 7.58172 7.58172 4 12 4C16.4183 4 20 7.58172 20 12Z" fill="currentColor"></path></svg>
+                  </button>
+                </div>
+                <button onClick="{{ c.select }}" style="text-align:left;border:none;background:none;padding:0;cursor:pointer;display:flex;align-items:center;gap:8px">
+                  <sc-if value="{{ c.hasDot }}"><span style="width:8px;height:8px;border-radius:50%;flex:none;background:{{ c.dot }}"></span></sc-if>
+                  <span style="font-size:20px;line-height:28px;font-weight:500;color:{{ c.color }}">{{ c.value }}</span>
+                </button>
+                <div style="font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">{{ c.note }}</div>
+                <sc-if value="{{ c.helpOpen }}">
+                <div style="margin-top:4px;border-top:1px solid #e7e8eb;padding-top:10px;font-size:13px;line-height:18px;color:rgba(4,4,19,.75);text-wrap:pretty">{{ c.helpText }}</div>
+                </sc-if>
+              </div>
+              </sc-for>
+            </div>
+
+            <div style="margin-top:28px;display:flex;flex-direction:column">
+              <sc-for list="{{ rsections }}" as="s" hint-placeholder-count="4">
+              <div style="border-top:1px solid #e7e8eb">
+                <div style="display:flex;align-items:baseline;gap:10px;padding:16px 0 4px">
+                  <span style="font-size:16px;line-height:24px;font-weight:500">{{ s.title }}</span>
+                  <span style="font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">{{ s.hint }}</span>
+                </div>
+                <sc-if value="{{ s.years }}">
+                <div style="display:flex;gap:12px;padding:4px 8px;font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">
+                  <span style="flex:2 1 180px;min-width:120px"></span>
+                  <sc-for list="{{ s.years }}" as="y" hint-placeholder-count="3">
+                  <span style="flex:1 1 88px;min-width:76px;text-align:right">{{ y.label }}</span>
+                  </sc-for>
+                  <span style="width:112px;flex:none"></span>
+                </div>
+                </sc-if>
+                <div style="display:flex;flex-direction:column">
+                  <sc-for list="{{ s.rows }}" as="r" hint-placeholder-count="2">
+                  <div style="border-radius:10px;background:{{ r.bg }};box-shadow:{{ r.ring }}">
+                    <div style="display:flex;gap:12px;align-items:baseline;padding:10px 8px">
+                      <button onClick="{{ r.select }}" style="flex:2 1 180px;min-width:120px;text-align:left;border:none;background:none;padding:0;cursor:pointer;font-size:14px;line-height:20px;text-wrap:pretty">{{ r.k }}</button>
+                      <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="1">
+                      <span style="flex:{{ c.grow }};min-width:{{ c.w }};text-align:right;font-size:14px;line-height:20px;color:{{ c.color }};text-wrap:pretty">{{ c.v }}</span>
+                      </sc-for>
+                      <span style="width:112px;flex:none;display:flex;justify-content:flex-end;gap:10px">
+                        <button onClick="{{ r.help }}" style="border:none;background:none;padding:0;cursor:pointer;color:rgba(5,8,29,.38);display:inline-flex" title="Что это значит">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.0017 8.39501C11.6281 8.39501 11.2838 8.55796 11.0378 8.8365L10.376 9.58589L8.83957 8.29469L9.50139 7.5453C10.1064 6.86022 10.9989 6.41674 12.0017 6.41674C13.8813 6.41674 15.3396 7.94992 15.3396 9.76095C15.3396 10.6253 15.0108 11.4198 14.4656 12.0173C14.3035 12.1949 14.1566 12.3465 14.02 12.4875C13.7911 12.7237 13.5909 12.9304 13.3957 13.1803C13.1115 13.5443 13.0157 13.7977 13.0157 14.0001H10.9877C10.9877 13.1619 11.3905 12.4836 11.7823 11.9818C12.0381 11.6542 12.3751 11.3043 12.6485 11.0205C12.7643 10.9003 12.8688 10.7917 12.9508 10.7019C13.172 10.4595 13.3116 10.1307 13.3116 9.76095C13.3116 8.97063 12.689 8.39501 12.0017 8.39501Z" fill="currentColor"></path><path d="M13 18V16H11V18H13Z" fill="currentColor"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12ZM20 12C20 16.4183 16.4183 20 12 20C7.58172 20 4 16.4183 4 12C4 7.58172 7.58172 4 12 4C16.4183 4 20 7.58172 20 12Z" fill="currentColor"></path></svg>
+                        </button>
+                        <button onClick="{{ r.discuss }}" style="border:none;background:none;padding:0;cursor:pointer;color:#2a77ef;font-size:13px;line-height:20px">Обсудить</button>
+                      </span>
+                    </div>
+                    <sc-if value="{{ r.helpOpen }}">
+                    <div style="padding:0 8px 12px;display:flex;gap:12px">
+                      <span style="flex:1;font-size:13px;line-height:18px;color:rgba(4,4,19,.75);text-wrap:pretty;max-width:640px">{{ r.helpText }}</span>
+                      <sc-if value="{{ r.hasEv }}"><button onClick="{{ r.openEv }}" style="flex:none;border:none;background:none;padding:0;cursor:pointer;color:#2a77ef;font-size:13px;line-height:18px">Основание</button></sc-if>
+                    </div>
+                    </sc-if>
+                  </div>
+                  </sc-for>
+                </div>
+              </div>
+              </sc-for>
+            </div>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ rCompare }}">
+          <div style="margin-top:24px">
+            <div style="border:1px solid #e7e8eb;border-radius:12px;overflow:auto">
+              <table style="border-collapse:collapse;width:100%;font-size:14px;line-height:20px">
+                <thead>
+                  <tr>
+                    <th style="text-align:left;font-weight:500;color:rgba(4,4,19,.55);padding:12px 16px;border-bottom:1px solid #e7e8eb;position:sticky;left:0;background:#fff;min-width:230px">Компания</th>
+                    <sc-for list="{{ cols }}" as="h" hint-placeholder-count="5">
+                    <th style="text-align:left;font-weight:500;color:rgba(4,4,19,.55);padding:12px 16px;border-bottom:1px solid #e7e8eb;min-width:190px;vertical-align:top">
+                      <span style="display:inline-flex;align-items:center;gap:6px">{{ h.label }}
+                        <button onClick="{{ h.help }}" style="border:none;background:none;padding:0;cursor:pointer;color:rgba(5,8,29,.38);display:inline-flex" title="Что это значит">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.0017 8.39501C11.6281 8.39501 11.2838 8.55796 11.0378 8.8365L10.376 9.58589L8.83957 8.29469L9.50139 7.5453C10.1064 6.86022 10.9989 6.41674 12.0017 6.41674C13.8813 6.41674 15.3396 7.94992 15.3396 9.76095C15.3396 10.6253 15.0108 11.4198 14.4656 12.0173C14.3035 12.1949 14.1566 12.3465 14.02 12.4875C13.7911 12.7237 13.5909 12.9304 13.3957 13.1803C13.1115 13.5443 13.0157 13.7977 13.0157 14.0001H10.9877C10.9877 13.1619 11.3905 12.4836 11.7823 11.9818C12.0381 11.6542 12.3751 11.3043 12.6485 11.0205C12.7643 10.9003 12.8688 10.7917 12.9508 10.7019C13.172 10.4595 13.3116 10.1307 13.3116 9.76095C13.3116 8.97063 12.689 8.39501 12.0017 8.39501Z" fill="currentColor"></path><path d="M13 18V16H11V18H13Z" fill="currentColor"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12ZM20 12C20 16.4183 16.4183 20 12 20C7.58172 20 4 16.4183 4 12C4 7.58172 7.58172 4 12 4C16.4183 4 20 7.58172 20 12Z" fill="currentColor"></path></svg>
+                        </button>
+                      </span>
+                      <sc-if value="{{ h.helpOpen }}">
+                      <span style="display:block;margin-top:8px;max-width:230px;font-size:12px;line-height:16px;color:rgba(4,4,19,.75);font-weight:400;white-space:normal">{{ h.helpText }}</span>
+                      </sc-if>
+                    </th>
+                    </sc-for>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ crows }}" as="r" hint-placeholder-count="5">
+                  <tr style="background:{{ r.bg }}">
+                    <td style="padding:14px 16px;border-bottom:1px solid #f1f2f4;position:sticky;left:0;background:{{ r.bgSticky }};vertical-align:top">
+                      <button onClick="{{ r.select }}" style="text-align:left;border:none;background:none;padding:0;cursor:pointer">
+                        <span style="display:block;font-size:14px;line-height:20px">{{ r.name }}</span>
+                        <span style="display:block;font-size:12px;line-height:16px;color:rgba(5,8,29,.38);margin-top:2px">ИНН {{ r.inn }} · срез {{ r.cut }}</span>
+                      </button>
+                    </td>
+                    <td style="padding:14px 16px;border-bottom:1px solid #f1f2f4;vertical-align:top">
+                      <span style="display:inline-flex;align-items:center;gap:8px"><span style="width:6px;height:6px;border-radius:50%;background:{{ r.riskDot }}"></span>{{ r.risk }}</span>
+                      <span style="display:block;font-size:12px;line-height:16px;color:rgba(5,8,29,.38);margin-top:4px">{{ r.zsk }}</span>
+                    </td>
+                    <td style="padding:14px 16px;border-bottom:1px solid #f1f2f4;vertical-align:top;color:{{ r.finColor }}">{{ r.fin }}</td>
+                    <td style="padding:14px 16px;border-bottom:1px solid #f1f2f4;vertical-align:top;color:{{ r.execColor }}">{{ r.exec }}</td>
+                    <td style="padding:14px 16px;border-bottom:1px solid #f1f2f4;vertical-align:top;color:{{ r.arbColor }}">{{ r.arb }}</td>
+                    <td style="padding:14px 16px;border-bottom:1px solid #f1f2f4;vertical-align:top;color:{{ r.offerColor }}">{{ r.offer }}</td>
+                    <td style="padding:14px 16px;border-bottom:1px solid #f1f2f4;vertical-align:top;color:rgba(4,4,19,.55)">{{ r.gap }}</td>
+                  </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+            <div style="margin-top:12px;font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">Сводного балла и автоматического победителя нет. «Не указано» — отсутствие условия, а не худшая цена или срок.</div>
+          </div>
+          </sc-if>
+        </div>
+      </div>
+
+      <sc-if value="{{ selOpen }}">
+      <div style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;background:#212124;color:rgba(255,255,255,.94);border-radius:14px;padding:10px 12px 10px 16px;box-shadow:0 10px 28px rgba(9,12,37,.24);animation:dcFade .14s ease-out;max-width:92%">
+        <span style="font-size:14px;line-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Выбрано: {{ selLabel }}</span>
+        <button onClick="{{ discussSel }}" style="height:32px;padding:0 14px;border:none;border-radius:9px;background:#fff;color:#212124;font-weight:500;cursor:pointer;flex:none">Спросить в чате</button>
+        <button onClick="{{ clearSel }}" style="height:32px;padding:0 10px;border:none;border-radius:9px;background:rgba(255,255,255,.14);color:rgba(255,255,255,.94);cursor:pointer;flex:none">Снять</button>
+      </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ pCompare }}">
+    <div style="position:absolute;inset:0;background:#fff;display:flex;flex-direction:column;animation:dcFade .16s ease-out">
+      <div style="flex:none;height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;border-bottom:1px solid #e7e8eb">
+        <button onClick="{{ closeCompare }}" style="border:none;background:none;padding:0;cursor:pointer;color:#2a77ef">← К разговору</button>
+        <span style="width:1px;height:20px;background:#e7e8eb"></span>
+        <span style="font-size:16px;line-height:24px;font-weight:500">Сравнение · 5 компаний</span>
+        <span style="margin-left:auto;font-size:13px;line-height:18px;color:rgba(4,4,19,.55)">Сравнение для: поставка оборудования к 20 сентября <button onClick="{{ noop }}" style="border:none;background:none;padding:0;cursor:pointer;color:#2a77ef">Изменить</button></span>
+      </div>
+      <div style="flex:1;min-height:0;overflow:auto;padding:20px 24px 40px">
+        <div style="max-width:1100px;margin:0 auto">
+          <div style="font-size:16px;line-height:24px;text-wrap:pretty;max-width:760px">По вашей задаче различие в авансе весит больше разницы в цене: у Компании Б аванс 520 000 ₽ против 1 920 000 ₽ при разнице цены 200 000 ₽. Компания Б по документам не проверялась — безопасной её считать нельзя.</div>
+          <div style="margin-top:10px;font-size:12px;line-height:16px;color:rgba(5,8,29,.38)">Это объяснение помощника, а не расчёт. Даты срезов различаются — см. примечания в строках.</div>
+          <div style="margin-top:20px;border:1px solid #e7e8eb;border-radius:12px;overflow:auto">
+            <table style="border-collapse:collapse;width:100%;font-size:14px;line-height:20px">
+              <thead>
+                <tr>
+                  <th style="text-align:left;font-weight:500;color:rgba(4,4,19,.55);padding:12px 16px;border-bottom:1px solid #e7e8eb;position:sticky;left:0;background:#fff;min-width:220px">Компания</th>
+                  <th style="text-align:left;font-weight:500;color:rgba(4,4,19,.55);padding:12px 16px;border-bottom:1px solid #e7e8eb;min-width:150px">Риск банка</th>
+                  <th style="text-align:left;font-weight:500;color:rgba(4,4,19,.55);padding:12px 16px;border-bottom:1px solid #e7e8eb;min-width:220px">Финансовый контекст</th>
+                  <th style="text-align:left;font-weight:500;color:rgba(4,4,19,.55);padding:12px 16px;border-bottom:1px solid #e7e8eb;min-width:180px">Действующие взыскания</th>
+                  <th style="text-align:left;font-weight:500;color:rgba(4,4,19,.55);padding:12px 16px;border-bottom:1px solid #e7e8eb;min-width:200px">Условия предложения</th>
+                  <th style="text-align:left;font-weight:500;color:rgba(4,4,19,.55);padding:12px 16px;border-bottom:1px solid #e7e8eb;min-width:200px">Что не подтверждено</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ rows }}" as="r" hint-placeholder-count="5">
+                <tr>
+                  <td style="padding:14px 16px;border-bottom:1px solid #f1f2f4;position:sticky;left:0;background:#fff;vertical-align:top">
+                    <span style="display:block">{{ r.name }}</span>
+                    <span style="display:block;font-size:12px;line-height:16px;color:rgba(5,8,29,.38);margin-top:2px">ИНН {{ r.inn }} · срез {{ r.cut }}</span>
+                  </td>
+                  <td style="padding:14px 16px;border-bottom:1px solid #f1f2f4;vertical-align:top"><span style="display:inline-flex;align-items:center;gap:8px"><span style="width:6px;height:6px;border-radius:50%;background:{{ r.riskDot }}"></span>{{ r.risk }}</span></td>
+                  <td style="padding:14px 16px;border-bottom:1px solid #f1f2f4;vertical-align:top;color:{{ r.finColor }}">{{ r.fin }}</td>
+                  <td style="padding:14px 16px;border-bottom:1px solid #f1f2f4;vertical-align:top;color:{{ r.claimsColor }}">{{ r.claims }}</td>
+                  <td style="padding:14px 16px;border-bottom:1px solid #f1f2f4;vertical-align:top;color:{{ r.offerColor }}">{{ r.offer }}</td>
+                  <td style="padding:14px 16px;border-bottom:1px solid #f1f2f4;vertical-align:top;color:rgba(4,4,19,.55)">{{ r.gap }}</td>
+                </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+            <button onClick="{{ discussCompare }}" style="height:38px;padding:0 16px;border:none;border-radius:10px;background:#212124;color:#fff;font-weight:500;cursor:pointer">Обсудить сравнение</button>
+            <button onClick="{{ closeCompare }}" style="height:38px;padding:0 16px;border:1px solid #e7e8eb;border-radius:10px;background:none;cursor:pointer">Продолжить с выбранными</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    </sc-if>
+  </main>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;showBankShell&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Демо&quot;},&quot;startScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;S1&quot;,&quot;S2&quot;],&quot;default&quot;:&quot;S1&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Демо&quot;},&quot;showDemoLabel&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Демо&quot;}}">
+class Component extends DCLogic {
+  uid = 0;
+  EV = {
+    1: {v:'1 920 000 ₽', t:'Аванс по вашим условиям — 80% от суммы предложения 2 400 000 ₽', c:'Компания А — Поставка', p:'Условия от 5 сентября 2026', s:'Из вашего сообщения и файла «Предложение-А.pdf»', cut:'—', file:true},
+    2: {v:'74 586 000 ₽', t:'Выручка за 2025 год', c:'Компания А — Поставка', p:'2025 год, годовая отчётность', s:'Источник: предоставленный отчёт, раздел «Финансы»', cut:'5 августа 2026'},
+    3: {v:'−300 000 ₽', t:'Капитал за 2025 год; годом ранее −1 224 000 ₽. Отрицательный капитал — отдельный факт, а не установленное банкротство', c:'Компания А — Поставка', p:'2024–2025 годы', s:'Источник: предоставленный отчёт, раздел «Финансы»', cut:'5 августа 2026'},
+    4: {v:'Низкий', t:'Риск по оценке банка. ЗСК — зелёный. Не заменяет оценку финансового положения', c:'Компания А — Поставка', p:'На дату среза', s:'Источник: предоставленный отчёт, раздел «Оценка банка»', cut:'5 августа 2026'},
+    5: {v:'21 день', t:'«Срок поставки — 21 день после комплектации заказа» — дата комплектации в документе не определена', c:'Компания А — Поставка', p:'Предложение от 3 сентября 2026', s:'Файл «Предложение-А.pdf», страница 1, пункт 4', cut:'—', file:true}
+  };
+  state = {
+    screen: this.props.startScreen === 'S2' ? 's2' : 's1',
+    draft: '', chat: 0, chatsOpen: false, attachOpen: false, ctx: null,
+    chats: [{name:'Поставка станка', hint:'Основной чат проверки', msgs:[]}],
+    panel: null, stack: [], ev: 1, termIdx: null, termVal: '', file: 'kp',
+    status: 'В работе', busy: false, suggest: false, resume: false,
+    decision: null, reason: '', decided: null, memoStale: false,
+    g: {c:true, t:true, d:true, s:true}, sec: {},
+    companies: [
+      {name:'Компания А — Поставка', inn:'7449088645', mark:'сейчас обсуждается'},
+      {name:'Компания Б — Альтернатива', inn:'7714497158', mark:''},
+      {name:'Компания В — Владелец товара', inn:'6673210324', mark:''}
+    ],
+    docs: [],
+    terms: [
+      {label:'Роль', value:'Поставщик оборудования', source:'Из вашего сообщения'},
+      {label:'Предмет', value:'Поставка станка с монтажом', source:'Из вашего сообщения'},
+      {label:'Сумма', value:'2 400 000 ₽', source:'Из вашего сообщения'},
+      {label:'Оплата', value:'Аванс 80% — 1 920 000 ₽', source:'Из вашего сообщения'},
+      {label:'Срок', value:'21 день, критичен', source:'Файл «Предложение-А.pdf»'},
+      {label:'Приоритет', value:'Не указано', source:''}
+    ]
+  };
+
+  // ── helpers ──────────────────────────────────────────────
+  mk(o) { return Object.assign({id: ++this.uid}, o); }
+  push() {
+    const add = Array.prototype.slice.call(arguments);
+    this.setState(s => {
+      const chats = s.chats.slice();
+      chats[s.chat] = Object.assign({}, chats[s.chat], {msgs: chats[s.chat].msgs.concat(add)});
+      return {chats};
+    });
+    setTimeout(() => this.scrollDown(), 30);
+  }
+  patch(id, o) {
+    this.setState(s => {
+      const chats = s.chats.slice();
+      chats[s.chat] = Object.assign({}, chats[s.chat], {
+        msgs: chats[s.chat].msgs.map(m => m.id === id ? Object.assign({}, m, o) : m)
+      });
+      return {chats};
+    });
+  }
+  patchAll(pred, o) {
+    this.setState(s => {
+      const chats = s.chats.slice();
+      chats[s.chat] = Object.assign({}, chats[s.chat], {
+        msgs: chats[s.chat].msgs.map(m => pred(m) ? Object.assign({}, m, o) : m)
+      });
+      return {chats};
+    });
+  }
+  scrollDown() { this.wantScroll = true; this.forceUpdate(); }
+  componentDidMount() {
+    this.measure = () => {
+      const el = document.querySelector('main');
+      const w = el ? el.clientWidth : window.innerWidth;
+      const narrow = w < 1000;
+      if (narrow !== this.state.narrow) this.setState({narrow});
+    };
+    this.measure();
+    window.addEventListener('resize', this.measure);
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this.measure); }
+  componentDidUpdate() {
+    if (!this.wantScroll) return;
+    this.wantScroll = false;
+    requestAnimationFrame(() => {
+      const n = document.querySelector('[data-feed]');
+      if (n) n.scrollTop = n.scrollHeight;
+    });
+  }
+  bullets(list) { return list.map(b => ({n: b[0], text: b[1], open: () => this.showEv(b[0])})); }
+  chips(list) { return list.map(c => ({label: c[0], act: c[1]})); }
+
+  // ── message builders ─────────────────────────────────────
+  bUser(text, extra) { return this.mk(Object.assign({user:true, text}, extra || {})); }
+  bNotice(text, link, act) { return this.mk({notice:true, text, link: link || '', act: act || (()=>{})}); }
+  bClarify() {
+    return this.mk({answer:true,
+      text:'Задача понятна: решить, платить ли аванс. Уточню два условия — какая предоплата и насколько критичен срок?',
+      chips: this.chips([
+        ['Аванс 80%, срок критичен', () => this.stepTerms()],
+        ['Оплата после поставки', () => this.stepTerms()],
+        ['Ещё не решили', () => this.stepTerms()]
+      ]), hasChips: true});
+  }
+  bProgress(text, steps) {
+    const m = this.mk({progress:true, running:true, done:false, text, steps, open:false, toggleLabel:'Что проверено'});
+    m.toggle = () => this.patch(m.id, {open: !this.msgById(m.id).open, toggleLabel: this.msgById(m.id).open ? 'Что проверено' : 'Свернуть'});
+    m.stop = () => { this.patch(m.id, {running:false, done:false, text:'Проверка остановлена. Выполненные действия сохранены'}); };
+    return m;
+  }
+  msgById(id) { const l = this.state.chats[this.state.chat].msgs; return l.filter(m => m.id === id)[0] || {}; }
+  bAnswer1() {
+    return this.mk({answer:true,
+      text:'По доступным сведениям отказываться не обязательно, но аванс 1,92 млн ₽ — существенная сумма относительно устойчивости компании: отчёт её не подтверждает и не опровергает.',
+      hasBullets:true,
+      bullets: this.bullets([
+        [1,'Аванс по вашим условиям — 1 920 000 ₽'],
+        [2,'Выручка за 2025 год — 74 586 000 ₽'],
+        [3,'Капитал отрицательный: −300 тыс. ₽ за 2025 год, −1 224 тыс. ₽ годом ранее; однозначное ухудшение утверждать нельзя'],
+        [4,'Риск по оценке банка — низкий, ЗСК — зелёный; это не оценка финансового положения']
+      ]),
+      followUp:'Товар уже есть на складе или его изготовят после аванса? От этого зависит риск по сроку.',
+      hasChips:true,
+      chips: this.chips([
+        ['Говорят, есть — прикреплю КП', () => this.stepKp()],
+        ['Не знаю', () => this.stepKp()]
+      ])});
+  }
+  bAnswer2() {
+    return this.mk({answer:true,
+      text:'В предложении срок отсчитывается от комплектации заказа, а не от оплаты. Наличие товара этот документ не подтверждает, а срок у вас критичен.',
+      hasBullets:true,
+      bullets: this.bullets([[5,'«Срок поставки — 21 день после комплектации заказа» — Предложение-А.pdf, страница 1, пункт 4']])});
+  }
+  bAskDoc() {
+    return this.mk({answer:true,
+      text:'Наличие товара не подтверждено. Прикрепите письмо или документ, если он у вас есть.',
+      hasCta:true, ctaLabel:'Прикрепить', cta:() => this.stepNoDoc(),
+      cta2Label:'Документа нет', cta2:() => this.stepNoDoc()});
+  }
+  bConclusion() {
+    return this.mk({conclusion:true, stale:false,
+      text:'Работать можно, но не платить 80% вперёд, пока не подтверждены наличие товара и дата отгрузки.',
+      bullets: this.bullets([
+        [3,'Отрицательный капитал не даёт запаса на возврат аванса такого размера'],
+        [5,'Срок в предложении привязан к комплектации, дата которой не определена'],
+        [4,'Оценка банка низкая — причин для отказа в самой компании нет']
+      ]),
+      ctaLabel:'Зафиксировать решение', cta:() => this.openDecision()});
+  }
+  bWarehouse() {
+    return this.mk({answer:true,
+      text:'Справка оформлена на Компанию В — Владелец товара, а не на Компанию А. Кто по договору сторона поставки? Пока связь между компаниями не подтверждена, наличие товара у Компании А эта справка не доказывает.',
+      hasChips:true,
+      chips: this.chips([
+        ['Сторона — Компания А', () => this.stepFinal()],
+        ['Пока не знаю', () => this.stepFinal()]
+      ])});
+  }
+  bFinal() {
+    return this.mk({answer:true,
+      text:'Тогда до подтверждения связи оплату лучше отложить и запросить два документа: письмо о наличии товара от Компании А и договор или доверенность, связывающую её с Компанией В.',
+      hasCta:true, ctaLabel:'Обновить решение', cta:() => this.openDecision(),
+      cta2Label:'Скопировать вопросы', cta2:() => {}});
+  }
+
+  // ── script steps ─────────────────────────────────────────
+  start(text) {
+    this.setState({screen:'s2', draft:'', panel:null, status:'В работе'});
+    this.push(this.bUser(text));
+    setTimeout(() => this.push(this.bClarify()), 550);
+  }
+  stepTerms() {
+    this.push(this.bUser('Аванс 80%, поставка через три недели. Задержка остановит монтаж.'));
+    setTimeout(() => {
+      this.setState(s => {
+        const terms = s.terms.slice();
+        terms[5] = Object.assign({}, terms[5], {value:'Срок поставки', source:'Из вашего сообщения'});
+        return {terms};
+      });
+      this.push(this.bNotice('Условия обновлены: 2,4 млн ₽ · аванс 80% · 21 день · срок критичен', 'Открыть условия', () => this.openMaterials('t')));
+      const p = this.bProgress('Сопоставляю условия оплаты и финансовые сведения', [
+        {label:'Оценка банка и ЗСК', source:'отчёт, срез 27.08'},
+        {label:'Финансы за 2024–2025', source:'отчёт, раздел «Финансы»'},
+        {label:'Действующие взыскания', source:'записей не найдено'}
+      ]);
+      this.push(p);
+      this.setState({busy:true});
+      setTimeout(() => {
+        this.patch(p.id, {running:false, done:true, text:'Проверено: оценка банка, финансы, взыскания'});
+        this.setState({busy:false});
+        this.push(this.bAnswer1());
+        this.push(this.bNotice('Отчёт по Компании А собран · данные на 5 августа 2026', 'Открыть отчёт', () => this.setState({panel:'report', rmode:'one'})));
+      }, 1700);
+    }, 400);
+  }
+  stepKp() {
+    const f = this.bUser('Говорят, товар есть. Прикрепляю их предложение.', {file:'Предложение-А.pdf', fileState:'Загружается', openFile:() => this.showFile('kp')});
+    this.push(f);
+    setTimeout(() => this.patch(f.id, {fileState:'Читаю документ'}), 700);
+    setTimeout(() => {
+      this.patch(f.id, {fileState:'Готово · 2 страницы'});
+      this.setState(s => ({docs: s.docs.concat([{name:'Предложение-А.pdf', meta:'Компания А · 5 сентября', state:'Готово', open:() => this.showFile('kp')}])}));
+      const p = this.bProgress('Использую навык «Чтение документов»', [
+        {label:'Предложение-А.pdf, страница 1, пункт 4', source:'условия поставки'},
+        {label:'Сумма и порядок оплаты', source:'пункт 2'}
+      ]);
+      this.push(p);
+      this.setState({busy:true});
+      setTimeout(() => {
+        this.patch(p.id, {running:false, done:true, text:'Прочитано: Предложение-А.pdf'});
+        this.setState({busy:false});
+        this.push(this.bAnswer2(), this.bAskDoc());
+      }, 1500);
+    }, 1500);
+  }
+  stepNoDoc() {
+    this.push(this.bUser('Документа нет.'));
+    setTimeout(() => {
+      this.push(this.bNotice('Сохранено как неизвестное: наличие товара не подтверждено'));
+      this.push(this.bConclusion());
+      this.setState({status:'Нужны сведения'});
+    }, 500);
+  }
+  stepFinal() {
+    this.push(this.bUser('Пока не знаю. Оплату отложу и запрошу уточнения.'));
+    setTimeout(() => this.push(this.bFinal()), 600);
+  }
+  uploadWarehouse() {
+    const f = this.bUser('Прислали складскую справку.', {file:'Складская-справка.pdf', fileState:'Загружается', openFile:() => this.showFile('wh')});
+    this.setState({suggest:false});
+    this.push(f);
+    setTimeout(() => this.patch(f.id, {fileState:'Читаю документ'}), 700);
+    setTimeout(() => {
+      this.patch(f.id, {fileState:'Готово · 1 страница'});
+      this.setState(s => ({docs: s.docs.concat([{name:'Складская-справка.pdf', meta:'Компания В · 5 сентября', state:'Готово', open:() => this.showFile('wh')}]), memoStale:true, status:'Нужны сведения'}));
+      this.patchAll(m => m.conclusion, {stale:true});
+      this.push(this.bNotice('Решение помечено: после записи появились новые сведения', 'Открыть итог', () => this.openMaterials('memo')));
+      this.push(this.bWarehouse());
+    }, 1600);
+  }
+
+  // ── saved project (returning user) ───────────────────────
+  openSaved() {
+    const msgs = [
+      this.bUser('Хочу работать с Компанией А. Предлагают поставку за 2,4 млн ₽. Помоги разобраться перед оплатой. ИНН 7449088645'),
+      this.bUser('Аванс 80%, поставка через три недели. Задержка остановит монтаж.'),
+      this.mk({progress:true, running:false, done:true, text:'Проверено: оценка банка, финансы, взыскания', open:false, toggleLabel:'Что проверено', steps:[
+        {label:'Оценка банка и ЗСК', source:'отчёт, срез 27.08'},
+        {label:'Финансы за 2024–2025', source:'отчёт, раздел «Финансы»'},
+        {label:'Действующие взыскания', source:'записей не найдено'}
+      ], toggle:()=>{}, stop:()=>{}}),
+      this.bAnswer1(),
+      this.bUser('Говорят, товар есть. Прикрепляю их предложение.', {file:'Предложение-А.pdf', fileState:'Готово · 2 страницы', openFile:() => this.showFile('kp')}),
+      this.bAnswer2(),
+      this.bNotice('Сохранено как неизвестное: наличие товара не подтверждено'),
+      this.mk({notice:true, text:'Решение записано: «Готов при условиях» · 5 сентября', link:'Открыть итог', act:() => this.openMaterials('memo')})
+    ];
+    this.setState(s => ({
+      screen:'s2', resume:true, status:'Нужны сведения', suggest:true,
+      decided:'Готов при условиях', decision:'Готов при условиях',
+      reason:'Подтвердить наличие товара письмом и согласовать дату отгрузки до оплаты аванса.',
+      docs:[{name:'Предложение-А.pdf', meta:'Компания А · 5 сентября', state:'Готово', open:() => this.showFile('kp')}],
+      chats:[Object.assign({}, s.chats[0], {msgs})]
+    }));
+  }
+
+  // ── panels ───────────────────────────────────────────────
+  openMaterials(which) {
+    const g = Object.assign({}, this.state.g);
+    if (which === 't') g.t = true;
+    this.setState({panel: which === 'memo' ? 'memo' : 'list', stack: which === 'memo' ? ['list'] : [], g, chatsOpen:false});
+  }
+  showEv(n) { this.setState(s => ({panel:'evidence', ev:n, stack: s.panel && s.panel !== 'evidence' ? s.stack.concat([s.panel]) : s.stack})); }
+  showFile(f) { this.setState(s => ({panel:'file', file:f, stack: s.panel && s.panel !== 'file' ? s.stack.concat([s.panel]) : s.stack})); }
+  openDecision() {
+    this.setState(s => ({panel:'decision', stack: s.panel ? s.stack.concat([s.panel]) : [],
+      decision: s.decision || 'Готов при условиях',
+      reason: s.reason || 'Подтвердить наличие товара письмом от Компании А и согласовать дату отгрузки до оплаты аванса.'}));
+  }
+  saveDecision() {
+    const d = this.state.decision;
+    this.setState({decided:d, panel:'memo', stack:['list'], memoStale:false,
+      status: d === 'Нужно больше сведений' ? 'Нужны сведения' : 'Решение записано',
+      suggest: !this.state.suggest && d === 'Готов при условиях'});
+    this.push(this.bNotice('Решение записано: «' + d + '» · 5 сентября', 'Открыть итог', () => this.openMaterials('memo')));
+  }
+  back() {
+    this.setState(s => {
+      const st = s.stack.slice();
+      const prev = st.pop();
+      return {panel: prev || 'list', stack: st};
+    });
+  }
+
+  renderVals() {
+    const s = this.state;
+    const chat = s.chats[s.chat];
+    const ev = this.EV[s.ev];
+    const files = {
+      kp: {name:'Предложение-А.pdf', meta:'Компания А · 5 сентября · PDF, 2 страницы', head:'Коммерческое предложение № 114 от 3 сентября 2026',
+        p1:'Предмет: станок листогибочный, 1 шт., с монтажом. Стоимость 2 400 000 ₽, оплата — аванс 80%, остаток по факту монтажа.',
+        quote:'Срок поставки — 21 день после комплектации заказа.',
+        p2:'Гарантия 12 месяцев. Предложение действительно 10 календарных дней.'},
+      wh: {name:'Складская-справка.pdf', meta:'Компания В · 5 сентября · PDF, 1 страница', head:'Справка о наличии товара на складе',
+        p1:'Настоящим подтверждается, что на складе по адресу г. Челябинск, ул. Промышленная, 14 находится оборудование:',
+        quote:'Станок листогибочный, 1 шт. Владелец — Компания В — Владелец товара, ИНН 6673210324.',
+        p2:'Справка выдана по запросу. Срок действия не указан.'}
+    };
+    const f = files[s.file];
+    const secDefs = [
+      {key:'fin', title:'Финансы', hint:'2024–2025', rows:[
+        {k:'Выручка, 2025', v:'74 586 000 ₽', ev:2},
+        {k:'Капитал, 2025', v:'−300 000 ₽', ev:3, color:'#b2670a'},
+        {k:'Капитал, 2024', v:'−1 224 000 ₽', ev:3},
+        {k:'Отчётность', v:'Годовая, за 2025 год', ev:2}
+      ]},
+      {key:'court', title:'Суды', hint:'агрегировано', rows:[
+        {k:'Дела за 12 месяцев', v:'2 · 310 000 ₽', ev:4},
+        {k:'Предметы дел', v:'В отчёте нет этих сведений', ev:4, color:'rgba(5,8,29,.38)'}
+      ]},
+      {key:'claims', title:'Взыскания', hint:'', rows:[
+        {k:'Действующие производства', v:'В отчёте события не обнаружены', ev:4, color:'rgba(5,8,29,.38)'}
+      ]},
+      {key:'lic', title:'Деятельность и разрешения', hint:'', rows:[
+        {k:'Основной ОКВЭД', v:'28.41 — производство металлообрабатывающего оборудования', ev:4},
+        {k:'Лицензии', v:'В отчёте нет этих сведений', ev:4, color:'rgba(5,8,29,.38)'},
+        {k:'Проверки ведомств', v:'1 плановая, 2025 год', ev:4}
+      ]},
+      {key:'other', title:'Другие сведения', hint:'', rows:[
+        {k:'Связанные компании', v:'3 записи без полных отчётов', ev:4},
+        {k:'Дата среза', v:'5 августа 2026', ev:4}
+      ]}
+    ];
+    const rows = [
+      {name:'Компания А — Поставка', inn:'7449088645', cut:'05.08.2026', risk:'Низкий', riskDot:'#1f8c4d', zsk:'ЗСК зелёный',
+       fin:'Выручка 74 586 000 ₽ · капитал −300 000 ₽', finColor:'#b2670a',
+       exec:'Нет · 12 записей завершены', arb:'3 дела · 1 513 302 ₽',
+       offer:'2,4 млн ₽ · аванс 80% · 21 день', gap:'Наличие товара, дата комплектации'},
+      {name:'Компания Б — Альтернатива', inn:'7714729497', cut:'14.08.2026', risk:'Низкий', riskDot:'#1f8c4d', zsk:'ЗСК зелёный',
+       fin:'Выручка 101 875 000 ₽ · капитал 13 060 000 ₽',
+       exec:'Нет', arb:'1 дело · 100 ₽',
+       offer:'2,6 млн ₽ · аванс 20% · 30 дней', gap:'Документы не предоставлены'},
+      {name:'Компания В — Владелец товара', inn:'1660266560', cut:'06.08.2026', risk:'Средний', riskDot:'#b2670a', zsk:'ЗСК зелёный',
+       fin:'Выручка 79 827 000 ₽ · капитал 2 798 000 ₽',
+       exec:'1 действующее', arb:'6 дел · 2 056 438 ₽',
+       offer:'Не указано', offerColor:'rgba(5,8,29,.38)', gap:'Роль в поставке, связь с Компанией А'},
+      {name:'Компания Г — Учебная', inn:'5029069967', cut:'29.07.2026 · срез старше 30 дней', risk:'Оценка недоступна', riskDot:'rgba(5,8,29,.38)', zsk:'ЗСК зелёный',
+       fin:'Финансы не предоставлены', finColor:'rgba(5,8,29,.38)',
+       exec:'45 действующих', arb:'1 525 дел · 4 534 783 044 ₽',
+       offer:'Не указано', offerColor:'rgba(5,8,29,.38)', gap:'Финансовые показатели, причины производств'},
+      {name:'Компания Д — Учебная', inn:'7728380537', cut:'05.08.2026', risk:'Низкий', riskDot:'#1f8c4d', zsk:'ЗСК: отображение требует уточнения',
+       fin:'Выручка 4 749 348 000 ₽ · капитал 213 087 000 ₽',
+       exec:'8 действующих', arb:'89 дел · 873 488 088 ₽',
+       offer:'Не указано', offerColor:'rgba(5,8,29,.38)', gap:'Масштаб споров, применимость к вашей задаче'}
+    ];
+    const titles = {list:'Материалы', company:'Сведения о компании', evidence:'Основание', file:'Документ', term:'Условие', add:'Компании', memo:'Итог', decision:'Решение'};
+    const opts = ['Готов работать','Готов при условиях','Не готов работать','Нужно больше сведений'];
+    const upd = s.updated || '5 августа 2026';
+    const pick = (key, label) => this.setState({sel: key, selLabel: label});
+    const toChat = label => this.setState({panel:null, sel:null, ctx: label});
+    const hlp = key => () => this.setState(st => ({help: st.help === key ? null : key}));
+    const mDefs = [
+      {key:'risk', label:'Оценка банка', value:'Низкий риск', dot:'#1f8c4d', note:'Помогает отсеять опасных, но не говорит о деньгах',
+       help:'Насколько компания похожа на проблемную по своей истории и поведению. Помогает быстро отсеять явно опасных партнёров. Не отвечает на вопрос, есть ли у компании деньги и силы выполнить именно ваш заказ.'},
+      {key:'zsk', label:'Проверка операций (ЗСК)', value:'Зелёный', dot:'#1f8c4d', note:'Отдельная оценка, с оценкой банка не складывается',
+       help:'Оценка Банка России: не похожи ли платежи компании на обналичивание и другие сомнительные схемы. Зелёный — вопросов нет. О финансовом состоянии и качестве работы это ничего не говорит.'},
+      {key:'rev', label:'Выручка за 2025 год', value:'74 586 000 ₽', note:'2024: 65 289 000 ₽ · 2023: 6 461 000 ₽',
+       help:'Сколько компания заработала за год до вычета расходов. Показывает масштаб бизнеса: сопоставим ли ваш заказ с тем, что компания обычно делает. Это не деньги на счёте и не прибыль.'},
+      {key:'cap', label:'Своих средств', value:'−300 000 ₽', color:'#b2670a', note:'2024: −1 224 000 ₽ · 2023: 35 000 ₽',
+       help:'Что осталось бы у компании, если продать всё имущество и рассчитаться с долгами. Минус означает, что долгов больше, чем имущества: своей подушки на возврат аванса нет. Это не банкротство и не запрет работать — это причина не платить много вперёд.'},
+      {key:'exec', label:'Долги у приставов', value:'Нет действующих', note:'12 закрытых за прошлые годы',
+       help:'Незакрытые долги, которые взыскивают судебные приставы: налоги, штрафы, проигранные суды. Если такие есть, деньги компании могут списать раньше, чем она выполнит ваш заказ.'},
+      {key:'arb', label:'Судебные споры', value:'3 дела · 1 513 302 ₽', note:'Из них 2 закрытых, где компания была ответчиком',
+       help:'Как часто компания судится и на какие суммы. Спор сам по себе не нарушение: смотрите на частоту и на суммы относительно масштаба компании. Из-за чего были споры, по этим данным неизвестно.'},
+      {key:'full', label:'Полнота сведений', value:'14 разделов из 19', note:'Нет данных о лицензиях, филиалах и госзакупках',
+       help:'Сведения о компании приходят из разных источников, и часть может не прийти. Пустой пункт означает «мы не знаем», а не «всё чисто».'},
+      {key:'signals', label:'Замечания', value:'2 замечания', note:'Много видов деятельности · есть суды как ответчик',
+       help:'Готовые пометки о том, на что обычно смотрят при проверке партнёра. Замечание — повод задать вопрос, а не доказательство проблемы. По остальным пунктам ничего не нашли.'}
+    ];
+    const metrics = mDefs.map(d => ({
+      label:d.label, value:d.value, note:d.note, dot:d.dot || '', hasDot: !!d.dot,
+      color: d.color || 'rgba(3,3,6,.88)',
+      bc: s.sel === d.key ? '#212124' : '#e7e8eb',
+      bg: s.sel === d.key ? 'rgba(15,25,55,.04)' : '#fff',
+      helpOpen: s.help === d.key, helpText: d.help,
+      help: hlp(d.key),
+      select: () => pick(d.key, d.label + ' · Компания А')
+    }));
+    const secDefs2 = [
+      {title:'Кто эта компания', rows:[
+        {k:'ИНН и ОГРН', cells:['7449088645 · 1097449003156'], help:'Номера, по которым компанию отличают от похожих по названию. По ним же сверяют, что в договоре стоит то самое юрлицо, которое вы проверяли.'},
+        {k:'КПП и ОКПО', cells:['742401001 · 61255613'], help:'Учётные номера для счетов и платёжных документов. На надёжность не влияют, но должны совпасть с реквизитами в договоре и счёте.'},
+        {k:'Адрес', cells:['457040, Челябинская обл., г. Южноуральск, ул. Спортивная, д. 54'], help:'Где компания зарегистрирована. Полезно сравнить с местом, откуда обещают поставку: далёкий регион означает больше времени на доставку.'},
+        {k:'Работает с', cells:['16.04.2009 · 17 лет'], help:'Сколько лет компания существует. Чем дольше, тем больше видно её историю; у совсем молодых проверять почти нечего.'},
+        {k:'Размер бизнеса', cells:['Микропредприятие'], help:'Категория по числу сотрудников и обороту. Микропредприятие с большой выручкой обычно работает малой командой — стоит понять, кто физически выполнит заказ.'},
+        {k:'Статус', cells:['Действующая · с 01.08.2026'], help:'Работает компания или уже закрывается. Это минимум, без которого дальше смотреть не имеет смысла.'}
+      ]},
+      {title:'Чем занимается', rows:[
+        {k:'Основное дело', cells:['Строительство жилых и нежилых зданий (41.20)'], help:'Чем компания занимается по документам. Если основное дело — не то, что вам продают, стоит спросить, кто именно выполняет такую работу.'},
+        {k:'Другие направления', cells:['Ещё 39, всего 40'], help:'Сколько направлений заявлено. Длинный список — не нарушение, но часто означает, что компания берётся за всё; повод уточнить опыт именно в вашем заказе.'},
+        {k:'Налоги', cells:['Упрощённая система'], help:'От неё зависит, будет ли в счёте НДС. Влияет на вашу итоговую цену и вычет, а не на надёжность партнёра.'}
+      ]},
+      {title:'Деньги по годам', hint:'годовая отчётность', years:['2023','2024','2025'], rows:[
+        {k:'Выручка, ₽', cells:['6 461 000','65 289 000','74 586 000'], ev:2, help:'Сколько компания заработала за год. Смотрите не на рост сам по себе, а на то, сопоставим ли ваш заказ с обычным для неё масштабом.'},
+        {k:'Своих средств, ₽', cells:['35 000','−1 224 000','−300 000'], colors:['','#b2670a','#b2670a'], ev:3, help:'Разница между имуществом и долгами. Минус означает, что своей подушки на возврат аванса нет, поэтому порядок оплаты важнее обычного.'},
+        {k:'Всё имущество и долги, ₽', cells:['3 482 000','23 663 000','50 699 000'], help:'Сумма всего, чем компания распоряжается, и всего, что она должна. Это масштаб бизнеса, а не размер задолженности.'},
+        {k:'Долги перед поставщиками, ₽', cells:['3 377 000','21 738 000','47 059 000'], help:'Сколько компания не заплатила своим поставщикам и подрядчикам к концу года. Крупная сумма означает, что она работает на чужих деньгах: ваш аванс может уйти на прошлые обязательства.'},
+        {k:'Прибыль, ₽', cells:['Нет сведений','Нет сведений','Нет сведений'], muted:true, help:'Что осталось после всех расходов. Здесь этих сведений нет — это значит «неизвестно», а не «ноль» или «убыток».'},
+        {k:'Товар, долги перед компанией, деньги', cells:['—','—','15 572 000 · 34 772 000 · 355 000'], help:'Из чего состоят оборотные средства: товар на складе, деньги, которые компании должны, и остаток на счетах к концу года. Помогает понять, есть ли из чего выполнить заказ. За прошлые годы такой разбивки нет.'}
+      ]},
+      {title:'Владельцы и управление', rows:[
+        {k:'Вложено при создании, ₽', cells:['10 000'], help:'Сумма, которую владельцы внесли при открытии компании. Обычно минимальная и почти ничего не говорит о платёжеспособности.'},
+        {k:'Владельцы', cells:['Один · доля 100% · с 22.04.2014'], help:'Кому принадлежит компания и с какого времени. Один владелец с давней долей спокойнее, чем частая смена собственников.'},
+        {k:'Кто подписывает договоры', cells:['Генеральный директор с 12.11.2018'], help:'Руководитель компании. Полезно сверить с тем, кто подпишет ваш договор: подпись другого человека без доверенности создаёт спор.'}
+      ]},
+      {title:'Судебные споры', hint:'известны количество и суммы', rows:[
+        {k:'Всего споров', cells:['3 дела · 1 513 302 ₽'], ev:4, help:'Сколько дел и на какую сумму. Сравнивайте с оборотом: для крупной компании несколько дел — рутина, для микропредприятия ощутимо.'},
+        {k:'Компания была ответчиком', cells:['2 закрытых дела · 1 068 858 ₽'], help:'К компании предъявляли требования — обычно за неоплату или срыв обязательств. Одно дело не приговор, но если таких много, риск повторения выше.'},
+        {k:'Компания сама подавала иск', cells:['Не найдено'], muted:true, help:'Взыскивала ли компания долги со своих партнёров. Здесь таких дел не нашли: иногда это значит, что споров не было, иногда — что сведения не пришли.'},
+        {k:'Когда были споры', cells:['2026: 2 дела · 1 513 301 ₽ · 2024: 1 дело'], help:'Свежие дела важнее старых: они говорят о том, что происходит сейчас. За 2024 год сумма не указана.'}
+      ]},
+      {title:'Долги у приставов', rows:[
+        {k:'Сейчас взыскивают', cells:['Нет'], help:'Незакрытые долги, которые списывают судебные приставы. Пока их нет, деньги компании не уходят принудительно.'},
+        {k:'Было раньше', cells:['12 закрытых · последний 08.08.2024 на 12,32 ₽'], help:'Взыскания за прошлые годы. Мелкие суммы — обычно пошлины и штрафы; важно, что все закрыты.'}
+      ]},
+      {title:'Опыт, разрешения и проверки', rows:[
+        {k:'Госзакупки', cells:['Сведений нет'], muted:true, help:'Участвовала ли компания в закупках и выполняла ли контракты. Такой опыт — плюс, но его отсутствие ничего не доказывает: многие работают только с частными заказчиками.'},
+        {k:'Лицензии', cells:['Сведений нет'], muted:true, help:'Разрешения на работы, где они обязательны. Если ваш заказ требует лицензии, её нужно проверить отдельно — здесь этих сведений нет.'},
+        {k:'Проверки надзорных органов', cells:['11 проверок · нарушений не нашли'], help:'Приходили ли к компании с проверкой и что нашли. Предупреждение — не штраф, а «нарушений не нашли» относится к конкретной проверке, а не ко всей работе.'}
+      ]},
+      {title:'Связи и полнота сведений', rows:[
+        {k:'Связанные компании', cells:['2 · без подробностей'], help:'Другие фирмы, связанные с этой через владельцев или руководителей. Важно, когда товар, склад или деньги идут через другое юрлицо: тогда и договор стоит смотреть с ним.'},
+        {k:'Филиалы и контакты', cells:['Сведений нет'], muted:true, help:'Дополнительные адреса и телефоны. Их отсутствие здесь — не признак фиктивности, просто эти сведения не пришли.'},
+        {k:'Дата сведений', cells:[upd + ' · больше месяца назад'], help:'На какой день собраны данные. Чем они старше, тем выше шанс, что что-то изменилось: перед оплатой стоит обновить.'}
+      ]}
+    ];
+    const rsections = secDefs2.map((d, si) => ({
+      title:d.title, hint:d.hint || '',
+      years: d.years ? d.years.map(y => ({label:y})) : null,
+      rows: d.rows.map((r, ri) => {
+        const key = 'r' + si + '-' + ri;
+        const wide = !d.years;
+        return {
+          k:r.k,
+          cells: r.cells.map((v, i) => ({v, w: wide ? '160px' : '76px', grow: wide ? '3 1 240px' : '1 1 88px',
+            color: r.muted ? 'rgba(5,8,29,.38)' : ((r.colors && r.colors[i]) || 'rgba(3,3,6,.88)')})),
+          bg: s.sel === key ? 'rgba(15,25,55,.05)' : 'transparent',
+          ring: s.sel === key ? 'inset 0 0 0 1px #212124' : 'none',
+          helpOpen: s.help === key, helpText: r.help, help: hlp(key),
+          hasEv: !!r.ev, openEv: () => { this.setState({panel:null}); this.showEv(r.ev); },
+          select: () => pick(key, r.k + ' · Компания А'),
+          discuss: () => toChat(r.k + ' · Компания А · срез ' + upd)
+        };
+      })
+    }));
+    const colDefs = [
+      {key:'c-risk', label:'Оценка банка и операций', help:'Две независимые оценки: насколько компания похожа на проблемную и не выглядят ли её платежи сомнительно. Они не складываются, и одинаковые оценки у двух компаний не означают одинаковое финансовое состояние.'},
+      {key:'c-fin', label:'Деньги за 2025 год', help:'Годовой заработок и разница между имуществом и долгами. «Сведений нет» значит, что данные не пришли, а не что показатели нулевые.'},
+      {key:'c-exec', label:'Долги у приставов', help:'Незакрытые взыскания. Если их много, деньги компании могут списать раньше, чем она выполнит ваш заказ.'},
+      {key:'c-arb', label:'Судебные споры', help:'Сколько дел и на какие суммы. Сравнивайте с масштабом компании: для крупной это рутина, для маленькой — заметная нагрузка.'},
+      {key:'c-offer', label:'Что предлагают вам', help:'То, что вы сами написали или прислали файлом. «Не указано» означает, что условие пока не обсуждалось, а не худшую цену или срок.'},
+      {key:'c-gap', label:'Что не подтверждено', help:'Главные неизвестные по вашей задаче. Их проще закрыть одним вопросом партнёру, и они меняют решение сильнее, чем разница в цене.'}
+    ];
+    const cols = colDefs.map(c => ({label:c.label, helpText:c.help, helpOpen: s.help === c.key, help: hlp(c.key)}));
+    const summary = s.rmode === 'compare' ? [
+      {dot:'#b2670a', text:'Разница в авансе весит больше разницы в цене: 1,92 млн ₽ у Компании А против 520 тыс. ₽ у Компании Б при разнице цены 200 тыс. ₽.', discuss: () => toChat('Сравнение · разница в авансе')},
+      {dot:'#b2670a', text:'У Компании Г нет сведений о деньгах, зато 45 незакрытых долгов у приставов. Сравнивать её по финансам не с чем, а платить вперёд рискованно.', discuss: () => toChat('Сравнение · Компания Г, нет сведений о деньгах')},
+      {dot:'rgba(5,8,29,.38)', text:'У Компании Д проверка операций даёт жёлтый уровень. Что он означает на практике, пока не подтверждено — показываю как есть, без подмены цветом.', discuss: () => toChat('Сравнение · проверка операций Компании Д')},
+      {dot:'rgba(5,8,29,.38)', text:'Сведения по компаниям собраны в разные дни — с 29 июля по 14 августа. Строки сопоставимы приблизительно.', discuss: () => toChat('Сравнение · разные даты сведений')}
+    ] : [
+      {dot:'#b2670a', text:'Капитал отрицательный второй год: −300 тыс. ₽ за 2025 после −1 224 тыс. ₽ за 2024 при кредиторской задолженности 47 059 тыс. ₽. При авансе 1,92 млн ₽ это главный вопрос отчёта.', discuss: () => toChat('Капитал 2025 · Компания А')},
+      {dot:'#1f8c4d', text:'Оценка банка низкая, платежи вопросов не вызывают, долгов у приставов сейчас нет — все 12 прошлых взысканий закрыты. Причин для отказа в самой компании нет.', discuss: () => toChat('Оценка банка и долги у приставов · Компания А')},
+      {dot:'rgba(5,8,29,.38)', text:'Основное дело компании — строительство зданий, а не поставка оборудования, и всего заявлено 40 направлений. Стоит спросить, кто именно выполняет поставку.', discuss: () => toChat('Основное дело компании · Компания А')},
+      {dot:'rgba(5,8,29,.38)', text:'Сведения собраны 5 августа — больше месяца назад. О лицензиях, филиалах и госзакупках данных нет: это «неизвестно», а не «всё чисто».', discuss: () => toChat('Полнота сведений · Компания А')}
+    ];
+
+    return {
+      shell: this.props.showBankShell !== false,
+      showDemo: this.props.showDemoLabel !== false,
+      isS1: s.screen === 's1', isS2: s.screen === 's2',
+      draft: s.draft, msgs: chat.msgs, status: s.status,
+      statusDot: s.status === 'Решение записано' ? '#1f8c4d' : (s.status === 'Нужны сведения' ? '#b2670a' : 'rgba(5,8,29,.38)'),
+      sendBg: s.draft.trim() ? '#212124' : 'rgba(15,25,55,.18)',
+      matBg: s.panel && s.panel !== 'compare' ? 'rgba(15,25,55,.06)' : 'transparent',
+      attachBg: s.attachOpen ? 'rgba(15,25,55,.06)' : 'transparent',
+      composerPlaceholder: s.busy ? 'Уточнение — учту после текущего действия' : 'Сообщение помощнику',
+      busy: s.busy, suggest: s.suggest, resume: s.resume, ctx: s.ctx,
+      chatName: chat.name, chatsOpen: s.chatsOpen, attachOpen: s.attachOpen,
+      chatList: s.chats.map((c, i) => ({name:c.name, hint:c.hint, bg: i === s.chat ? 'rgba(15,25,55,.06)' : 'transparent', pick: () => this.setState({chat:i, chatsOpen:false})})),
+      moreCompanies: s.companies.length > 1 ? '· ещё ' + (s.companies.length - 1) : '',
+      canCompare: s.companies.length > 1,
+      companies: s.companies.map(c => ({name:c.name, inn:c.inn, mark:c.mark, open: () => this.setState({panel:'report', rmode:'one', sel:null, help:null})})),
+      docs: s.docs, noDocs: s.docs.length === 0,
+      nCompanies: s.companies.length, nDocs: s.docs.length || '—',
+      nTerms: s.terms.filter(t => t.value !== 'Не указано').length + ' из ' + s.terms.length,
+      terms: s.terms.map((t, i) => ({label:t.label, value:t.value, source:t.source || 'Не заполнено',
+        color: t.value === 'Не указано' ? 'rgba(5,8,29,.38)' : 'rgba(3,3,6,.88)',
+        edit: () => this.setState(st => ({panel:'term', termIdx:i, termVal:t.value, stack: st.panel ? st.stack.concat([st.panel]) : []}))})),
+      memoShort: s.decided || 'нет записи',
+      memoLine: s.decided ? 'Решение: ' + s.decided : 'Предложение помощника: не платить 80% вперёд',
+      memoKind: s.decided ? 'Запись пользователя · 5 сентября 2026' : 'Предложение помощника, не записанное решение',
+      memoTitle: s.decided || 'Готов при условиях (предложение)',
+      memoWhy: s.reason || 'Подтвердить наличие товара письмом и согласовать дату отгрузки до оплаты аванса.',
+      memoStale: s.memoStale,
+      pReport: s.panel === 'report',
+      rOne: (s.rmode || 'one') === 'one', rCompare: s.rmode === 'compare',
+      oneBg: (s.rmode || 'one') === 'one' ? 'rgba(15,25,55,.08)' : 'transparent',
+      cmpBg: s.rmode === 'compare' ? 'rgba(15,25,55,.08)' : 'transparent',
+      updated: upd,
+      modeOne: () => this.setState({rmode:'one', sel:null, help:null}),
+      modeCompare: () => this.setState({rmode:'compare', sel:null, help:null}),
+      closeReport: () => this.setState({panel:null, sel:null, help:null}),
+      refreshData: () => {
+        this.push(this.bNotice('Обновление недоступно в демонстрации: показан последний успешный срез 5 августа 2026', 'Открыть отчёт', () => this.setState({panel:'report'})));
+      },
+      selOpen: !!s.sel, selLabel: s.selLabel || '',
+      clearSel: () => this.setState({sel:null}),
+      discussSel: () => this.setState({panel:null, sel:null, ctx: s.selLabel}),
+      summary: summary,
+      metrics: metrics,
+      rsections: rsections,
+      cols: cols,
+      crows: rows.map((r, i) => Object.assign({
+        finColor:'rgba(3,3,6,.88)', execColor:'rgba(3,3,6,.88)', arbColor:'rgba(3,3,6,.88)', offerColor:'rgba(3,3,6,.88)'
+      }, r, {
+        bg: s.sel === 'row' + i ? 'rgba(15,25,55,.05)' : 'transparent',
+        bgSticky: s.sel === 'row' + i ? '#f4f5f7' : '#fff',
+        select: () => pick('row' + i, r.name + ' · строка сравнения')
+      })),
+      reports: [
+        {name:'Отчёт · Компания А — Поставка', updated: upd + ' · срез старше 30 дней', open: () => this.setState({panel:'report', rmode:'one'}), refresh: () => this.push(this.bNotice('Обновление недоступно в демонстрации: показан последний успешный срез 5 августа 2026'))},
+        {name:'Сравнение · ' + s.companies.length + ' компании', updated: '5 сентября 2026, собрано помощником', open: () => this.setState({panel:'report', rmode:'compare'}), refresh: () => this.push(this.bNotice('Сравнение пересобрано по текущим отчётам и условиям'))}
+      ],
+      nReports: 2, g5: s.g5 !== false, g5c: s.g5 === false,
+      tg5: () => this.setState(st => ({g5: st.g5 === false})),
+      panelOpen: !!s.panel && s.panel !== 'compare' && s.panel !== 'report',
+      panelStyle: s.narrow
+        ? 'position:absolute;top:0;right:0;bottom:0;width:400px;max-width:100%;z-index:4;border-left:1px solid #e7e8eb;box-shadow:-12px 0 32px rgba(9,12,37,.10);display:flex;flex-direction:column;overflow:hidden;background:#fff;animation:dcPanel .16s ease-out'
+        : 'width:400px;flex:none;border-left:1px solid #e7e8eb;display:flex;flex-direction:column;overflow:hidden;background:#fff;animation:dcPanel .16s ease-out',
+      pList: s.panel === 'list', pCompany: s.panel === 'company', pEvidence: s.panel === 'evidence',
+      pFile: s.panel === 'file', pTerm: s.panel === 'term', pAdd: s.panel === 'add',
+      pMemo: s.panel === 'memo', pDecision: s.panel === 'decision', pCompare: s.panel === 'compare',
+      panelTitle: titles[s.panel] || 'Материалы',
+      panelTitleShown: s.panel === 'list' || s.panel === 'add',
+      panelBack: s.stack.length > 0,
+      backLabel: s.stack.length && s.stack[s.stack.length - 1] === 'list' ? '← К материалам' : '← Назад',
+      g1: s.g.c, g1c: !s.g.c, g2: s.g.t, g2c: !s.g.t, g3: s.g.d, g3c: !s.g.d, g4: s.g.s, g4c: !s.g.s,
+      tg1: () => this.setState(st => ({g: Object.assign({}, st.g, {c: !st.g.c})})),
+      tg2: () => this.setState(st => ({g: Object.assign({}, st.g, {t: !st.g.t})})),
+      tg3: () => this.setState(st => ({g: Object.assign({}, st.g, {d: !st.g.d})})),
+      tg4: () => this.setState(st => ({g: Object.assign({}, st.g, {s: !st.g.s})})),
+      sections: secDefs.map(d => ({title:d.title, hint:d.hint, open: !!s.sec[d.key],
+        toggle: () => this.setState(st => ({sec: Object.assign({}, st.sec, {[d.key]: !st.sec[d.key]})})),
+        rows: d.rows.map(r => ({k:r.k, v:r.v, color: r.color || 'rgba(3,3,6,.88)',
+          discuss: () => { this.setState({ctx: r.k + ' · Компания А', panel:null}); }}))})),
+      evN: s.ev, evValue: ev.v, evTitle: ev.t, evCompany: ev.c, evPeriod: ev.p, evSource: ev.s, evCut: ev.cut,
+      evHasFile: !!ev.file,
+      openFileFromEv: () => this.showFile(s.ev === 5 ? 'kp' : 'kp'),
+      discussEv: () => this.setState({ctx:'Основание ' + s.ev + ' · Компания А', panel:null}),
+      fileName: f.name, fileMeta: f.meta, fileHead: f.head, fileP1: f.p1, fileQuote: f.quote, fileP2: f.p2,
+      termLabel: s.termIdx !== null ? s.terms[s.termIdx].label : '',
+      termOld: s.termIdx !== null ? s.terms[s.termIdx].value : '',
+      termVal: s.termVal,
+      onTermVal: e => this.setState({termVal: e.target.value}),
+      saveTerm: () => {
+        const i = s.termIdx;
+        this.setState(st => {
+          const terms = st.terms.slice();
+          terms[i] = Object.assign({}, terms[i], {value: st.termVal, source:'Изменено вами'});
+          return {terms, panel:'list', stack:[]};
+        });
+        this.patchAll(m => m.conclusion, {stale:true});
+        this.push(this.bNotice('Условия изменены — пересмотреть вывод?', 'Пересмотреть', () => this.push(this.bConclusion())));
+      },
+      options: opts.map(o => ({label:o, border: s.decision === o ? '#212124' : 'rgba(9,12,37,.28)', dot: s.decision === o ? '#212124' : 'transparent', pick: () => this.setState({decision:o})})),
+      agentProposal: 'не платить 80% вперёд, пока не подтверждены наличие товара и дата отгрузки',
+      reason: s.reason, decision: s.decision,
+      needMore: s.decision === 'Нужно больше сведений',
+      saveBg: s.decision ? '#212124' : 'rgba(15,25,55,.18)',
+      onReason: e => this.setState({reason: e.target.value}),
+      saveDecision: () => { if (s.decision) this.saveDecision(); },
+      rows: rows.map(r => Object.assign({finColor:'rgba(3,3,6,.88)', claimsColor:'rgba(3,3,6,.88)', offerColor:'rgba(3,3,6,.88)'}, r)),
+      onDraft: e => this.setState({draft: e.target.value}),
+      onKey: e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.doSend(); } },
+      send: () => this.doSend(),
+      ex1: () => this.setState({draft:'Хочу работать с Компанией А. Предлагают поставку за 2,4 млн ₽. Помоги разобраться перед оплатой. ИНН 7449088645'}),
+      ex2: () => this.setState({draft:'Хочу сравнить условия двух поставщиков перед оплатой'}),
+      attachStart: () => this.setState({draft: s.draft || 'Проверь этот договор перед оплатой'}),
+      openSaved: () => this.openSaved(),
+      goS1: () => this.setState({screen:'s1', panel:null, chatsOpen:false}),
+      toggleChats: () => this.setState({chatsOpen: !s.chatsOpen}),
+      newChat: () => this.setState(st => ({
+        chats: st.chats.concat([{name:'Чат ' + (st.chats.length + 1), hint:'Общие условия применены', msgs:[this.bNotice('Новый чат в этой проверке. Общие условия и материалы доступны, история другого чата не подмешивается.')]}]),
+        chat: st.chats.length, chatsOpen:false})),
+      toggleMat: () => this.setState({panel: s.panel && s.panel !== 'compare' ? null : 'list', chatsOpen:false}),
+      toggleAttach: () => this.setState({attachOpen: !s.attachOpen}),
+      uploadFile: () => { this.setState({attachOpen:false}); this.uploadWarehouse(); },
+      attachMaterial: () => this.setState({attachOpen:false, ctx:'Итог проверки · версия от 5 сентября'}),
+      clearCtx: () => this.setState({ctx:null}),
+      openCompany: () => this.setState({panel:'report', rmode:'one', sel:null, help:null}),
+      openReportOne: () => this.setState({panel:'report', rmode:'one'}),
+      openAdd: () => this.setState({panel:'add', stack: s.panel === 'list' ? ['list'] : []}),
+      openCompare: () => this.setState({panel:'report', rmode:'compare', sel:null, help:null}),
+      closeCompare: () => this.setState({panel:null}),
+      discussCompare: () => this.setState({panel:null, ctx:'Сравнение 5 компаний · 5 сентября'}),
+      openMemo: () => this.setState(st => ({panel:'memo', stack: st.stack.concat(['list'])})),
+      openDecision: () => this.openDecision(),
+      closePanel: () => this.setState({panel:null, stack:[]}),
+      back: () => this.back(),
+      continueWork: () => this.setState({resume:false}),
+      uploadWarehouse: () => this.uploadWarehouse(),
+      noop: e => { if (e && e.preventDefault) e.preventDefault(); }
+    };
+  }
+
+  doSend() {
+    const s = this.state;
+    const text = s.draft.trim();
+    if (!text) return;
+    if (s.screen === 's1') { this.start(text); return; }
+    const ctx = s.ctx;
+    this.setState({draft:'', ctx:null});
+    this.push(this.bUser(text, ctx ? {ctx} : {}));
+    if (s.busy) {
+      const n = this.bNotice('Уточнение отправлено · ожидает обработки');
+      this.push(n);
+      setTimeout(() => this.patch(n.id, {text:'Уточнение учтено — применю в текущем ответе'}), 1600);
+    } else {
+      setTimeout(() => this.push(this.mk({answer:true, text:'Учёл. Если это меняет условия проверки, обновлю их и пересмотрю вывод — скажите, что записать.'})), 700);
+    }
+  }
+}
+
+</script>
+</body>
+</html>
