@@ -55,7 +55,6 @@ export function TaskComposer({
           value={draft}
         />
         <div className={styles.composerActions}>
-          <p className={styles.hint}>Enter отправляет, Shift+Enter переносит строку</p>
           <Button aria-label={loading ? 'Создаём…' : 'Отправить'} className={styles.send} disabled={!canSend} loading={loading} onClick={send} size={40} view="primary">
             <ArrowUpMIcon aria-hidden={true} />
           </Button>

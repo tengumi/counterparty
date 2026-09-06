@@ -220,7 +220,7 @@ describe('live report material binding', () => {
     vi.stubGlobal('fetch', vi.fn(sourceFetch));
     const user = userEvent.setup();
     openLiveProject();
-    await user.click(screen.getByRole('button', { name: 'Материалы' }));
+    await user.click(screen.getByRole('button', { name: 'Добавить' }));
     await user.click(within(panel()).getByRole('button', { name: /Условия/ }));
     expect(
       within(panel()).getByText('Запись и загрузка условий сделки пока недоступны.'),

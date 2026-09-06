@@ -1,14 +1,9 @@
-/**
- * S2-01 header: back to S1, project name, save state, chats and materials.
- *
- * «Сохранено» only appears for a state the server confirmed; a failed save
- * offers a retry instead and never hides the draft.
- */
+/** Шапка проверки. Статус сохранения отражает только подтверждённое сервером состояние. */
 
 import { useState } from 'react';
-import { Button } from '@alfalab/core-components/button';
 import { Input } from '@alfalab/core-components/input';
-import { Link } from 'react-router-dom';
+import { CheckmarkSIcon } from '@alfalab/icons-glyph/CheckmarkSIcon';
+import { PencilSIcon } from '@alfalab/icons-glyph/PencilSIcon';
 import { ChatSwitcher } from './ChatSwitcher';
 import type { ChatSummary, SaveState } from '../../mocks/types';
 import styles from './S2.module.css';
@@ -23,8 +18,6 @@ interface Props {
   readonly activeChatId: string | undefined;
   readonly onSelectChat: (chatId: string) => void;
   readonly onCreateChat?: () => void;
-  readonly materialsOpen: boolean;
-  readonly onToggleMaterials: () => void;
 }
 
 function SaveIndicator({ state }: { state: SaveState }) {
@@ -36,7 +29,12 @@ function SaveIndicator({ state }: { state: SaveState }) {
       </span>
     );
   }
-  return <span className={styles.saveState}>Сохранено</span>;
+  return (
+    <span className={styles.saveState}>
+      <CheckmarkSIcon aria-hidden="true" />
+      Сохранено
+    </span>
+  );
 }
 
 export function ProjectHeader(props: Props) {
@@ -56,60 +54,55 @@ export function ProjectHeader(props: Props) {
 
   return (
     <header className={styles.header}>
-      <Link className={styles.back} to="/checks">← Все проверки</Link>
-      <span aria-hidden="true" className={styles.divider} />
-      {editing ? (
-        <Input
-          className={styles.titleEditor}
-          autoFocus={true}
-          block={true}
-          label="Название проверки"
-          labelView="outer"
-          onChange={(_event, payload) => setTitle(payload.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') saveTitle();
-            if (event.key === 'Escape') { setTitle(props.title); setEditing(false); }
-          }}
-          onBlur={saveTitle}
-          size={40}
-          value={title}
-        />
-      ) : (
-        <button
-          aria-label="Переименовать проверку"
-          className={styles.projectTitleButton}
-          onClick={() => setEditing(true)}
-          title={props.title}
-          type="button"
-        >
-          {props.title}
-        </button>
-      )}
-      <SaveIndicator state={props.saveState} />
-      {props.saveError ? (
-        <span className={styles.saveError} role="alert">
-          {props.saveError}
-          {props.onRetryRename ? (
-            <button className={styles.retryLink} onClick={props.onRetryRename} type="button">Повторить</button>
-          ) : null}
-        </span>
-      ) : null}
+      <div className={styles.projectIdentity}>
+        {editing ? (
+          <Input
+            className={styles.titleEditor}
+            autoFocus={true}
+            block={true}
+            label="Название проверки"
+            labelView="outer"
+            onChange={(_event, payload) => setTitle(payload.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') saveTitle();
+              if (event.key === 'Escape') { setTitle(props.title); setEditing(false); }
+            }}
+            onBlur={saveTitle}
+            size={40}
+            value={title}
+          />
+        ) : (
+          <button
+            aria-label="Переименовать проверку"
+            className={styles.projectTitleButton}
+            onClick={() => { setTitle(props.title); setEditing(true); }}
+            title={props.title}
+            type="button"
+          >
+            <span className={styles.projectTitleText}>{props.title}</span>
+            <PencilSIcon aria-hidden="true" className={styles.renameIcon} />
+          </button>
+        )}
+        <div aria-live="polite" className={styles.saveLine}>
+          <SaveIndicator state={props.saveState} />
+        </div>
+        {props.saveError ? (
+          <span className={styles.saveError} role="alert">
+            {props.saveError}
+            {props.onRetryRename ? (
+              <button className={styles.retryLink} onClick={props.onRetryRename} type="button">Повторить</button>
+            ) : null}
+          </span>
+        ) : null}
+      </div>
       <div className={styles.headerActions}>
         <ChatSwitcher
           activeChatId={props.activeChatId}
           chats={props.chats}
           onCreate={props.onCreateChat}
           onSelect={props.onSelectChat}
+          projectTitle={props.title}
         />
-        <Button
-          aria-expanded={props.materialsOpen}
-          className={styles.headerAction}
-          onClick={props.onToggleMaterials}
-          size={40}
-          view="outlined"
-        >
-          Материалы
-        </Button>
       </div>
     </header>
   );

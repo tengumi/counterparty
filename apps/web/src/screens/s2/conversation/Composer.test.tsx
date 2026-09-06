@@ -43,6 +43,7 @@ describe('S2 composer states', () => {
     const onSend = vi.fn();
     show('idle', 'Можно ли платить авансом?', { onSend });
 
+    expect(screen.queryByText(/Enter отправляет/)).not.toBeInTheDocument();
     await user.click(screen.getByLabelText('Сообщение помощнику'));
     await user.keyboard('{Shift>}{Enter}{/Shift}');
     expect(onSend).not.toHaveBeenCalled();

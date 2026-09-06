@@ -36,7 +36,7 @@ function panel() {
 
 async function openPanel(user: ReturnType<typeof userEvent.setup>, path = DEMO) {
   const view = openCheck(path);
-  await user.click(screen.getByRole('button', { name: 'Материалы' }));
+  await user.click(screen.getByRole('button', { name: 'Добавить' }));
   expect(panel()).toBeVisible();
   return view;
 }
@@ -156,7 +156,7 @@ describe('S2 materials panel navigation', () => {
     await user.keyboard('{Escape}');
     expect(source).toHaveFocus();
     expect(screen.queryByRole('complementary', { name: 'Материалы проверки' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Материалы' }));
+    await user.click(source);
     expect(screen.getByRole('heading', { name: 'Основание 3' })).toBeVisible();
   });
 
@@ -164,7 +164,7 @@ describe('S2 materials panel navigation', () => {
     const user = userEvent.setup();
     openCheck(DEMO);
 
-    const trigger = screen.getByRole('button', { name: 'Материалы' });
+    const trigger = screen.getByRole('button', { name: 'Добавить' });
     await user.click(trigger);
     await user.click(screen.getByRole('button', { name: 'Назад к разговору — закрыть материалы' }));
 

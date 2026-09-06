@@ -77,6 +77,7 @@ describe('task composer', () => {
     const onSubmit = vi.fn();
     render(<TaskComposer onSubmit={onSubmit} />);
 
+    expect(screen.queryByText(/Enter отправляет/)).not.toBeInTheDocument();
     const send = screen.getByRole('button', { name: 'Отправить' });
     expect(send).toBeDisabled();
 

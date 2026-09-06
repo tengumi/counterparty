@@ -31,7 +31,7 @@ interface Props {
 }
 
 const hints: Readonly<Record<ComposerStatus, string>> = {
-  idle: 'Enter отправляет, Shift+Enter переносит строку',
+  idle: '',
   sending: 'Отправляем сообщение…',
   running: '',
   cancelling: 'Останавливаем проверку…',

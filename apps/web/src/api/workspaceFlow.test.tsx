@@ -57,7 +57,7 @@ describe('live workspace mutations', () => {
     await user.clear(input);
     await user.type(input, 'Новый заголовок{Enter}');
 
-    expect(await screen.findByTitle('Новый заголовок')).toBeVisible();
+    expect(await within(screen.getByRole('main')).findByTitle('Новый заголовок')).toBeVisible();
     expect(mutationBody(mock)).toEqual({ title: 'Новый заголовок' });
   });
 
@@ -72,7 +72,7 @@ describe('live workspace mutations', () => {
       ],
     }));
     openDemo();
-    await user.click(screen.getByRole('button', { name: 'Материалы' }));
+    await user.click(screen.getByRole('button', { name: 'Добавить' }));
     const panel = screen.getByRole('complementary', { name: 'Материалы проверки' });
     await user.type(within(panel).getByRole('textbox', { name: 'ИНН компаний' }), '7702070139, 0000000000');
     await user.click(within(panel).getByRole('button', { name: 'Добавить компании' }));
@@ -90,7 +90,7 @@ describe('live workspace mutations', () => {
       details: { limit: 20, in_project: 19, requested_new: 2 },
     }, { status: 409 }));
     openDemo();
-    await user.click(screen.getByRole('button', { name: 'Материалы' }));
+    await user.click(screen.getByRole('button', { name: 'Добавить' }));
     const panel = screen.getByRole('complementary', { name: 'Материалы проверки' });
     await user.type(within(panel).getByRole('textbox', { name: 'ИНН компаний' }), '7702070139, 0000000000');
     await user.click(within(panel).getByRole('button', { name: 'Добавить компании' }));
@@ -106,7 +106,7 @@ describe('live workspace mutations', () => {
       schema_version: '0.1', project_id: demo.id, companies: [], context_version: 1,
     }));
     openDemo();
-    await user.click(screen.getByRole('button', { name: 'Материалы' }));
+    await user.click(screen.getByRole('button', { name: 'Добавить' }));
     await user.click(screen.getByRole('button', { name: 'Удалить' }));
 
     expect(await screen.findByText('Компании не добавлены')).toBeVisible();

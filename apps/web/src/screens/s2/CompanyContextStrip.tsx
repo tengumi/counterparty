@@ -6,6 +6,7 @@
  */
 
 import { ProjectStatusMark } from '../../components/StatusMark';
+import { PlusSIcon } from '@alfalab/icons-glyph/PlusSIcon';
 import type { CompanyRef, ProjectStatus } from '../../mocks/types';
 import { COMPANY_LIMIT } from '../../mocks/types';
 import styles from './S2.module.css';
@@ -35,16 +36,20 @@ export function CompanyContextStrip(props: Props) {
           {first.name}
         </button>
       ) : (
-        <span className={styles.moreCompanies}>Компании не добавлены</span>
+        <span className={styles.emptyCompanies}>Компании не добавлены</span>
       )}
       {props.isDemo ? <span className={styles.demoTag}>Учебный пример</span> : null}
-      {rest.length > 0 ? <span className={styles.moreCompanies}>ещё {rest.length}</span> : null}
+      {rest.length > 0 ? (
+        <button aria-label={`Все компании проверки: ${props.companies.length}`} className={styles.moreCompanies}
+          onClick={props.onAddCompany} type="button">ещё {rest.length}</button>
+      ) : null}
       <button
         className={styles.companyAction}
         disabled={limitReached}
         onClick={props.onAddCompany}
         type="button"
       >
+        <PlusSIcon aria-hidden="true" />
         Добавить
       </button>
       {limitReached ? (

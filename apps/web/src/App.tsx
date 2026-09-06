@@ -5,18 +5,13 @@ import { WorkspaceQueryProvider } from './api/QueryProvider';
 import type { ApiProject } from './api/contracts';
 import styles from './App.module.css';
 import { SessionGate } from './auth/SessionGate';
+import { ChecksSidebar } from './components/ChecksSidebar';
 
 function AppShell() {
   return (
     <div className={styles.shell}>
       <a className={styles.skipLink} href="#content">К содержимому</a>
-      <aside className={styles.sidebar}>
-        <div className={styles.brand}><span aria-hidden="true" />Альфа-Бизнес</div>
-        <nav aria-label="Основная навигация">
-          <Link className={styles.navLink} to="/checks">Проверка контрагентов</Link>
-        </nav>
-        <p className={styles.demo}>Демонстрационная оболочка</p>
-      </aside>
+      <ChecksSidebar />
       <main className={styles.main} id="content" tabIndex={-1}><Outlet /></main>
     </div>
   );
