@@ -222,8 +222,9 @@ def create_harness_runner(
                 and settings.ui_api_internal_token is not None
             )
             no_company = ctx.scope is not None and not context.project.companies
-            if no_company and _INN.search(ctx.prompt) is None:
+            if no_company and _INN.search(ctx.prompt) is None and not explains:
                 # Nothing to read and no INN to act on: ask for one, no model run.
+                # (A "что такое …" question still runs — it needs no company.)
                 ctx.append_text(text_path, ASK_TO_ADD_COMPANY)
                 _finish(
                     ctx,
