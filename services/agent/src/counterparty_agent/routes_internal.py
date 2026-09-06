@@ -17,10 +17,9 @@ router = APIRouter(prefix="/api/v1/internal", tags=["internal"])
 
 
 class SummaryRequest(BaseModel):
-    """Which report to orient, and toward what task."""
+    """Which report to summarise."""
 
     report_id: str
-    task: str = ""
 
 
 def _authorize(settings: AgentSettings, token: str | None) -> None:
@@ -42,7 +41,7 @@ async def summary(
     settings = AgentSettings()
     _authorize(settings, x_internal_token)
     try:
-        return await build_report_summary(settings, report_id=payload.report_id, task=payload.task)
+        return await build_report_summary(settings, report_id=payload.report_id)
     except ValueError as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(error)

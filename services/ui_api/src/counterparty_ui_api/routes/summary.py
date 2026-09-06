@@ -37,7 +37,7 @@ class ReportSummary(BaseModel):
     caveat: str = ""
 
 
-_cache: dict[tuple[str, int], ReportSummary] = {}
+_cache: dict[str, ReportSummary] = {}
 
 
 @router.get(
@@ -50,21 +50,18 @@ async def get_report_summary(
     settings: Annotated[Settings, Depends(get_settings)],
     report_id: Annotated[UUID, Path()],
 ) -> ReportSummary:
-    """Build (or replay) the task-aware orientation block for one pinned report."""
+    """Build (or replay) the general orientation block for one pinned report."""
     if settings.agent_url is None:
         raise ApiError(
             ErrorCode.DEPENDENCY_UNAVAILABLE, "summary is not configured", retryable=True
         )
     project_id = UUID(str(scope.project_id))
-    project = await uow.projects.get(project_id)
-    if project is None:
-        raise ApiError(ErrorCode.NOT_FOUND, "project not found")
     active = await uow.project_companies.list_active(uow.scope.project(project_id))
     if report_id not in {row.report_id for row in active}:
         raise ApiError(ErrorCode.NOT_FOUND, "report is not pinned in this project")
 
-    key = (str(report_id), int(project.context_version))
-    cached = _cache.get(key)
+    # The pinned snapshot is immutable, so the block depends only on the report.
+    cached = _cache.get(str(report_id))
     if cached is not None:
         return cached
 
@@ -75,7 +72,7 @@ async def get_report_summary(
         async with httpx.AsyncClient(timeout=90.0) as client:
             response = await client.post(
                 f"{settings.agent_url.rstrip('/')}/api/v1/internal/summary",
-                json={"report_id": str(report_id), "task": project.title or ""},
+                json={"report_id": str(report_id)},
                 headers=headers,
             )
     except httpx.HTTPError as error:
@@ -89,5 +86,5 @@ async def get_report_summary(
             retryable=True,
         )
     summary = ReportSummary.model_validate(response.json())
-    _cache[key] = summary
+    _cache[str(report_id)] = summary
     return summary

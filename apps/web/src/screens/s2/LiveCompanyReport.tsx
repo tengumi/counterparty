@@ -220,7 +220,7 @@ function ReportSummaryBlock({
       <div className={reportStyles.summary}>
         <p className={reportStyles.summaryTitle}>На что обратить внимание</p>
         <p className={reportStyles.summaryLoading} role="status">
-          Помощник читает отчёт под вашу задачу…
+          Помощник готовит краткую справку по компании…
         </p>
       </div>
     );
@@ -237,7 +237,7 @@ function ReportSummaryBlock({
             <span className={reportStyles.summaryText}>{bullet.text}</span>
             <button
               className={reportStyles.summaryDiscuss}
-              onClick={() => onDiscuss(`Про пункт из отчёта: «${bullet.text}» — что это значит для сделки?`)}
+              onClick={() => onDiscuss(`Поясни пункт из отчёта: «${bullet.text}»`)}
               type="button"
             >
               Обсудить
