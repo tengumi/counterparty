@@ -95,7 +95,7 @@ export function Composer({
               disabled={status === 'cancelling'}
               onClick={onStop}
               size={40}
-              view={hasText ? 'secondary' : 'primary'}
+              view="secondary"
             >
               <span aria-hidden={true} className={styles.stopGlyph} />
             </Button>

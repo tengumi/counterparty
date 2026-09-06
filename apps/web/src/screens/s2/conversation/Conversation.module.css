@@ -42,7 +42,7 @@
   .dot[data-status='running'] { animation: dotPulse 2s steps(2, jump-none) infinite; }
 }
 /* Collapsed "что было сделано" above a finished answer */
-.trailDone { margin: 0 0 8px; }
+.trailDone { margin: 0 0 14px; }
 .trailToggle {
   display: inline-flex; align-items: center; gap: 8px;
   background: none; border: 0; padding: 2px 0; cursor: pointer;
@@ -54,16 +54,21 @@
   background: rgba(5, 8, 29, .06); color: rgba(5, 8, 29, .5);
   font-size: 11px; line-height: 16px; text-align: center;
 }
-.trailDone .steps { margin-top: 8px; }
+.trailDone .steps { margin-top: 10px; }
 
-.steps { list-style: none; margin: 0 0 0 18px; padding: 0 0 0 14px; border-left: 1px solid #e7e8eb; display: flex; flex-direction: column; gap: 8px; }
-.step { display: flex; gap: 12px; font-size: 13px; line-height: 18px; }
-.stepLabel { flex: 1; color: rgba(3, 3, 6, .88); }
+.steps { list-style: none; margin: 0 0 0 3px; padding: 0 0 0 15px; border-left: 1px solid #e7e8eb; display: flex; flex-direction: column; gap: 9px; }
+.step { position: relative; display: flex; gap: 10px; font-size: 13px; line-height: 18px; }
+.step::before {
+  content: ''; position: absolute; left: -19px; top: 6px;
+  width: 6px; height: 6px; border-radius: 50%; background: #c3c6cd;
+}
+.step[data-status='failed']::before { background: #d91d0b; }
+.stepLabel { flex: 1; color: rgba(3, 3, 6, .78); }
 .stepLabel[data-status='failed'] { color: #d91d0b; }
 .stepSource { flex: none; color: rgba(5, 8, 29, .38); }
 
 /* S2-06 answer */
-.answer { font-size: 16px; line-height: 24px; display: flex; flex-direction: column; gap: 14px; }
+.answer { font-size: 16px; line-height: 24px; display: flex; flex-direction: column; gap: 16px; }
 .answerText { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* Markdown answer from the live model, rendered as the plain block of the
