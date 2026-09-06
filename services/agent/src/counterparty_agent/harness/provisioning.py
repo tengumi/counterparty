@@ -12,7 +12,9 @@ calls it like any other; it takes only an INN and returns one short Russian
 sentence the model can quote back.
 """
 
+import asyncio
 import logging
+from collections import defaultdict
 from uuid import UUID
 
 import httpx
@@ -32,6 +34,15 @@ logger = logging.getLogger(__name__)
 
 _TIMEOUT = 15.0
 
+_project_locks: dict[UUID, asyncio.Lock] = defaultdict(asyncio.Lock)
+"""One in-process lock per project.
+
+The model often emits several ``add_company_to_check`` calls from one step and
+the harness runs them concurrently. Each hits the same project row on the UI
+backend (context version, company slot); run in parallel two of three collide
+and come back 500. Serialising per project keeps every add on the clean path
+the endpoint already handles."""
+
 
 async def add_company_by_inn(settings: AgentSettings, *, project_id: UUID, inn: str) -> str:
     """POST one INN to the UI backend's internal add-company endpoint.
@@ -47,8 +58,12 @@ async def add_company_by_inn(settings: AgentSettings, *, project_id: UUID, inn: 
     url = f"{base.rstrip('/')}/api/v1/internal/projects/{project_id}/companies"
     headers = {"X-Internal-Token": token.get_secret_value()}
     try:
-        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+        async with _project_locks[project_id], httpx.AsyncClient(timeout=_TIMEOUT) as client:
             response = await client.post(url, json={"inn": inn}, headers=headers)
+            if response.status_code >= 500:
+                # A row conflict with a sibling add; the serialised retry is clean.
+                await asyncio.sleep(0.2)
+                response = await client.post(url, json={"inn": inn}, headers=headers)
     except httpx.HTTPError as error:
         logger.warning("add_company_to_check transport error: %s", error)
         return ADD_COMPANY_FAILED.format(inn=inn, reason="сервис недоступен")
