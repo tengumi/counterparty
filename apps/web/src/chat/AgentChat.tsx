@@ -71,6 +71,8 @@ interface ChatView {
   readonly draft: string;
   readonly onDraftChange: (value: string) => void;
   readonly inputRef?: RefObject<HTMLTextAreaElement | null>;
+  /** A task carried from S1: sent once, automatically, on the first mount. */
+  readonly autoSend?: string;
   readonly layout?: (feed: ReactNode, composer: ReactNode) => ReactNode;
 }
 
@@ -185,7 +187,12 @@ function RunState({
       <span data-testid="run-status" hidden={true}>
         {run?.status ?? 'нет запуска'}
       </span>
-      {showsRun && run !== null && run.status !== 'accepted' && !run.error ? (
+      {/* «completed» needs no line — the answer above it is the signal. */}
+      {showsRun &&
+      run !== null &&
+      run.status !== 'accepted' &&
+      run.status !== 'completed' &&
+      !run.error ? (
         <p className={styles.notice} role="status">
           {runLabels[run.status]}
         </p>
@@ -303,6 +310,23 @@ function LiveTrail({
   );
 }
 
+/**
+ * Sends the task carried from S1 once, so arriving in the chat does not leave
+ * an unsent draft the user has to submit a second time.
+ */
+function AutoSend({ lastSentRef }: { lastSentRef: RefObject<string> }) {
+  const view = useContext(ChatViewContext);
+  const send = useSendMessage(lastSentRef, () => view.onDraftChange(''));
+  const done = useRef(false);
+  useEffect(() => {
+    const text = view.autoSend?.trim();
+    if (done.current || !text) return;
+    done.current = true;
+    send(text);
+  }, [send, view.autoSend]);
+  return null;
+}
+
 /** The whole chat body; everything that changes lives below the runtime host. */
 function ChatBody({
   fallback,
@@ -323,6 +347,7 @@ function ChatBody({
   const feed = (
     <>
       {view.history}
+      <AutoSend lastSentRef={lastSentRef} />
       <LiveMessages />
       <LiveTrail
         connection={connection}
@@ -400,6 +425,8 @@ export interface AgentChatProps extends AgentRuntimeOptions {
   readonly inputRef?: RefObject<HTMLTextAreaElement | null>;
   /** Opens a numbered basis cited in an answer (07 P1-03). */
   readonly onOpenEvidence?: (evidenceRef: string) => void;
+  /** A task carried from S1, sent once on the first mount. */
+  readonly autoSend?: string;
   /** Places the feed and the composer into the screen layout. */
   readonly layout?: (feed: ReactNode, composer: ReactNode) => ReactNode;
 }
@@ -411,6 +438,7 @@ export function AgentChat({
   onDraftChange,
   inputRef,
   onOpenEvidence,
+  autoSend,
   layout,
   ...options
 }: AgentChatProps) {
@@ -422,6 +450,7 @@ export function AgentChat({
     draft: draft ?? localDraft,
     onDraftChange: onDraftChange ?? setLocalDraft,
     inputRef,
+    autoSend,
     layout,
   };
 

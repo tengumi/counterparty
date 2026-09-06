@@ -106,13 +106,24 @@ describe('V01 assistant-stream ↔ assistant-ui transport', () => {
     expect(screen.getByText('Можно ли перечислять 80% аванса?')).toBeVisible();
   });
 
-  it('renders the typed activity published alongside the text', async () => {
+  it('renders the typed activity of a run that did not finish cleanly', async () => {
+    // A clean completion drops the single-step trail (the answer stands alone);
+    // a cancelled run keeps it, so the typed activity is still inspectable.
+    installFetch(cancelledSse);
+    await send('/slow проверь отчёт');
+
+    const activity = await screen.findByText('Читаю условия поставки');
+    expect(activity).toHaveAttribute('data-kind', 'reading_document');
+    await waitFor(() => expect(activity).toHaveAttribute('data-status', 'failed'));
+  });
+
+  it('does not leave a bare activity line under a clean answer', async () => {
     installFetch(answerSse);
     await send('Проверь условия');
 
-    const activity = await screen.findByText('Читаю условия поставки');
-    await waitFor(() => expect(activity).toHaveAttribute('data-status', 'completed'));
-    expect(activity).toHaveAttribute('data-kind', 'reading_document');
+    await screen.findByText(/Аванс 80%/);
+    expect(screen.queryByText('Читаю условия поставки')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Что проверено' })).not.toBeInTheDocument();
   });
 
   it('surfaces a terminal error without losing the run status', async () => {

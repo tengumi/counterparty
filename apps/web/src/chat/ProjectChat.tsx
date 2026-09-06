@@ -31,6 +31,8 @@ export interface ProjectChatProps {
   readonly onDraftChange: (value: string) => void;
   readonly inputRef?: RefObject<HTMLTextAreaElement | null>;
   readonly onOpenEvidence?: (evidenceRef: string) => void;
+  /** A task carried from S1, sent once on the first mount. */
+  readonly autoSend?: string;
   readonly layout: (feed: ReactNode, composer: ReactNode) => ReactNode;
 }
 
@@ -48,6 +50,7 @@ export function ProjectChat({
   onDraftChange,
   inputRef,
   onOpenEvidence,
+  autoSend,
   layout,
 }: ProjectChatProps) {
   const conversation = useQuery({
@@ -102,6 +105,7 @@ export function ProjectChat({
         </>
       }
       initialState={restored?.state}
+      autoSend={autoSend}
       inputRef={inputRef}
       onOpenEvidence={onOpenEvidence}
       key={restored === undefined ? 'live' : 'restored'}

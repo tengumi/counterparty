@@ -93,6 +93,13 @@ export function ActivityBlock({
   const [open, setOpen] = useState(false);
   const listId = useId();
   const done = steps.filter((step) => step.status !== 'running');
+  const failed = done.some((step) => step.status === 'failed');
+
+  // A finished run speaks for itself through its answer. Keep the trail while
+  // it works, when something went wrong, or when there is a real multi-step
+  // sequence worth inspecting — but not a bare «Проверка завершена» line under
+  // an answer that already stands on its own.
+  if (status === 'completed' && !failed && done.length < 2) return null;
 
   return (
     <section aria-label="Ход проверки" className={styles.activity}>

@@ -149,6 +149,7 @@ export function ChatSurface({
   if (!fixtureMode) {
     return (
       <ProjectChat
+        autoSend={showsHandoff ? (handoffDraft ?? undefined) : undefined}
         draft={draft}
         history={history}
         inputRef={inputRef}
