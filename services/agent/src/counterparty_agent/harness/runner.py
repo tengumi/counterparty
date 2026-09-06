@@ -25,6 +25,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, tool
 from langgraph.checkpoint.base import BaseCheckpointSaver
+from langgraph.errors import GraphRecursionError
 
 from ..config import AgentSettings
 from ..transport.public_state import PublicMessage
@@ -42,6 +43,7 @@ from .prompts import (
     EXPLAIN_TOOL_DESCRIPTION,
     RUN_FAILED_MESSAGE,
     SECTION_ACTIVITY,
+    STEP_BUDGET_MESSAGE,
     TOOL_ACTIVITY,
 )
 from .provisioning import build_add_company_tool
@@ -320,6 +322,21 @@ def create_harness_runner(
                     ),
                     timeout=settings.run_timeout_seconds,
                 )
+        except (GraphRecursionError, TimeoutError):
+            # The model spent its whole tool budget without settling on an
+            # answer. That is not a crash: keep the thread usable and say so,
+            # rather than failing the run and leaving a blank chat.
+            logger.warning("Harness run %s hit its step/time budget", ctx.run.id)
+            ctx.append_text(text_path, STEP_BUDGET_MESSAGE)
+            _finish(
+                ctx,
+                status=RunStatus.COMPLETED,
+                message_status="partial",
+                refs=(),
+                msg_index=msg_index,
+                stream=stream,
+            )
+            return
         except Exception:
             # CancelledError is a BaseException and stays with the registry.
             logger.exception("Harness run %s failed", ctx.run.id)

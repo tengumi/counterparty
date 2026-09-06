@@ -212,6 +212,9 @@ class PublicActivity(ContractModel):
     """
 
     id: NonEmptyString
+    run_id: RunId | None = None
+    """The run that produced this step. The UI shows one run's trail per answer;
+    a projection folded before this field existed simply omits it."""
     kind: ActivityKind
     label: NonEmptyString
     status: ActivityStatus

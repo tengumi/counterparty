@@ -155,8 +155,9 @@ POLICY = """Ты — помощник по проверке контрагент
 
 DOMAIN_NOTES = render_reference()
 """Standing domain notes, generated from the versioned reference in
-:mod:`counterparty_agent.harness.knowledge` so provenance and tests stay
-attached. A question also pulls the fragments it touches through
+:mod:`counterparty_agent.harness.knowledge` so provenance and worked examples stay
+attached. Do not pin prompt text or note selection in tests.
+A question also pulls the fragments it touches through
 ``knowledge.lookup`` and they are rendered by :func:`render_system_prompt`."""
 
 REPAIR_INSTRUCTION = """Ответ отклонён проверкой оснований.
@@ -227,6 +228,11 @@ ADD_COMPANY_ALREADY = "Компания {name} уже закреплена в э
 ADD_COMPANY_NOT_FOUND = "Компании с ИНН {inn} нет в доступном индексе отчётов."
 ADD_COMPANY_FAILED = "Не удалось добавить компанию с ИНН {inn}: {reason}."
 RUN_FAILED_MESSAGE = "Не удалось завершить разбор. Попробуйте повторить запрос."
+STEP_BUDGET_MESSAGE = (
+    "Я поднял отчёт и просмотрел основные разделы, но не успел свести это в короткий "
+    "вывод за отведённое число шагов. Спросите точечно — по финансам, судам, "
+    "исполнительным производствам или руководству — и я отвечу сжато и по делу."
+)
 ANSWER_HEADING = "Что показывает закреплённый отчёт:"
 ASK_FOR_INN = "Назовите ИНН компании, тогда я подниму закреплённый отчёт и отвечу по нему?"
 MISSING_SECTION_LINE = (
