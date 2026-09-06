@@ -104,25 +104,34 @@ function MessageTrail({
 }) {
   const [open, setOpen] = useState(false);
   const listId = useId();
-  if (activities.length === 0) return null;
+
+  // A tool call runs in a fraction of a second; the model then thinks for
+  // several before the next one. Hold the last action on screen through that
+  // gap so it's clear what just happened, then fall back to a neutral line.
+  const running = activities.filter((activity) => activity.status === 'running');
+  const liveLabel =
+    running.length > 1 ? 'Собираю сведения' : running.length === 1 ? running[0]!.label : null;
+  const [held, setHeld] = useState('Изучаю отчёт');
+  useEffect(() => {
+    if (!inFlight) return;
+    if (liveLabel !== null) {
+      setHeld(liveLabel);
+      return;
+    }
+    const timer = setTimeout(() => setHeld('Формулирую ответ'), 4000);
+    return () => clearTimeout(timer);
+  }, [inFlight, liveLabel]);
 
   if (inFlight) {
-    const running = activities.filter((activity) => activity.status === 'running');
-    // No tool is running any more but the run is still going: the model is
-    // writing the answer. Say that instead of freezing on the last step.
-    const label =
-      running.length === 0
-        ? 'Формулирую ответ'
-        : running.length > 1
-          ? 'Собираю сведения'
-          : running[0]!.label;
     return (
       <p className={styles.activityLine} data-status="running">
         <span aria-hidden="true" className={styles.dot} data-status="running" />
-        <span>{label}…</span>
+        <span>{held}…</span>
       </p>
     );
   }
+
+  if (activities.length === 0) return null;
 
   const failed = activities.some((activity) => activity.status === 'failed');
   return (
