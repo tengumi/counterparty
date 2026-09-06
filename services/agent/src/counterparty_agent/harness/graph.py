@@ -30,13 +30,14 @@ from langgraph.graph.state import CompiledStateGraph
 
 from .context import AgentContext
 from .evidence import (
+    CITATION,
     RunEvidenceLedger,
     ValidationReport,
     repair_answer,
 )
 from .filesystem import scoped_permissions
 from .middleware import ActivityTraceMiddleware, EvidenceLedgerMiddleware, ToolTrace
-from .prompts import REPAIR_INSTRUCTION
+from .prompts import CITE_INSTRUCTION, REPAIR_INSTRUCTION
 
 CompiledHarness = CompiledStateGraph[Any, Any, Any, Any]
 """The compiled LangGraph the harness runs. Its generics are library detail."""
@@ -162,10 +163,21 @@ async def run_turn(
             dropped_claims=(),
             observed_refs=tuple(ledger.known_refs()),
         )
+    # The weak model routinely answers with facts and no citation at all even
+    # though it just read the report. One targeted retry when the answer has
+    # zero [evidence:] and the run did observe refs — nothing else is changed.
+    refs = list(ledger.known_refs())
+    cited = bool(CITATION.search(answer))
+    attempted = bool(refs) and not cited
+    if attempted:
+        so_far = list(state["messages"])
+        so_far.append(HumanMessage(content=CITE_INSTRUCTION.format(refs="\n".join(refs))))
+        state = await graph.ainvoke({"messages": so_far}, config)
+        answer = final_text(state["messages"])
     outcome = repair_answer(answer, ledger)
     return TurnResult(
         answer=outcome.text,
-        model_repair_attempted=False,
+        model_repair_attempted=attempted,
         dropped_claims=outcome.dropped,
         observed_refs=tuple(ledger.known_refs()),
     )
