@@ -7,13 +7,30 @@ model call, so the same assertions hold in tests and in the browser.
 
 from datetime import datetime, timedelta
 from enum import StrEnum
+from typing import NamedTuple
 
 from counterparty_contracts import RunStatus
 
 from .runs import RunContext
 
-ASSISTANT_MESSAGE_INDEX = "1"
-_TEXT_PATH = ("messages", ASSISTANT_MESSAGE_INDEX, "blocks", "0", "text")
+
+class _Paths(NamedTuple):
+    """Where this run's own message and activity sit once appended.
+
+    The projection carries the whole thread, so with prior turns seeded into
+    ``initial_state`` the run's items land after them, not at a fixed 1/0.
+    """
+
+    msg: str
+    act: str
+    text: tuple[str, ...]
+
+
+def _paths(ctx: RunContext) -> _Paths:
+    state = ctx.run.initial_state
+    msg = str(len(state.messages))
+    act = str(len(state.activities))
+    return _Paths(msg=msg, act=act, text=("messages", msg, "blocks", "0", "text"))
 _ANSWER_CHUNKS = (
     "Смотрю условия поставки. ",
     "Аванс 80% от 2,4 млн ₽ — это 1,92 млн ₽ до отгрузки. ",
@@ -54,12 +71,12 @@ def _started_at(ctx: RunContext) -> datetime:
     return run_info.started_at
 
 
-def _begin(ctx: RunContext) -> None:
+def _begin(ctx: RunContext, paths: _Paths) -> None:
     ctx.set(("run", "status"), RunStatus.RUNNING.value)
     ctx.append_item(
         ("activities",),
         {
-            "id": "activity-1",
+            "id": f"activity-{paths.msg}",
             "kind": "reading_document",
             "label": "Читаю условия поставки",
             "status": "running",
@@ -71,7 +88,7 @@ def _begin(ctx: RunContext) -> None:
     ctx.append_item(
         ("messages",),
         {
-            "id": "assistant-1",
+            "id": f"assistant-{paths.msg}",
             "role": "assistant",
             "blocks": [{"type": "text", "text": ""}],
             "status": "streaming",
@@ -80,8 +97,10 @@ def _begin(ctx: RunContext) -> None:
     )
 
 
-def _settle(ctx: RunContext, *, status: RunStatus, message_status: str, revision: int) -> None:
-    ctx.set(("messages", ASSISTANT_MESSAGE_INDEX, "status"), message_status)
+def _settle(
+    ctx: RunContext, *, status: RunStatus, message_status: str, revision: int, paths: _Paths
+) -> None:
+    ctx.set(("messages", paths.msg, "status"), message_status)
     ctx.set(("run", "status"), status.value)
     ctx.set(("run", "finished_at"), _at(ctx, 1))
     ctx.set(("run", "last_public_revision"), revision)
@@ -92,12 +111,13 @@ def _settle(ctx: RunContext, *, status: RunStatus, message_status: str, revision
 async def deterministic_agent(ctx: RunContext) -> None:
     """Emit one V01 case, checking cancellation at every safe boundary."""
     scenario = Scenario.from_prompt(ctx.prompt)
-    _begin(ctx)
+    paths = _paths(ctx)
+    _begin(ctx, paths)
 
     if scenario is Scenario.FAIL:
-        ctx.set(("activities", "0", "status"), "failed")
-        ctx.set(("activities", "0", "finished_at"), _at(ctx, 1))
-        _settle(ctx, status=RunStatus.FAILED, message_status="error", revision=1)
+        ctx.set(("activities", paths.act, "status"), "failed")
+        ctx.set(("activities", paths.act, "finished_at"), _at(ctx, 1))
+        _settle(ctx, status=RunStatus.FAILED, message_status="error", revision=1, paths=paths)
         ctx.set(
             ("run", "error"),
             {
@@ -115,19 +135,25 @@ async def deterministic_agent(ctx: RunContext) -> None:
     slow = scenario is Scenario.SLOW
     if slow:
         # Emit before the first boundary so a cancel still leaves partial output.
-        ctx.append_text(_TEXT_PATH, "Разбираю документ, это займёт время…")
+        ctx.append_text(paths.text, "Разбираю документ, это займёт время…")
     steps = _SLOW_STEPS if slow else len(_ANSWER_CHUNKS)
     step_seconds = _SLOW_STEP_SECONDS if slow else _ANSWER_STEP_SECONDS
     for step in range(steps):
         if await ctx.pause(step_seconds):
             ctx.set(("run", "status"), RunStatus.CANCELLING.value)
-            ctx.set(("activities", "0", "status"), "failed")
-            ctx.set(("activities", "0", "finished_at"), _at(ctx, 1))
-            _settle(ctx, status=RunStatus.CANCELLED, message_status="partial", revision=1)
+            ctx.set(("activities", paths.act, "status"), "failed")
+            ctx.set(("activities", paths.act, "finished_at"), _at(ctx, 1))
+            _settle(
+                ctx,
+                status=RunStatus.CANCELLED,
+                message_status="partial",
+                revision=1,
+                paths=paths,
+            )
             return
         if not slow:
-            ctx.append_text(_TEXT_PATH, _ANSWER_CHUNKS[step])
+            ctx.append_text(paths.text, _ANSWER_CHUNKS[step])
 
-    ctx.set(("activities", "0", "status"), "completed")
-    ctx.set(("activities", "0", "finished_at"), _at(ctx, 1))
-    _settle(ctx, status=RunStatus.COMPLETED, message_status="complete", revision=1)
+    ctx.set(("activities", paths.act, "status"), "completed")
+    ctx.set(("activities", paths.act, "finished_at"), _at(ctx, 1))
+    _settle(ctx, status=RunStatus.COMPLETED, message_status="complete", revision=1, paths=paths)

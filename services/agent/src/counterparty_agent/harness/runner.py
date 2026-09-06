@@ -39,8 +39,23 @@ from .tools import reports_toolset
 
 logger = logging.getLogger(__name__)
 
+# The assistant message index of a run that starts from a fresh thread (one
+# user message, no prior turns). ``_assistant_paths`` generalises it.
 ASSISTANT_MESSAGE_INDEX = "1"
-_TEXT_PATH = ("messages", ASSISTANT_MESSAGE_INDEX, "blocks", "0", "text")
+
+
+def _assistant_paths(state: object) -> tuple[str, str, tuple[str, ...]]:
+    """Indices of the turn this run appends, given the state it starts from.
+
+    The projection carries the whole thread (prior turns are seeded into
+    ``initial_state``), so the run's own assistant message and activity land
+    after whatever history is already there — not at a fixed ``1``/``0``.
+    """
+    messages = getattr(state, "messages", [])
+    activities = getattr(state, "activities", [])
+    msg_index = str(len(messages))
+    act_index = str(len(activities))
+    return msg_index, act_index, ("messages", msg_index, "blocks", "0", "text")
 
 ContextLoader = Callable[[ThreadScope], Awaitable[AgentContext]]
 ConfigFactory = Callable[[ThreadScope], Awaitable[RunnableConfig]]
@@ -89,12 +104,13 @@ def create_harness_runner(
 
     async def run(ctx: RunContext) -> None:
         state = ctx.run.initial_state
+        msg_index, act_index, text_path = _assistant_paths(state)
         started = _started_at(ctx)
         ctx.set(("run", "status"), RunStatus.RUNNING.value)
         ctx.append_item(
             ("activities",),
             {
-                "id": "activity-1",
+                "id": f"activity-{msg_index}",
                 "kind": "reading_report",
                 "label": ACTIVITY_READING_REPORT,
                 "status": "running",
@@ -122,9 +138,16 @@ def create_harness_runner(
             context = await context_loader(scope)
             config = await config_factory(scope)
             if ctx.scope is not None and not context.project.companies:
-                ctx.set(("activities", "0", "label"), ACTIVITY_CHECKING_CONTEXT)
-                ctx.append_text(_TEXT_PATH, ASK_TO_ADD_COMPANY)
-                _finish(ctx, status=RunStatus.COMPLETED, message_status="complete", refs=())
+                ctx.set(("activities", act_index, "label"), ACTIVITY_CHECKING_CONTEXT)
+                ctx.append_text(text_path, ASK_TO_ADD_COMPANY)
+                _finish(
+                    ctx,
+                    status=RunStatus.COMPLETED,
+                    message_status="complete",
+                    refs=(),
+                    msg_index=msg_index,
+                    act_index=act_index,
+                )
                 return
             context = replace(context, relevant_notes=render_relevant(lookup(ctx.prompt)))
             # Specs 04 §3 caps tool calls per run; one model step per call plus
@@ -146,18 +169,34 @@ def create_harness_runner(
         except Exception:
             # CancelledError is a BaseException and stays with the registry.
             logger.exception("Harness run %s failed", ctx.run.id)
-            _finish(ctx, status=RunStatus.FAILED, message_status="error", refs=())
+            _finish(
+                ctx,
+                status=RunStatus.FAILED,
+                message_status="error",
+                refs=(),
+                msg_index=msg_index,
+                act_index=act_index,
+            )
             ctx.fail(RUN_FAILED_MESSAGE)
             return
         if ctx.cancel_requested:
-            _finish(ctx, status=RunStatus.CANCELLED, message_status="partial", refs=())
+            _finish(
+                ctx,
+                status=RunStatus.CANCELLED,
+                message_status="partial",
+                refs=(),
+                msg_index=msg_index,
+                act_index=act_index,
+            )
             return
-        ctx.append_text(_TEXT_PATH, result.answer)
+        ctx.append_text(text_path, result.answer)
         _finish(
             ctx,
             status=RunStatus.COMPLETED,
             message_status="complete",
             refs=result.observed_refs,
+            msg_index=msg_index,
+            act_index=act_index,
         )
 
     return run
@@ -176,15 +215,17 @@ def _finish(
     status: RunStatus,
     message_status: str,
     refs: tuple[str, ...],
+    msg_index: str,
+    act_index: str,
 ) -> None:
     finished = datetime.now(UTC).isoformat()
     ctx.set(
-        ("activities", "0", "status"),
+        ("activities", act_index, "status"),
         "completed" if refs or status is RunStatus.COMPLETED else "failed",
     )
-    ctx.set(("activities", "0", "finished_at"), finished)
-    ctx.set(("activities", "0", "evidence_refs"), list(refs))
-    ctx.set(("messages", ASSISTANT_MESSAGE_INDEX, "status"), message_status)
+    ctx.set(("activities", act_index, "finished_at"), finished)
+    ctx.set(("activities", act_index, "evidence_refs"), list(refs))
+    ctx.set(("messages", msg_index, "status"), message_status)
     ctx.set(("run", "status"), status.value)
     ctx.set(("run", "finished_at"), finished)
     ctx.set(("run", "last_public_revision"), 1)

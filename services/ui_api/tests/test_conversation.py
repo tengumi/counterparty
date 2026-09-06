@@ -246,6 +246,50 @@ def test_a_finished_run_surfaces_its_stored_history(
     assert body["active_run_id"] is None
 
 
+def test_history_survives_while_the_next_run_is_still_working(
+    client: TestClient, clean: Engine, sign_in: SignIn
+) -> None:
+    """History outlives an in-flight run.
+
+    A running run has no projection yet, so the endpoint falls back to the last
+    completed run — whose projection already carries the whole thread.
+    """
+    sign_in()
+    project = _project(client)
+    thread_id = str(project["default_thread_id"])
+    started = datetime.now(UTC) - timedelta(minutes=10)
+    _add_run(
+        clean,
+        project_id=str(project["id"]),
+        thread_id=thread_id,
+        status=AgentRunStatus.COMPLETED,
+        started_at=started,
+        revision=1,
+        projection=_completed_projection(
+            project_id=str(project["id"]),
+            thread_id=thread_id,
+            run_id=str(uuid4()),
+            started_at=started,
+        ),
+    )
+    running = _add_run(
+        clean,
+        project_id=str(project["id"]),
+        thread_id=thread_id,
+        status=AgentRunStatus.RUNNING,
+        started_at=datetime.now(UTC),
+        revision=1,
+    )
+
+    body = client.get(f"/api/v1/projects/{project['id']}/threads/{thread_id}/conversation").json()
+
+    assert [m["role"] for m in body["messages"]] == ["user", "assistant"]
+    assert body["activities"] != []
+    assert body["run"]["id"] == running
+    assert body["run"]["status"] == "running"
+    assert body["active_run_id"] == running
+
+
 def test_an_unreadable_stored_projection_degrades_to_an_empty_history(
     client: TestClient, clean: Engine, sign_in: SignIn
 ) -> None:

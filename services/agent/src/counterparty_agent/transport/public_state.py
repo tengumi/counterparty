@@ -93,8 +93,16 @@ def initial_state(
     run_id: RunId,
     started_at: datetime,
     user_message: PublicMessage,
+    prior_messages: list[PublicMessage] | None = None,
+    prior_activities: list[PublicActivity] | None = None,
 ) -> PublicAgentState:
-    """Build the snapshot a fresh run starts from."""
+    """Build the snapshot a fresh run starts from.
+
+    ``prior_messages``/``prior_activities`` are this thread's earlier turns,
+    read from the last stored projection; folding the new run's events onto
+    them keeps the thread's history whole across runs. The lifecycle fields
+    always describe the new run, never the prior one.
+    """
     return PublicAgentState(
         project_id=project_id,
         thread_id=thread_id,
@@ -108,7 +116,8 @@ def initial_state(
             last_public_revision=0,
         ),
         revision=0,
-        messages=[user_message],
+        messages=[*(prior_messages or []), user_message],
+        activities=list(prior_activities or []),
         context_version=0,
         save_status="unsaved",
     )

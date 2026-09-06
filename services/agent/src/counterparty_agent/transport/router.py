@@ -1,5 +1,6 @@
 """HTTP surface of the agent RPC transport (Specs 10 §6)."""
 
+import logging
 from datetime import UTC, datetime
 from typing import Annotated, Literal
 from uuid import UUID, uuid4
@@ -12,13 +13,21 @@ from counterparty_contracts import (
     ThreadId,
 )
 from fastapi import APIRouter, HTTPException, Request, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from starlette.responses import Response
 
 from .delivery import stream_projection, stream_run
 from .durable import ActiveRunExists, is_terminal
-from .public_state import PublicAgentState, PublicMessage, TextBlock, initial_state
+from .public_state import (
+    PublicActivity,
+    PublicAgentState,
+    PublicMessage,
+    TextBlock,
+    initial_state,
+)
 from .runs import Run, RunRegistry
+
+logger = logging.getLogger(__name__)
 
 
 class ChatMessage(BaseModel):
@@ -110,6 +119,8 @@ def create_transport_router() -> APIRouter:
             return stream_run(existing)
 
         scope = None
+        prior_messages: list[PublicMessage] = []
+        prior_activities: list[PublicActivity] = []
         if registry.durable is not None:
             scope = await registry.durable.resolve_scope(
                 project_id=UUID(str(body.project_id)),
@@ -120,6 +131,17 @@ def create_transport_router() -> APIRouter:
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="unknown project or thread",
                 )
+            prior = await registry.durable.prior_projection(scope)
+            if prior is not None:
+                try:
+                    stored = PublicAgentState.model_validate(prior)
+                    prior_messages = list(stored.messages)
+                    prior_activities = list(stored.activities)
+                except ValidationError:
+                    logger.warning(
+                        "Prior projection for thread %s unreadable; starting empty",
+                        scope.thread_id,
+                    )
 
         command = body.commands[0]
         now = datetime.now(UTC)
@@ -139,6 +161,8 @@ def create_transport_router() -> APIRouter:
                     status="complete",
                     created_at=now,
                 ),
+                prior_messages=prior_messages,
+                prior_activities=prior_activities,
             ),
             prompt=command.message.text,
         )

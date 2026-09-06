@@ -34,5 +34,11 @@ async def get_thread_conversation(scope: ScopedThread, uow: TenantWork) -> Threa
     project = await uow.projects.get(project_id)
     if project is None:
         raise ApiError(ErrorCode.NOT_FOUND, "project not found")
-    run = await uow.agent_runs.latest_for_thread(uow.scope.project(project_id), thread_id)
-    return as_thread_conversation(project, ThreadId(thread_id), run)
+    project_scope = uow.scope.project(project_id)
+    run = await uow.agent_runs.latest_for_thread(project_scope, thread_id)
+    # The newest run's projection may still be unwritten while it works; fall
+    # back to the last one that has a projection so the history is not lost.
+    projection_run = run
+    if run is not None and run.public_projection is None:
+        projection_run = await uow.agent_runs.latest_projection_for_thread(project_scope, thread_id)
+    return as_thread_conversation(project, ThreadId(thread_id), run, projection_run)

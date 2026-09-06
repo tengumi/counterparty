@@ -54,6 +54,19 @@ class DurableRuns:
         """Trusted ``(tenant, project, thread)`` for an RPC that has no session."""
         return await self._owner.resolve_thread_scope(project_id=project_id, thread_id=thread_id)
 
+    async def prior_projection(self, scope: ThreadScope) -> dict[str, object] | None:
+        """The newest stored projection of this thread, or ``None``.
+
+        A fresh run folds its events onto this so the thread's messages and
+        activities accumulate across runs. Fails soft: a read error means the
+        run just starts from an empty history.
+        """
+        try:
+            return await self._owner.latest_projection(scope)
+        except Exception:
+            logger.exception("Prior projection read for thread %s failed", scope.thread_id)
+            return None
+
     async def accept(
         self,
         scope: ThreadScope,

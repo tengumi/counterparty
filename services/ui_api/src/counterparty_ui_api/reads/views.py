@@ -142,22 +142,25 @@ def as_analysis_artifact(row: AnalysisArtifactRow) -> AnalysisArtifact:
 
 
 def as_thread_conversation(
-    project: ProjectRow, thread_id: ThreadId, run: AgentRunRow | None
+    project: ProjectRow,
+    thread_id: ThreadId,
+    run: AgentRunRow | None,
+    projection_run: AgentRunRow | None = None,
 ) -> ThreadConversationState:
     """Render the stored projection of one thread.
 
     ``messages`` and ``activities`` are the agent service's durable projection.
-    A finished run writes its final ``PublicAgentState`` to
-    ``agent_runs.public_projection`` on its owner connection; this reads it back
-    verbatim. A run still working, or one that predates the projection column,
-    has none, so the history is empty rather than invented. Run lifecycle
-    (``run``, ``active_run_id``, ``revision``) and ``context_version`` always
-    come from the authoritative rows, never from the stored blob.
+    Each run folds its events onto the thread's prior projection, so the newest
+    run that has one (``projection_run``, ``run`` by default) already holds the
+    whole history. A run still working writes its projection only at the
+    terminal transition, so ``projection_run`` may be an older row than ``run``.
+    Run lifecycle (``run``, ``active_run_id``, ``revision``) and
+    ``context_version`` always come from the authoritative rows, never the blob.
     """
     run_info: RunInfo | None = None
     active_run_id: RunId | None = None
     revision = 0
-    stored = _stored_projection(run)
+    stored = _stored_projection(projection_run if projection_run is not None else run)
     if run is not None:
         run_info = RunInfo(
             id=RunId(run.id),

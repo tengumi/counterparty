@@ -534,6 +534,30 @@ class AgentRunReadRepository(_TenantScoped):
         )
         return (await self._session.execute(statement)).scalar_one_or_none()
 
+    async def latest_projection_for_thread(
+        self, scope: ProjectScope, thread_id: UUID
+    ) -> AgentRun | None:
+        """The most recent run of the thread that carries a public projection.
+
+        The agent seeds each run's projection with the thread's prior turns, so
+        the newest one with a projection holds the whole history. It can be an
+        older row than :meth:`latest_for_thread` when a run is still working
+        (its projection is written only at the terminal transition).
+        """
+        self._assert_same_tenant(scope)
+        statement = (
+            select(AgentRun)
+            .where(
+                AgentRun.tenant_id == self.tenant_id,
+                AgentRun.project_id == scope.project_id,
+                AgentRun.thread_id == thread_id,
+                AgentRun.public_projection.is_not(None),
+            )
+            .order_by(AgentRun.started_at.desc(), AgentRun.id.desc())
+            .limit(1)
+        )
+        return (await self._session.execute(statement)).scalar_one_or_none()
+
 
 @dataclass(frozen=True, slots=True)
 class CompanyAddition:
@@ -1046,6 +1070,27 @@ class AgentRunOwner:
         """
         async with self._transaction() as session:
             return await session.get(AgentRun, run_id)
+
+    async def latest_projection(self, scope: ThreadScope) -> dict[str, Any] | None:
+        """The stored public projection of the newest run of this thread.
+
+        A fresh run seeds its ``initial_state`` with this so a thread's history
+        accumulates across runs instead of every reload showing only the last
+        turn. ``None`` when the thread has no finished run with a projection.
+        """
+        async with self._transaction() as session:
+            row = await session.scalar(
+                select(AgentRun)
+                .where(
+                    AgentRun.tenant_id == scope.tenant_id,
+                    AgentRun.project_id == scope.project_id,
+                    AgentRun.thread_id == scope.thread_id,
+                    AgentRun.public_projection.is_not(None),
+                )
+                .order_by(AgentRun.started_at.desc(), AgentRun.id.desc())
+                .limit(1)
+            )
+        return None if row is None or row.public_projection is None else dict(row.public_projection)
 
     async def interrupt_active(self, *, only_current: bool = False) -> int:
         """Recover abandoned active runs, or finish this owner's bounded shutdown.

@@ -14,6 +14,7 @@ from counterparty_contracts import ClientRequestId, ProjectId, RunId, ThreadId
 
 from counterparty_agent.transport.projection import fold_projection
 from counterparty_agent.transport.public_state import (
+    PublicActivity,
     PublicMessage,
     TextBlock,
     initial_state,
@@ -104,3 +105,66 @@ async def test_a_cancelled_run_keeps_its_partial_output() -> None:
     assert state.run is not None and state.run.status == "cancelled"
     assert state.messages[1].status == "partial"
     assert state.messages[1].blocks[0].text.startswith("Разбираю документ")
+
+
+@pytest.mark.asyncio
+async def test_a_run_seeded_with_prior_turns_folds_to_the_whole_thread() -> None:
+    """Prior messages and activities from the last projection are carried through.
+
+    This is what keeps a thread's history whole across runs: the new run folds
+    its events onto the previous projection, and its own turn is appended, not
+    substituted for the earlier ones.
+    """
+    prior_user = PublicMessage(
+        id="turn-1-user",
+        role="user",
+        blocks=[TextBlock(text="Первый вопрос")],
+        status="complete",
+        created_at=_STARTED,
+    )
+    prior_answer = PublicMessage(
+        id="turn-1-assistant",
+        role="assistant",
+        blocks=[TextBlock(text="Первый ответ")],
+        status="complete",
+        created_at=_STARTED,
+    )
+    prior_activity = PublicActivity(
+        id="turn-1-act", kind="reading_report", label="Читаю отчёт", status="completed"
+    )
+    run = Run(
+        id=_RUN,
+        client_request_id=_REQUEST,
+        initial_state=initial_state(
+            project_id=_PROJECT,
+            thread_id=_THREAD,
+            run_id=_RUN,
+            started_at=_STARTED,
+            user_message=PublicMessage(
+                id="turn-2-user",
+                role="user",
+                blocks=[TextBlock(text="Можно ли перечислять 80% аванса?")],
+                status="complete",
+                created_at=_STARTED,
+            ),
+            prior_messages=[prior_user, prior_answer],
+            prior_activities=[prior_activity],
+        ),
+        prompt="Можно ли перечислять 80% аванса?",
+    )
+    async with RunRegistry(deterministic_agent) as registry:
+        await registry.start(run)
+        while not run.finished:
+            await asyncio.sleep(0)
+
+    state = fold_projection(run.initial_state, run.events)
+
+    assert [m.id for m in state.messages[:3]] == [
+        "turn-1-user",
+        "turn-1-assistant",
+        "turn-2-user",
+    ]
+    assert state.messages[3].role == "assistant"
+    assert state.messages[3].blocks[0].text  # the new answer, appended
+    assert any(a.id == "turn-1-act" for a in state.activities)
+    assert state.run is not None and state.run.status == "completed"
