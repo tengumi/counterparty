@@ -226,7 +226,7 @@ function ReportSummaryBlock({
     );
   }
   if (query.isError || query.data.bullets.length === 0) return null;
-  const { bullets, caveat } = query.data;
+  const { bullets } = query.data;
   return (
     <div className={reportStyles.summary}>
       <p className={reportStyles.summaryTitle}>На что обратить внимание</p>
@@ -245,7 +245,9 @@ function ReportSummaryBlock({
           </li>
         ))}
       </ul>
-      {caveat ? <p className={reportStyles.summaryCaveat}>{caveat}</p> : null}
+      <p className={reportStyles.summaryCaveat}>
+        Краткая справка помощника по контрагенту, не оценка банка. Ниже — факты отчёта как есть.
+      </p>
     </div>
   );
 }

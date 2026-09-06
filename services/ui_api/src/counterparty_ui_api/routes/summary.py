@@ -34,7 +34,6 @@ class ReportSummary(BaseModel):
     """The orientation block shown above the raw report sections."""
 
     bullets: list[SummaryBullet] = Field(default_factory=list)
-    caveat: str = ""
 
 
 _cache: dict[str, ReportSummary] = {}

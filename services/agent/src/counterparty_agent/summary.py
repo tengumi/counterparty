@@ -65,10 +65,6 @@ class ReportSummary(BaseModel):
     bullets: list[SummaryBullet] = Field(
         description="3–4 пункта о самой компании, самый важный первым", min_length=1, max_length=4
     )
-    caveat: str = Field(
-        description="одна фраза: это краткая справка по контрагенту, а не оценка банка; "
-        "ниже идут факты как есть"
-    )
 
 
 def _tool(tools: Sequence[BaseTool], name: str) -> BaseTool | None:
