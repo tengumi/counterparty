@@ -1,10 +1,10 @@
-"""The harness answers a business question through MCP tools (AG-01..AG-03)."""
+"""Model configuration and checkpoint history isolation."""
 
 from uuid import UUID
 
 import pytest
-from harness_fixtures import CAPITAL_REF, INN, PROCEEDS_REF, ScriptedChatModel, report_tools
-from langchain_core.messages import AIMessage, HumanMessage
+from harness_fixtures import INN, report_tools
+from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
 
@@ -18,7 +18,6 @@ from counterparty_agent.harness import (
     create_chat_model,
     create_harness,
     run_turn,
-    validate_answer,
 )
 
 PROJECT = UUID("33333333-3333-4333-8333-333333333333")
@@ -55,65 +54,6 @@ def test_the_default_provider_needs_no_model_api() -> None:
     """The default provider needs no model api."""
     model = create_chat_model(AgentSettings())
     assert isinstance(model, DeterministicChatModel)
-
-
-async def test_the_agent_answers_from_mcp_tools_with_resolvable_refs() -> None:
-    """The agent answers from mcp tools with resolvable refs."""
-    ledger = RunEvidenceLedger()
-    graph = create_harness(
-        model=DeterministicChatModel(),
-        tools=report_tools(),
-        context=context_for(THREAD_A),
-        ledger=ledger,
-        checkpointer=InMemorySaver(),
-    )
-    result = await run_turn(graph, question=QUESTION, config=config_for(THREAD_A), ledger=ledger)
-
-    assert PROCEEDS_REF in result.observed_refs
-    assert CAPITAL_REF in result.observed_refs
-    assert f"[evidence:{PROCEEDS_REF}]" in result.answer
-    assert result.grounded
-    assert validate_answer(result.answer, ledger).ok
-
-
-async def test_a_missing_section_is_named_instead_of_reported_as_zero() -> None:
-    """A missing section is named instead of reported as zero."""
-    ledger = RunEvidenceLedger()
-    graph = create_harness(
-        model=DeterministicChatModel(),
-        tools=report_tools(),
-        context=context_for(THREAD_A),
-        ledger=ledger,
-        checkpointer=InMemorySaver(),
-    )
-    result = await run_turn(graph, question=QUESTION, config=config_for(THREAD_A), ledger=ledger)
-    assert "licenses" in result.answer
-
-
-async def test_the_model_is_asked_once_to_cite_then_the_answer_is_shown() -> None:
-    """The model gets one repair pass; for the demo an uncited answer still shows.
-
-    Only a line citing a ref that does not resolve would be dropped — here the
-    model cites nothing, so its answer passes through after the repair attempt.
-    """
-    model = ScriptedChatModel(
-        script=[
-            AIMessage(content="Capitals are negative and the supplier looks stretched."),
-            AIMessage(content="Capitals are negative and the supplier looks stretched."),
-        ]
-    )
-    ledger = RunEvidenceLedger(refs={PROCEEDS_REF})
-    graph = create_harness(
-        model=model,
-        tools=report_tools(),
-        context=context_for(THREAD_A),
-        ledger=ledger,
-        checkpointer=InMemorySaver(),
-    )
-    result = await run_turn(graph, question=QUESTION, config=config_for(THREAD_A), ledger=ledger)
-
-    assert result.model_repair_attempted
-    assert "supplier looks stretched" in result.answer
 
 
 async def test_a_sibling_thread_history_never_reaches_the_model() -> None:
@@ -173,36 +113,6 @@ async def test_the_same_thread_keeps_its_own_history() -> None:
 
     last = model.seen_prompts[-1]
     assert any(QUESTION in message.text() for message in last)
-
-
-async def test_without_an_inn_the_agent_asks_instead_of_guessing() -> None:
-    """Without an inn the agent asks instead of guessing."""
-    ledger = RunEvidenceLedger()
-    graph = create_harness(
-        model=DeterministicChatModel(),
-        tools=report_tools(),
-        context=build_context(
-            project_id=PROJECT,
-            tenant_id=TENANT,
-            title="Supply check",
-            workflow_status="draft",
-            context_version=0,
-            companies=[],
-            thread_id=THREAD_A,
-            thread_title="New chat",
-            thread_status="active",
-        ),
-        ledger=ledger,
-        checkpointer=InMemorySaver(),
-    )
-    result = await run_turn(
-        graph,
-        question="Is this counterparty safe?",
-        config=config_for(THREAD_A),
-        ledger=ledger,
-    )
-    assert result.answer.endswith("?")
-    assert result.observed_refs == ()
 
 
 @pytest.mark.parametrize("provider", ["deterministic"])

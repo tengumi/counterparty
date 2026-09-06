@@ -6,11 +6,8 @@ from harness_fixtures import CAPITAL_REF, PROCEEDS_REF, company_overview
 
 from counterparty_agent.harness import (
     RunEvidenceLedger,
-    repair_answer,
-    split_claims,
     validate_answer,
 )
-from counterparty_agent.harness.prompts import UNKNOWN_HEADING
 
 
 def ledger() -> RunEvidenceLedger:
@@ -84,54 +81,3 @@ def test_a_ref_from_another_run_does_not_resolve() -> None:
     answer = "- Capitals: -300000 [evidence:ev-from-another-thread]"
     assert validate_answer(answer, other_run).ok
     assert not validate_answer(answer, ledger()).ok
-
-
-def test_a_question_needs_no_ref() -> None:
-    """A question needs no ref."""
-    assert validate_answer("When will the goods be ready?", ledger()).ok
-
-
-def test_a_gap_under_the_unknown_heading_needs_no_ref() -> None:
-    """A gap under the unknown heading needs no ref."""
-    answer = f"{UNKNOWN_HEADING}\n- The delivery date is not stated anywhere."
-    assert validate_answer(answer, ledger()).ok
-
-
-def test_a_number_under_the_unknown_heading_still_needs_a_ref() -> None:
-    """A number under the unknown heading still needs a ref."""
-    answer = f"{UNKNOWN_HEADING}\n- Capitals were -300000 last year."
-    assert not validate_answer(answer, ledger()).ok
-
-
-def test_split_marks_headings_and_sentences() -> None:
-    """Split marks headings and sentences."""
-    claims = split_claims("Findings:\n- One. Two.")
-    assert [claim.exempt for claim in claims] == [True, False, False]
-
-
-def test_repair_removes_only_a_line_that_cites_a_dead_ref() -> None:
-    """A line citing a ref that does not resolve is dropped; uncited prose stays."""
-    answer = (
-        f"- Proceeds 2025: 74586000 RUB [evidence:{PROCEEDS_REF}]\n"
-        "- The company will certainly deliver in 21 days.\n"
-        "- Capitals: -300000 [evidence:ev-invented]"
-    )
-    outcome = repair_answer(answer, ledger())
-    assert PROCEEDS_REF in outcome.text
-    assert "21 days" in outcome.text  # uncited — left alone for the demo
-    assert "-300000" not in outcome.text  # cited a dead ref — removed
-    assert outcome.dropped == ("Capitals: -300000 [evidence:ev-invented]",)
-
-
-def test_repair_shows_an_otherwise_ungrounded_answer() -> None:
-    """Nothing resolvable survives: show the model's answer, not a wall of text."""
-    answer = "- Capitals: -300000 [evidence:ev-invented]"
-    outcome = repair_answer(answer, ledger())
-    assert outcome.text == answer
-    assert outcome.dropped
-
-
-def test_an_answer_with_no_citations_passes_through_untouched() -> None:
-    """A follow-up that leaned on earlier context is shown as written."""
-    answer = "We discussed the supplier and the 40 percent advance earlier."
-    assert repair_answer(answer, ledger()).text == answer

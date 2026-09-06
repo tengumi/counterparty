@@ -18,7 +18,7 @@ from typing import Literal
 KnowledgeSource = Literal["case", "qa", "verified_reference"]
 
 REFERENCE_VERSION = 2
-"""Bump on any change to :data:`REFERENCE`; a test pins it so an edit is visible."""
+"""Bump on any change to :data:`REFERENCE`; do not pin reference content in tests."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,7 +32,7 @@ class KnowledgeExample:
 
 @dataclass(frozen=True, slots=True)
 class KnowledgeEntry:
-    """One reviewed piece of domain knowledge with its provenance and tests."""
+    """One reviewed piece of domain knowledge with provenance and worked examples."""
 
     id: str
     version: int

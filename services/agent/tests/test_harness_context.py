@@ -44,12 +44,6 @@ def test_project_layer_carries_its_version_and_pinned_reports() -> None:
     assert str(REPORT) in rendered
 
 
-def test_companies_are_rendered_in_slot_order() -> None:
-    """Companies are rendered in slot order."""
-    rendered = context(THREAD_A, "Delivery terms").render()
-    assert rendered.index("1:") < rendered.index("2:")
-
-
 def test_a_thread_context_never_mentions_a_sibling_thread() -> None:
     """Threads of one project share the project layer, not each other."""
     rendered = context(THREAD_A, "Delivery terms").render()

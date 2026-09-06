@@ -246,6 +246,11 @@ live REST сценарий. Исторические [WEB-07](artifacts/qa/WEB-0
 В каждом Python-проекте: `uv run ruff check .`, `uv run ruff format --check .`,
 `uv run mypy`, `uv run pytest`.
 
+В `services/agent` pytest проверяет общие контракты и инфраструктуру.
+Хрупкие тесты ответов, промптов и конкретных действий модели не писать и
+не восстанавливать; поведение проверяется ручным живым прогоном.
+Подробные границы — [инструкции Agent Service](services/agent/AGENTS.md).
+
 ### Backend: отчёты, MCP и checkpoints
 
 UI API читает `/api/v1/reports/{report_id}/sections/{section}` и разрешает

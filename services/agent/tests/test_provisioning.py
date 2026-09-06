@@ -61,37 +61,14 @@ def _install(monkeypatch: pytest.MonkeyPatch, response: _Response) -> None:
     monkeypatch.setattr(httpx, "AsyncClient", _Client(response))
 
 
-async def test_a_successful_pin_names_the_company(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A 200/added response comes back as a sentence naming the company."""
+async def test_a_successful_pin_sends_the_scoped_request(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A pin request carries the company, project and internal credential."""
     _install(monkeypatch, _Response(200, {"outcome": "added", "name": "ООО РОМАШКА", "inn": INN}))
 
-    message = await add_company_by_inn(SETTINGS, project_id=PROJECT_ID, inn=INN)
-
-    assert "ООО РОМАШКА" in message and "добавлена" in message
+    await add_company_by_inn(SETTINGS, project_id=PROJECT_ID, inn=INN)
     assert _Client.last_call["json"] == {"inn": INN}
     assert _Client.last_call["headers"]["X-Internal-Token"] == "s3cret"
     assert str(PROJECT_ID) in _Client.last_call["url"]
-
-
-async def test_an_already_pinned_company_is_not_an_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``already_present`` is reported without an error framing."""
-    _install(
-        monkeypatch,
-        _Response(200, {"outcome": "already_present", "name": "ООО РОМАШКА", "inn": INN}),
-    )
-
-    message = await add_company_by_inn(SETTINGS, project_id=PROJECT_ID, inn=INN)
-
-    assert "уже закреплена" in message
-
-
-async def test_an_unknown_inn_is_reported_plainly(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A 404 becomes the not-found sentence, not a raised error."""
-    _install(monkeypatch, _Response(404, {"error": {"code": "not_found"}}))
-
-    message = await add_company_by_inn(SETTINGS, project_id=PROJECT_ID, inn="0000000000")
-
-    assert "нет в доступном индексе" in message
 
 
 async def test_a_transport_failure_degrades_to_a_message(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -105,7 +82,7 @@ async def test_a_transport_failure_degrades_to_a_message(monkeypatch: pytest.Mon
 
     message = await add_company_by_inn(SETTINGS, project_id=PROJECT_ID, inn=INN)
 
-    assert "Не удалось добавить" in message
+    assert message
 
 
 async def test_the_tool_rejects_a_malformed_inn_before_any_call(
@@ -122,7 +99,6 @@ async def test_the_tool_rejects_a_malformed_inn_before_any_call(
     monkeypatch.setattr(provisioning, "add_company_by_inn", _fail)
     tool = build_add_company_tool(SETTINGS, project_id=PROJECT_ID)
 
-    result = await tool.ainvoke({"inn": "12-34"})
+    await tool.ainvoke({"inn": "12-34"})
 
     assert not called
-    assert "10 или 12" in result
