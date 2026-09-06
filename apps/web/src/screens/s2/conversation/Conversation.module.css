@@ -132,8 +132,8 @@
 .threadRoot { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 
 .composer:focus-within { border-color: #2a77ef; }
-.send { min-height: 44px; width: 44px; min-width: 44px; padding: 0; border-radius: 10px; }
-.stopGlyph { width: 12px; height: 12px; border-radius: 3px; background: currentColor; display: block; }
+.send { min-height: 48px; width: 48px; min-width: 48px; padding: 0; border-radius: 12px; }
+.stopGlyph { width: 18px; height: 18px; border-radius: 4px; background: #05081d; display: block; margin: 0 auto; }
 .evidence { position: relative; }
 .evidence::after { content: ''; position: absolute; width: 44px; height: 44px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
 @media (max-width: 640px) {
