@@ -62,7 +62,37 @@ describe('Общая навигация проверок', () => {
       id: String(i), name: `Компания ${i + 1}`, inn: '7449088645',
     }))} status="in_progress" isDemo={false} onOpenCompany={vi.fn()} onAddCompany={openCompanies} onCompare={vi.fn()} />);
     expect(screen.getByRole('button', { name: 'Добавить' })).toBeDisabled();
+    expect(screen.queryByText('В работе')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Все компании проверки: 20' }));
     expect(openCompanies).toHaveBeenCalledOnce();
+  });
+
+  it('сохраняет значимые статусы в строке компаний', () => {
+    render(<CompanyContextStrip companies={[]} status="needs_input" isDemo={false}
+      onOpenCompany={vi.fn()} onAddCompany={vi.fn()} onCompare={vi.fn()} />);
+    expect(screen.getByText('Нужны сведения')).toBeVisible();
+  });
+
+  it('сохраняет действия и полное имя компании в новых плашках', async () => {
+    const user = userEvent.setup();
+    const openCompany = vi.fn();
+    const addCompany = vi.fn();
+    const compare = vi.fn();
+    const name = 'ООО «Специализированная транспортно-логистическая компания»';
+    render(<CompanyContextStrip companies={[
+      { id: 'first', name, inn: '7449088645' },
+      { id: 'second', name: 'Вторая компания', inn: '1684017097' },
+    ]} status="in_progress" isDemo={false} onOpenCompany={openCompany}
+      onAddCompany={addCompany} onCompare={compare} />);
+
+    const company = screen.getByRole('button', { name });
+    expect(company).toHaveAttribute('title', name);
+    await user.click(company);
+    expect(openCompany).toHaveBeenCalledWith('first');
+    await user.click(screen.getByRole('button', { name: 'Все компании проверки: 2' }));
+    await user.click(screen.getByRole('button', { name: 'Добавить' }));
+    expect(addCompany).toHaveBeenCalledTimes(2);
+    await user.click(screen.getByRole('button', { name: 'Сравнить' }));
+    expect(compare).toHaveBeenCalledOnce();
   });
 });

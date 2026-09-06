@@ -10,7 +10,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { Button } from '@alfalab/core-components/button';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { addCompanies, getProject, removeCompany, renameProject, WorkspaceApiError } from '../api/client';
 import type { DiscussionContext } from '../api/reportContracts';
 import type { AddCompanyResult, ApiProject } from '../api/contracts';
@@ -25,8 +25,7 @@ import { readTaskHandoff } from '../screens/s2/taskHandoff';
 import { parseMaterialsState, initialMaterials } from '../screens/s2/materialsView';
 import type { MaterialsState, MaterialsView } from '../screens/s2/materialsView';
 import { usePersistentState } from '../screens/s2/persisted';
-import type { ChatSummary, ProjectDetail } from '../mocks/types';
-import { newChat } from '../mocks/workspace';
+import type { ProjectDetail } from '../mocks/types';
 import styles from '../screens/s2/S2.module.css';
 
 function ProjectNotFound() {
@@ -39,22 +38,21 @@ function ProjectNotFound() {
   );
 }
 
-function ChatNotFound() {
+function ChatNotFound({ project }: { project: ProjectDetail }) {
   return (
     <div className={styles.conversation}>
       <div className={styles.conversationInner}>
         <h2>Чат не найден</h2>
-        <p className={styles.muted}>Выберите чат этой проверки в переключателе «Чат».</p>
+        <p className={styles.muted}>Возможно, ссылка на разговор устарела.</p>
+        <Link to={`/checks/${project.id}/chats/${project.lastThreadId}`}>К разговору проверки</Link>
       </div>
     </div>
   );
 }
 
 function ProjectScreen({ apiProject, project, threadId, fixtureMode }: { apiProject: ApiProject; project: ProjectDetail; threadId?: string; fixtureMode: boolean }) {
-  const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const [chats, setChats] = useState<readonly ChatSummary[]>(project.chats);
   const [companyResults, setCompanyResults] = useState<readonly AddCompanyResult[]>([]);
   const [materials, setMaterials] = usePersistentState<MaterialsState>(
     `materials:${project.id}`,
@@ -73,7 +71,7 @@ function ProjectScreen({ apiProject, project, threadId, fixtureMode }: { apiProj
   const opener = useRef<HTMLElement | null>(null);
 
   const activeChatId = threadId ?? project.lastThreadId;
-  const activeChat = chats.find((chat) => chat.id === activeChatId);
+  const activeChat = project.chats.find((chat) => chat.id === activeChatId);
 
   // The company strip fills in on its own once the agent pins a company
   // (CheckPage invalidates the project query when a run settles). The full
@@ -114,23 +112,9 @@ function ProjectScreen({ apiProject, project, threadId, fixtureMode }: { apiProj
     opener.current?.focus();
   };
 
-  const openChat = (chatId: string) => {
-    navigate(`/checks/${project.id}/chats/${chatId}`);
-  };
-
-  const createChat = () => {
-    const created = newChat(chats.filter((chat) => chat.id.startsWith('local-chat-')).length + 1);
-    setChats([...chats, created]);
-    openChat(created.id);
-  };
-
   return (
     <div className={styles.screen} data-panel-open={materials.open}>
       <ProjectHeader
-        activeChatId={activeChat?.id}
-        chats={chats}
-        onCreateChat={fixtureMode ? createChat : undefined}
-        onSelectChat={openChat}
         onRename={(title) => rename.mutate(title)}
         onRetryRename={rename.variables ? () => rename.mutate(rename.variables) : undefined}
         saveError={rename.error ? requestErrorMessage(rename.error) : null}
@@ -155,7 +139,7 @@ function ProjectScreen({ apiProject, project, threadId, fixtureMode }: { apiProj
       />
       <div className={styles.body}>
         {activeChat === undefined ? (
-          <ChatNotFound />
+          <ChatNotFound project={project} />
         ) : (
           <ChatSurface
             fixtureMode={fixtureMode}

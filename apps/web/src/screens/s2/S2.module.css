@@ -1,52 +1,36 @@
 .screen { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); min-height: 0; overflow: hidden; position: relative; }
 .screen[data-panel-open="true"] { grid-template-columns: minmax(0, 1fr) 400px; }
 
-/* Шапка: название и сохранение объединены, действия не зависят от длины запроса. */
-.header { grid-column: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 20px; padding: 10px 24px; border-bottom: 1px solid #eceef1; background: #fff; }
+/* Шапка с названием без постоянных служебных подписей. */
+.header { grid-column: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; padding: 10px 24px 2px; background: #fff; }
 .divider { flex: none; width: 1px; height: 20px; background: #e7e8eb; }
 .projectIdentity { min-width: 0; }
-.projectTitleButton { display: flex; align-items: center; gap: 8px; max-width: 100%; border: 0; border-radius: 6px; background: none; padding: 0; font: inherit; font-size: 15px; line-height: 22px; font-weight: 600; min-width: 0; cursor: pointer; color: #252b35; }
+.projectTitleButton { display: flex; align-items: center; gap: 8px; max-width: 100%; border: 0; border-radius: 6px; background: none; padding: 0; font: inherit; font-size: 16px; line-height: 24px; font-weight: 600; min-width: 0; cursor: pointer; color: #252b35; }
 .projectTitleText { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .renameIcon { flex: none; width: 16px; height: 16px; color: #8a909c; opacity: 0; }
 .projectTitleButton:hover .renameIcon, .projectTitleButton:focus-visible .renameIcon { opacity: 1; }
-.saveLine { min-height: 18px; }
 .saveState { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; line-height: 18px; color: #818793; }
-.saveState svg { width: 14px; height: 14px; flex: none; }
 .saveError { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; line-height: 18px; color: #d91d0b; overflow-wrap: anywhere; }
 .retryLink { border: 0; background: none; padding: 0; color: #2a77ef; cursor: pointer; text-decoration: underline; }
-.headerActions { display: flex; align-items: center; gap: 8px; min-width: 0; position: relative; }
 
-/* S2-13/S2-14 chat switcher */
-.switcher { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; min-height: 44px; padding: 0 12px; border: 1px solid #e4e7ec; border-radius: 10px; background: #fff; color: #414956; cursor: pointer; max-width: 220px; font-size: 13px; }
-.switcher:hover, .switcher[aria-expanded='true'] { background: #f7f8fa; border-color: #cdd3dd; }
-.switcherLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.switcherChevron { flex: none; width: 16px; height: 16px; color: #838b98; }
-.switcher[aria-expanded='true'] .switcherChevron { transform: rotate(180deg); }
-.chatCount { flex: none; min-width: 20px; padding: 1px 5px; border-radius: 6px; background: #eef0f4; color: #68707d; font-size: 11px; line-height: 18px; text-align: center; font-variant-numeric: tabular-nums; }
-.switcherWrap { position: relative; display: flex; min-width: 0; }
-.popover { position: absolute; top: calc(100% + 8px); right: 0; width: 300px; max-width: calc(100vw - 32px); padding: 8px; background: #fff; border: 1px solid #e7e8eb; border-radius: 14px; box-shadow: 0 12px 36px rgba(9, 12, 37, .12); z-index: 5; }
-.popoverTitle { margin: 0; padding: 6px 10px; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); }
-.chatList { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow: auto; }
-.chatItem { display: block; width: 100%; text-align: left; border: 0; border-radius: 8px; padding: 8px 10px; background: none; cursor: pointer; color: inherit; }
-.chatItem:hover { background: rgba(15, 25, 55, .04); text-decoration: none; }
-.chatItem[aria-current='true'] { background: rgba(15, 25, 55, .06); }
-.chatName { display: -webkit-box; line-height: 20px; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
-.chatHint { display: block; margin-top: 1px; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.newChat { width: 100%; text-align: left; border: 0; border-radius: 8px; padding: 8px 10px; margin-top: 2px; background: none; cursor: pointer; color: #2a77ef; }
-
-/* Компании и статус проверки: отдельная спокойная строка под названием. */
-.companies { grid-column: 1; min-width: 0; flex: none; display: flex; align-items: center; gap: 10px; min-height: 54px; padding: 4px 24px; border-bottom: 1px solid #eceef1; background: #fafbfc; color: #68707d; font-size: 13px; overflow-x: auto; }
-.companyName { flex: 0 1 auto; min-width: 0; max-width: 360px; border: 0; border-radius: 8px; background: none; padding: 0 8px; margin-left: -8px; cursor: pointer; color: #343d4a; font-weight: 500; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.companyName:hover { background: #eef1f5; }
+/* Плашки и действия продолжают шапку; на узкой области переносятся целиком. */
+.companies { grid-column: 1; min-width: 0; flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 4px 24px 16px; border-bottom: 1px solid #eceef1; background: #fff; color: #68707d; font-size: 13px; }
+.companyName { display: inline-flex; align-items: center; gap: 8px; flex: 0 1 auto; min-width: 0; max-width: min(360px, 100%); border: 1px solid #e8ecf1; border-radius: 12px; background: #f5f7fa; padding: 0 12px; cursor: pointer; color: #343d4a; font-weight: 500; text-align: left; }
+.companyLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.companyIcon { width: 18px; height: 18px; flex: none; color: #7b8796; }
+.companyName:hover { background: #edf1f6; border-color: #d7dfe9; }
 .demoTag { flex: none; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); border: 1px solid #e7e8eb; border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
-.moreCompanies { flex: none; min-height: 44px; padding: 2px 8px; border: 0; border-radius: 8px; background: #edf0f4; color: #68707d; white-space: nowrap; font-size: 12px; cursor: pointer; }
-.moreCompanies:hover { background: #e2e7ef; color: #34445b; }
-.emptyCompanies { min-width: 0; color: #818793; }
-.companyAction { display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex: none; border: 0; border-radius: 8px; background: none; padding: 0 8px; cursor: pointer; color: #286bdd; font-weight: 500; white-space: nowrap; }
+.moreCompanies { flex: none; min-height: 44px; padding: 0 12px; border: 1px solid #e8ecf1; border-radius: 12px; background: #f5f7fa; color: #657181; white-space: nowrap; font-size: 12px; cursor: pointer; }
+.moreCompanies:hover { background: #edf1f6; border-color: #d7dfe9; color: #34445b; }
+.emptyCompanies { min-width: 0; margin-right: 4px; color: #818793; }
+.companyAction { display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: none; border: 1px solid #e5e9f0; border-radius: 12px; background: #fff; padding: 0 12px; cursor: pointer; color: #596677; font-weight: 500; white-space: nowrap; }
 .companyAction svg { width: 16px; height: 16px; flex: none; }
-.companyAction:hover:not(:disabled) { background: #edf3fd; }
-.companyAction:disabled { color: rgba(5, 8, 29, .38); cursor: default; }
-.limitNote { min-width: 0; color: #818793; font-size: 12px; }
+.companyAction:hover:not(:disabled) { background: #f7f9fc; border-color: #cfd8e5; }
+.companyAction:disabled { color: #9aa2ad; background: #fafbfc; cursor: default; }
+.compareAction { border-color: #e0eaff; background: #edf3ff; color: #2d63b1; }
+.compareAction:hover:not(:disabled) { background: #e3edff; border-color: #c6d9fb; }
+.companyName:focus-visible, .moreCompanies:focus-visible, .companyAction:focus-visible { outline: 2px solid #7398cf; outline-offset: 2px; }
+.limitNote { flex-basis: 100%; order: 1; min-width: 0; color: #818793; font-size: 12px; }
 .projectStatus { margin-left: auto; flex: none; padding: 4px 9px; border: 1px solid #e7eaee; border-radius: 7px; background: #fff; }
 
 /* layout */
@@ -149,22 +133,12 @@
   .panel { grid-area: auto; position: absolute; inset: 0 0 0 auto; width: min(400px, 100%); box-shadow: -8px 0 24px rgba(9, 12, 37, .12); z-index: 4; }
   .panelBackdrop { display: block; position: absolute; inset: 0; z-index: 3; border: 0; background: rgba(9, 12, 37, .16); }
 }
-@media (min-width: 641px) and (max-width: 900px) {
-  .header { gap: 12px; }
-}
 @media (max-width: 640px) {
-  .header { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 8px 16px 12px; }
+  .header { padding: 8px 16px 2px; }
   .divider { display: none; }
   .projectTitleButton { width: 100%; font-size: 14px; }
   .renameIcon { display: none; }
-  .headerActions { grid-column: 1 / -1; display: flex; width: 100%; position: static; }
-  .switcherWrap { position: static; width: 100%; }
-  .switcher { width: 100%; max-width: none; }
-  .popover { position: fixed; inset: 0; width: auto; max-width: none; border: 0; border-radius: 0; padding: 16px; overflow: auto; z-index: 6; }
-  .chatList { max-height: none; }
-  .companies { gap: 4px 8px; padding: 4px 16px; flex-wrap: wrap; overflow: visible; font-size: 12px; }
-  .companyName { max-width: 100%; flex: 1 1 180px; min-height: 44px; }
-  .companyAction { min-height: 44px; padding: 0 5px; }
+  .companies { padding: 4px 16px 12px; font-size: 12px; }
   .conversationInner { padding: 20px 16px 8px; }
   .dock { padding: 8px 16px max(12px, env(safe-area-inset-bottom)); }
   .panel { position: fixed; inset: 0; width: 100%; z-index: 6; box-shadow: none; }
@@ -173,7 +147,7 @@
   .panelTitle { font-size: 16px; }
   .panelClose { order: -1; margin-left: 0; }
   .panelBack { order: 2; }
-  .factActions button, .panel button, .headerActions button, .chatItem, .newChat { min-height: 44px; }
+  .factActions button, .panel button { min-height: 44px; }
   .group { padding: 8px 0; }
 }
 
@@ -181,7 +155,7 @@
 
 /* Keep the compact typography while making every control easy to activate. */
 .projectTitleButton, .companyName, .companyAction, .retryLink,
-.headerActions button, .panel button, .chatItem, .newChat { min-height: 44px; }
+.panel button { min-height: 44px; }
 
 .liveSectionTitle { margin: 16px 0 8px; font-size: 14px; font-weight: 600; }
 .liveRecord { margin-bottom: 18px; }
