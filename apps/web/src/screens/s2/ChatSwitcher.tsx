@@ -7,6 +7,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '@alfalab/core-components/button';
+import { ChevronDownSIcon } from '@alfalab/icons-glyph/ChevronDownSIcon';
 import { ChatStatusMark } from '../../components/StatusMark';
 import type { ChatSummary } from '../../mocks/types';
 import styles from './S2.module.css';
@@ -16,15 +17,20 @@ interface Props {
   readonly activeChatId: string | undefined;
   readonly onSelect: (chatId: string) => void;
   readonly onCreate?: () => void;
+  readonly projectTitle?: string;
 }
 
-export function ChatSwitcher({ chats, activeChatId, onSelect, onCreate }: Props) {
+export function ChatSwitcher({ chats, activeChatId, onSelect, onCreate, projectTitle }: Props) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listId = useId();
   const active = chats.find((chat) => chat.id === activeChatId);
+  const activeTitle = active?.title ?? 'не выбран';
+  const label = active && active.title.trim() === projectTitle?.trim()
+    ? 'Чат проверки'
+    : `Чат: ${activeTitle}`;
 
   useEffect(() => {
     if (!open) return;
@@ -56,13 +62,16 @@ export function ChatSwitcher({ chats, activeChatId, onSelect, onCreate }: Props)
         aria-controls={open ? listId : undefined}
         aria-expanded={open}
         aria-haspopup="dialog"
+        aria-label={label === 'Чат проверки' ? `${label}. Чат: ${activeTitle}` : label}
         className={styles.switcher}
         onClick={() => setOpen((value) => !value)}
         ref={triggerRef}
+        title={`Чат: ${activeTitle}`}
         type="button"
       >
-        <span className={styles.switcherLabel}>Чат: {active?.title ?? 'не выбран'}</span>
-        <span aria-hidden="true">▾</span>
+        <span className={styles.switcherLabel}>{label}</span>
+        {chats.length > 1 ? <span aria-hidden="true" className={styles.chatCount}>{chats.length}</span> : null}
+        <ChevronDownSIcon aria-hidden="true" className={styles.switcherChevron} />
       </button>
       {open ? (
         <div

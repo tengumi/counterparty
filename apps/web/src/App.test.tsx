@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
@@ -16,11 +16,11 @@ describe('check routes', () => {
     expect(screen.getByRole('heading', { name: 'Проверка контрагентов' })).toBeVisible();
 
     await user.click(screen.getByRole('link', { name: /Поставка оборудования к 20 сентября/ }));
-    expect(screen.getByTitle('Поставка оборудования к 20 сентября')).toBeVisible();
+    expect(within(screen.getByRole('main')).getByTitle('Поставка оборудования к 20 сентября')).toBeVisible();
     expect(screen.getByRole('button', { name: /Чат: Поставка/ })).toBeVisible();
     expect(screen.getByText('Остановились на…')).toBeVisible();
 
-    await user.click(screen.getByRole('link', { name: '← Все проверки' }));
+    await user.click(within(screen.getByRole('complementary', { name: 'Навигация проверок' })).getByRole('link', { name: 'Альфа-Бизнес — на главную' }));
     expect(screen.getByRole('heading', { name: 'Проверка контрагентов' })).toBeVisible();
   });
 
@@ -33,13 +33,13 @@ describe('check routes', () => {
   it('does not present an unknown project as loaded data', async () => {
     openRoute('/checks/other/chats/thread-2');
     expect(await screen.findByRole('heading', { name: 'Проверка не найдена' })).toBeVisible();
-    expect(screen.queryByText('Поставка оборудования к 20 сентября')).not.toBeInTheDocument();
+    expect(within(screen.getByRole('main')).queryByText('Поставка оборудования к 20 сентября')).not.toBeInTheDocument();
   });
 
   it('says so when the chat of a real project is unknown', () => {
     openRoute('/checks/demo-project/chats/missing-thread');
     expect(screen.getByRole('heading', { name: 'Чат не найден' })).toBeVisible();
-    expect(screen.getByTitle('Поставка оборудования к 20 сентября')).toBeVisible();
+    expect(within(screen.getByRole('main')).getByTitle('Поставка оборудования к 20 сентября')).toBeVisible();
   });
 
   it('redirects the root to checks', () => {

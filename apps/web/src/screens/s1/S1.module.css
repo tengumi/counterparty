@@ -1,45 +1,39 @@
-.scroll { flex: 1; min-height: 0; overflow: auto; }
-.screen { max-width: 720px; margin: 0 auto; padding: 96px 32px 64px; }
-.title { margin: 0; font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -.2px; }
-.subtitle { margin: 8px 0 0; font-size: 16px; line-height: 24px; color: rgba(4, 4, 19, .55); }
+.scroll { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; padding: 40px 32px max(40px, 12dvh); }
+.screen { width: 100%; max-width: 760px; margin: auto; padding: 0; }
+.title { margin: 0; font-size: clamp(26px, 2.5vw, 34px); line-height: 1.25; font-weight: 600; letter-spacing: -.8px; text-align: center; color: #252d39; }
+.subtitle { max-width: 580px; margin: 12px auto 0; font-size: 15px; line-height: 24px; color: #747e8c; text-align: center; }
 
-.composer { margin-top: 32px; border: 1px solid #e7e8eb; border-radius: 16px; padding: 14px 14px 10px; box-shadow: 0 1px 2px rgba(9, 12, 37, .04); }
-.composer:focus-within { border-color: #2a77ef; }
-/* The card is the only focus affordance; drop Core's own inset field ring. */
+.composer { margin-top: 28px; border: 1px solid #e3e7ed; border-radius: 22px; padding: 18px 18px 12px; background: #fff; box-shadow: 0 6px 28px rgba(31, 46, 73, .06), 0 1px 3px rgba(31, 46, 73, .03); }
+.composer:focus-within { border-color: #91afe0; box-shadow: 0 0 0 3px #edf3fc, 0 6px 28px rgba(31, 46, 73, .05); }
+/* Фокус обозначается рамкой всей карточки, без дополнительной рамки внутри поля. */
 .field { background: transparent; border: 0 !important; box-shadow: none !important; outline: none !important; padding: 0; }
 .fieldText { font-size: 16px; line-height: 24px; padding: 0; }
 .fieldText:focus, .fieldText:focus-visible { outline: none; box-shadow: none; }
-.composerActions { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-.hint { flex: 1; min-width: 0; margin: 0; font-size: 13px; line-height: 18px; color: rgba(5, 8, 29, .38); }
-.examples { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-.example { min-height: 44px; }
+.composerActions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.examples { display: flex; justify-content: center; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+.examples .example { min-height: 40px; border: 1px solid #e7eaf0; border-radius: 99px; background: #fafbfc; color: #606a79; font-size: 13px; font-weight: 400; }
+.examples .example:hover { background: #f0f3f8; border-color: #d9e0eb; }
 
-.listLabel { margin: 56px 0 0; font-size: 13px; line-height: 18px; color: rgba(5, 8, 29, .38); letter-spacing: .2px; }
-.search { margin-top: 12px; }
-.list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; }
-.list li { border-top: 1px solid #e7e8eb; }
-.row { display: block; color: inherit; padding: 4px; border-radius: 8px; }
-.row:hover { text-decoration: none; background: rgba(15, 25, 55, .04); }
-.meta { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
-.date { font-size: 13px; line-height: 18px; color: rgba(5, 8, 29, .38); }
-.empty { margin: 16px 0 0; padding-top: 16px; border-top: 1px solid #e7e8eb; color: rgba(4, 4, 19, .55); }
-.state { margin: 32px 0 0; color: rgba(4, 4, 19, .55); }
-.errorState { margin: 32px 0 0; padding: 16px; border: 1px solid #f0b5ae; border-radius: 12px; color: #8f160b; }
-.errorState p { margin: 0 0 8px; }
+.history { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.listLabel { flex: none; margin: 0; padding: 0 10px 10px; font-size: 12px; line-height: 18px; color: #737d8c; font-weight: 500; }
+.search { flex: none; margin: 0 4px 10px; }
+.list { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; list-style: none; margin: 0; padding: 0 2px 4px; display: flex; flex-direction: column; gap: 3px; }
+.row { display: block; color: #434d5c; padding: 10px; border: 1px solid transparent; border-radius: 10px; }
+.row:hover { text-decoration: none; background: #edf0f5; }
+.row[aria-current='page'] { background: #e8edf5; border-color: #dde4ef; color: #273c59; }
+.historyTitle { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; font-size: 13px; line-height: 19px; }
+.continuation { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 4px; font-size: 11px; line-height: 16px; color: #697381; overflow-wrap: anywhere; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; row-gap: 2px; margin-top: 6px; font-size: 11px; line-height: 16px; color: #747e8c; }
+.meta > span:last-child { font-size: 11px; line-height: 16px; }
+.date { font-size: 11px; line-height: 16px; white-space: nowrap; }
+.empty { margin: 0; padding: 8px 10px; font-size: 12px; line-height: 18px; color: #747e8c; }
 .submitError { margin: 8px 0 0; color: #d91d0b; font-size: 13px; line-height: 18px; }
 
-@media (max-width: 1100px) {
-  .screen { padding-top: 48px; }
-}
 @media (max-width: 640px) {
-  .screen { padding: 32px 20px 48px; }
-  .meta { flex-direction: column; align-items: flex-end; gap: 2px; }
-  .listLabel { margin-top: 40px; }
+  .scroll { padding: 28px 20px 40px; }
+  .title { font-size: 27px; }
+  .subtitle { font-size: 14px; line-height: 22px; }
+  .composer { padding: 16px 14px 10px; border-radius: 18px; }
 }
 
-.example { border-radius: 99px; font-weight: 400; }
 .send { min-height: 44px; width: 44px; min-width: 44px; padding: 0; border-radius: 10px; }
-@media (max-width: 640px) {
-  .hint { display: none; }
-  .composerActions { justify-content: flex-end; }
-}

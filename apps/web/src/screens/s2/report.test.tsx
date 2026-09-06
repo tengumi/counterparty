@@ -46,7 +46,7 @@ async function openReport(
   companyName: string | RegExp,
 ) {
   openCheck(path);
-  await user.click(screen.getByRole('button', { name: 'Материалы' }));
+  await user.click(screen.getByRole('button', { name: 'Добавить' }));
   await user.click(within(panel()).getByRole('button', { name: companyName }));
 }
 

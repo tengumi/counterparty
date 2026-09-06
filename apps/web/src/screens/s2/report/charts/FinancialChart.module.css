@@ -28,3 +28,10 @@
   .readout .picker { flex-basis: 100%; max-width: 100%; }
   .picker select, .card .switcher button { min-height: 44px; }
 }
+/* В боковом отчёте график компактен и при широком окне браузера. */
+@container company-report (max-width: 600px) {
+  .card { padding: 14px 10px; }
+  .heading { gap: 8px; padding: 0 4px; }
+  .heading h4 { font-size: 15px; }
+  .readout .picker { flex-basis: 100%; max-width: 100%; }
+}

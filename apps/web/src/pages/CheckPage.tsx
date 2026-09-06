@@ -129,16 +129,8 @@ function ProjectScreen({ apiProject, project, threadId, fixtureMode }: { apiProj
       <ProjectHeader
         activeChatId={activeChat?.id}
         chats={chats}
-        materialsOpen={materials.open}
         onCreateChat={fixtureMode ? createChat : undefined}
         onSelectChat={openChat}
-        onToggleMaterials={() => {
-          if (materials.open) closeMaterials();
-          else {
-            opener.current = document.activeElement as HTMLElement | null;
-            setMaterials({ ...materials, open: true });
-          }
-        }}
         onRename={(title) => rename.mutate(title)}
         onRetryRename={rename.variables ? () => rename.mutate(rename.variables) : undefined}
         saveError={rename.error ? requestErrorMessage(rename.error) : null}

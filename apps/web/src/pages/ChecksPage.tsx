@@ -1,18 +1,11 @@
-/**
- * S1 — start or continue a check.
- *
- * Sending the task hands the draft to S2 through router state; nothing is
- * persisted yet, so the screen never claims a project was saved.
- */
+/** Старт проверки: создаём проект и передаём первый вопрос в разговор. История — в общей навигации. */
 
 import { useRef } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button } from '@alfalab/core-components/button';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { createProject, listProjects } from '../api/client';
+import { createProject } from '../api/client';
 import { requestErrorMessage } from '../api/messages';
-import { projectSummary, workspaceKeys } from '../api/workspace';
-import { SavedChecksList } from '../screens/s1/SavedChecksList';
+import { workspaceKeys } from '../api/workspace';
 import { TaskComposer } from '../screens/s1/TaskComposer';
 import type { TaskHandoff } from '../screens/s2/taskHandoff';
 import styles from '../screens/s1/S1.module.css';
@@ -21,7 +14,6 @@ export function ChecksPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pending = useRef<{ task: string; requestId: string } | null>(null);
-  const projectsQuery = useQuery({ queryKey: workspaceKeys.all, queryFn: listProjects, retry: false });
   const create = useMutation({
     mutationFn: ({ task, requestId }: { task: string; requestId: string }) =>
       createProject(task, requestId),
@@ -33,7 +25,6 @@ export function ChecksPage() {
       navigate(`/checks/${project.id}/chats/${project.default_thread_id}`, { state: handoff });
     },
   });
-  const projects = (projectsQuery.data ?? []).map(projectSummary);
 
   const start = (task: string) => {
     if (pending.current?.task !== task) {
@@ -54,15 +45,6 @@ export function ChecksPage() {
           loading={create.isPending}
           onSubmit={start}
         />
-        {projectsQuery.isPending ? <p className={styles.state} role="status">Загружаем проверки…</p> : null}
-        {projectsQuery.isError ? (
-          <div className={styles.errorState} role="alert">
-            <p>{requestErrorMessage(projectsQuery.error)}</p>
-            <p>Это не означает, что сохранённых проверок нет.</p>
-            <Button onClick={() => void projectsQuery.refetch()} size={40} view="outlined">Повторить</Button>
-          </div>
-        ) : null}
-        {projectsQuery.isSuccess ? <SavedChecksList projects={projects} /> : null}
       </section>
     </div>
   );
