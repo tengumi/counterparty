@@ -61,6 +61,14 @@ export function ChatSurface({
   const scrollKey = `scroll:${project.id}:${chat.id}`;
   const [draft, setDraft] = usePersistentState(draftKey, handoffDraft ?? '', parseNonEmptyString);
 
+  // The S1 task is auto-sent exactly once for the life of this chat. Clearing
+  // it as state (not a ref) means the transport's own remount, when the stored
+  // conversation loads, never sees the task a second time.
+  const [autoSendTask, setAutoSendTask] = useState<string | null>(
+    handoffDraft !== null && draft === handoffDraft ? handoffDraft : null,
+  );
+  const consumeAutoSend = useCallback(() => setAutoSendTask(null), []);
+
   const feedRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -149,11 +157,12 @@ export function ChatSurface({
   if (!fixtureMode) {
     return (
       <ProjectChat
-        autoSend={showsHandoff ? (handoffDraft ?? undefined) : undefined}
+        autoSend={autoSendTask ?? undefined}
         draft={draft}
         history={history}
         inputRef={inputRef}
         layout={layout}
+        onAutoSent={consumeAutoSend}
         onDraftChange={setDraft}
         onOpenEvidence={materialActions.onOpenEvidence}
         projectId={project.id}

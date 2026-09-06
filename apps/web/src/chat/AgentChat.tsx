@@ -73,6 +73,8 @@ interface ChatView {
   readonly inputRef?: RefObject<HTMLTextAreaElement | null>;
   /** A task carried from S1: sent once, automatically, on the first mount. */
   readonly autoSend?: string;
+  /** Called right after the auto-sent task is dispatched. */
+  readonly onAutoSent?: () => void;
   readonly layout?: (feed: ReactNode, composer: ReactNode) => ReactNode;
 }
 
@@ -323,7 +325,8 @@ function AutoSend({ lastSentRef }: { lastSentRef: RefObject<string> }) {
     if (done.current || !text) return;
     done.current = true;
     send(text);
-  }, [send, view.autoSend]);
+    view.onAutoSent?.();
+  }, [send, view]);
   return null;
 }
 
@@ -427,6 +430,8 @@ export interface AgentChatProps extends AgentRuntimeOptions {
   readonly onOpenEvidence?: (evidenceRef: string) => void;
   /** A task carried from S1, sent once on the first mount. */
   readonly autoSend?: string;
+  /** Called right after the auto-sent task is dispatched. */
+  readonly onAutoSent?: () => void;
   /** Places the feed and the composer into the screen layout. */
   readonly layout?: (feed: ReactNode, composer: ReactNode) => ReactNode;
 }
@@ -439,6 +444,7 @@ export function AgentChat({
   inputRef,
   onOpenEvidence,
   autoSend,
+  onAutoSent,
   layout,
   ...options
 }: AgentChatProps) {
@@ -451,6 +457,7 @@ export function AgentChat({
     onDraftChange: onDraftChange ?? setLocalDraft,
     inputRef,
     autoSend,
+    onAutoSent,
     layout,
   };
 
