@@ -1,7 +1,7 @@
 .scroll { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; padding: 40px 32px max(40px, 12dvh); }
 .screen { width: 100%; max-width: 760px; margin: auto; padding: 0; }
-.title { margin: 0; font-size: clamp(26px, 2.5vw, 34px); line-height: 1.25; font-weight: 600; letter-spacing: -.8px; text-align: center; color: #252d39; }
-.subtitle { max-width: 580px; margin: 12px auto 0; font-size: 15px; line-height: 24px; color: #747e8c; text-align: center; }
+.title { margin: 0; font-size: clamp(26px, 2.5vw, 34px); line-height: 1.25; font-weight: 600; letter-spacing: -.8px; text-align: left; color: #252d39; }
+.subtitle { margin: 12px 0 0; font-size: 15px; line-height: 24px; color: #747e8c; text-align: left; }
 
 .composer { margin-top: 28px; border: 1px solid #e3e7ed; border-radius: 22px; padding: 18px 18px 12px; background: #fff; box-shadow: 0 6px 28px rgba(31, 46, 73, .06), 0 1px 3px rgba(31, 46, 73, .03); }
 .composer:focus-within { border-color: #91afe0; box-shadow: 0 0 0 3px #edf3fc, 0 6px 28px rgba(31, 46, 73, .05); }

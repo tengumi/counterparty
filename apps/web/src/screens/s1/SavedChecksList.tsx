@@ -61,7 +61,7 @@ export function SavedChecksList({ projects, activeProjectId, onNavigate }: {
               {project.continuation ? <span className={styles.continuation} title={project.continuation}>{project.continuation}</span> : null}
               <span className={styles.meta}>
                 <span className={styles.date}>{project.lastActivityLabel}</span>
-                <ProjectStatusMark status={project.status} />
+                {project.status !== 'in_progress' ? <ProjectStatusMark status={project.status} /> : null}
               </span>
             </Link>
           </li>

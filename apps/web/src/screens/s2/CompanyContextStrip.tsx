@@ -1,12 +1,9 @@
-/**
- * S2-02 company context strip.
- *
- * One compact line: the current company, «ещё N», adding and comparing. The
- * project status sits at the right; company risk is never shown here.
- */
+/** Компании проверки и действия с ними. Цвет плашек не обозначает риск. */
 
 import { ProjectStatusMark } from '../../components/StatusMark';
 import { PlusSIcon } from '@alfalab/icons-glyph/PlusSIcon';
+import { HouseMIcon } from '@alfalab/icons-glyph/HouseMIcon';
+import { BarChartMIcon } from '@alfalab/icons-glyph/BarChartMIcon';
 import type { CompanyRef, ProjectStatus } from '../../mocks/types';
 import { COMPANY_LIMIT } from '../../mocks/types';
 import styles from './S2.module.css';
@@ -33,7 +30,8 @@ export function CompanyContextStrip(props: Props) {
           title={first.name}
           type="button"
         >
-          {first.name}
+          <HouseMIcon aria-hidden="true" className={styles.companyIcon} />
+          <span className={styles.companyLabel}>{first.name}</span>
         </button>
       ) : (
         <span className={styles.emptyCompanies}>Компании не добавлены</span>
@@ -58,13 +56,16 @@ export function CompanyContextStrip(props: Props) {
         </span>
       ) : null}
       {props.companies.length >= 2 ? (
-        <button className={styles.companyAction} onClick={props.onCompare} type="button">
+        <button className={`${styles.companyAction} ${styles.compareAction}`} onClick={props.onCompare} type="button">
+          <BarChartMIcon aria-hidden="true" />
           Сравнить
         </button>
       ) : null}
-      <span className={styles.projectStatus}>
-        <ProjectStatusMark status={props.status} />
-      </span>
+      {props.status !== 'in_progress' ? (
+        <span className={styles.projectStatus}>
+          <ProjectStatusMark status={props.status} />
+        </span>
+      ) : null}
     </div>
   );
 }

@@ -1,11 +1,9 @@
-/** Шапка проверки. Статус сохранения отражает только подтверждённое сервером состояние. */
+/** Шапка проверки: название и сообщения о сохранении, требующие внимания. */
 
 import { useState } from 'react';
 import { Input } from '@alfalab/core-components/input';
-import { CheckmarkSIcon } from '@alfalab/icons-glyph/CheckmarkSIcon';
 import { PencilSIcon } from '@alfalab/icons-glyph/PencilSIcon';
-import { ChatSwitcher } from './ChatSwitcher';
-import type { ChatSummary, SaveState } from '../../mocks/types';
+import type { SaveState } from '../../mocks/types';
 import styles from './S2.module.css';
 
 interface Props {
@@ -14,10 +12,6 @@ interface Props {
   readonly saveError?: string | null;
   readonly onRename?: (title: string) => void;
   readonly onRetryRename?: () => void;
-  readonly chats: readonly ChatSummary[];
-  readonly activeChatId: string | undefined;
-  readonly onSelectChat: (chatId: string) => void;
-  readonly onCreateChat?: () => void;
 }
 
 function SaveIndicator({ state }: { state: SaveState }) {
@@ -29,12 +23,7 @@ function SaveIndicator({ state }: { state: SaveState }) {
       </span>
     );
   }
-  return (
-    <span className={styles.saveState}>
-      <CheckmarkSIcon aria-hidden="true" />
-      Сохранено
-    </span>
-  );
+  return null;
 }
 
 export function ProjectHeader(props: Props) {
@@ -83,7 +72,7 @@ export function ProjectHeader(props: Props) {
             <PencilSIcon aria-hidden="true" className={styles.renameIcon} />
           </button>
         )}
-        <div aria-live="polite" className={styles.saveLine}>
+        <div aria-live="polite">
           <SaveIndicator state={props.saveState} />
         </div>
         {props.saveError ? (
@@ -94,15 +83,6 @@ export function ProjectHeader(props: Props) {
             ) : null}
           </span>
         ) : null}
-      </div>
-      <div className={styles.headerActions}>
-        <ChatSwitcher
-          activeChatId={props.activeChatId}
-          chats={props.chats}
-          onCreate={props.onCreateChat}
-          onSelect={props.onSelectChat}
-          projectTitle={props.title}
-        />
       </div>
     </header>
   );

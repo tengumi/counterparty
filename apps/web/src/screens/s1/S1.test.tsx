@@ -34,6 +34,8 @@ describe('saved checks list', () => {
     renderList([project({ id: 'a' }), project({ id: 'b' }), project({ id: 'c' })]);
     expect(screen.queryByLabelText('Поиск по проверкам')).not.toBeInTheDocument();
     expect(screen.getAllByRole('link')).toHaveLength(3);
+    expect(screen.queryByText('В работе')).not.toBeInTheDocument();
+    expect(screen.getAllByText('14 августа')).toHaveLength(3);
   });
 
   it('filters from six saved checks and explains an empty result', async () => {

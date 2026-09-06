@@ -31,54 +31,13 @@ function path() {
   return screen.getByTestId('path').textContent;
 }
 
-describe('S2 header and chat switcher', () => {
-  it('switches chats inside the same project without mixing their history', async () => {
-    const user = userEvent.setup();
+describe('Шапка S2', () => {
+  it('оставляет название без переключателя и служебных подписей', () => {
     openCheck('/checks/demo-project/chats/demo-thread');
-
-    expect(screen.getByText('Остановились на…')).toBeVisible();
-    expect(screen.getByLabelText('Сообщение помощнику')).toBeVisible();
-
-    await user.click(screen.getByRole('button', { name: /Чат: Поставка/ }));
-    expect(screen.getByText('Работает')).toBeVisible();
-    await user.click(screen.getByRole('button', { name: /Условия оплаты/ }));
-
-    expect(path()).toBe('/checks/demo-project/chats/terms-thread');
-    expect(screen.getByText('Сопоставляю условия оплаты и финансовые сведения')).toBeVisible();
-    // The other chat's saved conversation must not bleed into this one.
-    expect(screen.queryByText('Остановились на…')).not.toBeInTheDocument();
-  });
-
-  it('creates a new chat inside the same project, not a new check', async () => {
-    const user = userEvent.setup();
-    openCheck('/checks/demo-project/chats/demo-thread');
-
-    await user.click(screen.getByRole('button', { name: /Чат: Поставка/ }));
-    await user.click(screen.getByRole('button', { name: 'Новый чат' }));
-
-    expect(path()).toBe('/checks/demo-project/chats/local-chat-1');
-    expect(screen.getByText('Сообщений пока нет.')).toBeVisible();
-    expect(screen.getByTitle('Поставка оборудования к 20 сентября')).toBeVisible();
-
-    await user.click(screen.getByRole('button', { name: /Чат: Новый чат 1/ }));
-    expect(screen.getByRole('button', { name: /Поставка/ })).toBeVisible();
-  });
-
-  it('closes the chat list on Escape and returns focus to its trigger', async () => {
-    const user = userEvent.setup();
-    openCheck('/checks/demo-project/chats/demo-thread');
-
-    const trigger = screen.getByRole('button', { name: /Чат: Поставка/ });
-    await user.click(trigger);
-    expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    await user.keyboard('{Escape}');
-    expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    expect(trigger).toHaveFocus();
-  });
-
-  it('shows the confirmed save state only', () => {
-    openCheck('/checks/demo-project/chats/demo-thread');
-    expect(screen.getByText('Сохранено')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Переименовать проверку' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: /Чат проверки|Чат:/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('Сохранено')).not.toBeInTheDocument();
+    expect(screen.queryByText('В работе')).not.toBeInTheDocument();
     expect(screen.queryByText('Не удалось сохранить')).not.toBeInTheDocument();
   });
 });
