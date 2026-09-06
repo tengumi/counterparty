@@ -55,14 +55,23 @@ _INN = re.compile(r"(?<![\dA-Fa-f-])(\d{10}|\d{12})(?![\dA-Fa-f-])")
 """An INN in free text, never a digit run inside a UUID."""
 
 _EXPLAIN = re.compile(
-    r"что\s+(?:такое|значит|означа|показыва|за\b)|о\s*ч[её]м|про\s+что|"
-    r"как\s+(?:читать|понимать|это)|объясни|расшифру|чем\s+отлича|зачем\s+нужн|"
-    r"это\s+(?:вообще\s+)?что",
+    r"что\s+(?:\S+\s+){0,3}(?:такое|значит|означа|показыва|за\b)|"
+    r"о\s*ч[её]м|про\s+что|как\s+(?:читать|понимать|это)|объясни|расшифру|"
+    r"чем\s+отлича|зачем\s+нужн|это\s+(?:вообще\s+)?что",
     re.IGNORECASE,
 )
 """A "what does this field/signal mean" question — pull the guide in front of
 the model. It is only a hint now: a miss just means the guide is not
 pre-injected; the model can still call ``explain_indicator`` itself."""
+
+_WANTS_CHECK = re.compile(
+    r"провер|разбер|оцен|контрагент|поставщик|покупател|подрядчик|надёжн|надежн|"
+    r"стоит\s+ли\s+(?:работать|иметь\s+дело)",
+    re.IGNORECASE,
+)
+"""The message asks to check a company. Without an INN and with an empty
+project that is the one case worth answering with "назовите ИНН" instead of a
+model run; a greeting or a general question goes to the model."""
 
 
 def _is_explain(prompt: str) -> bool:
@@ -263,9 +272,10 @@ def create_harness_runner(
             )
             inn_here = _INN.search(ctx.prompt)
             no_company = ctx.scope is not None and not context.project.companies
-            if no_company and inn_here is None and not explains:
-                # Nothing to read and no INN to act on: ask for one, no model run.
-                # (A "что такое …" question still runs — it needs no company.)
+            if no_company and inn_here is None and _WANTS_CHECK.search(ctx.prompt):
+                # Asked to check a company but gave no INN, and nothing is pinned:
+                # ask for the INN, no model run. A greeting, a definition question
+                # or anything else goes to the model.
                 ctx.append_text(text_path, ASK_TO_ADD_COMPANY)
                 _finish(
                     ctx,
