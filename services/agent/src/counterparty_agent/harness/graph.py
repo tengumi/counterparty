@@ -14,6 +14,7 @@ supposed to keep. Conversation state is not rebuilt with it: that lives in the
 checkpoint keyed by the thread.
 """
 
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -84,11 +85,38 @@ def create_harness(
     return graph
 
 
+_THINK_BLOCK = re.compile(r"<think(?:ing)?>.*?</think(?:ing)?>", re.IGNORECASE | re.DOTALL)
+_THINK_OPEN = re.compile(r"<think(?:ing)?>.*$", re.IGNORECASE | re.DOTALL)
+_THINK_HEAD = re.compile(r"^.*?</think(?:ing)?>", re.IGNORECASE | re.DOTALL)
+# A model that reasons in-band often marks where the reply itself starts.
+_ANSWER_MARKER = re.compile(
+    r"(?:^|\n)\s*(?:итоговый |финальн(?:ый|ая) |краткий )?отв(?:ет|еть)\s*[:-]\s*",
+    re.IGNORECASE,
+)
+
+
+def strip_reasoning(text: str) -> str:
+    """Drop a model's in-band chain-of-thought from what the user will see.
+
+    ``qwen*-noreason`` still narrates its deliberation inside the message body.
+    Cut ``<think>`` blocks, and when the model flags its own reply with an
+    "Ответ:" marker, keep only what follows the last one.
+    """
+    cleaned = _THINK_BLOCK.sub("", text)
+    cleaned = _THINK_OPEN.sub("", cleaned)
+    if "</think" in cleaned.lower():
+        cleaned = _THINK_HEAD.sub("", cleaned)
+    markers = list(_ANSWER_MARKER.finditer(cleaned))
+    if markers:
+        cleaned = cleaned[markers[-1].end() :]
+    return cleaned.strip()
+
+
 def final_text(messages: Sequence[BaseMessage]) -> str:
-    """Return the text of the last assistant message of a turn."""
+    """Return the text of the last assistant message of a turn, reasoning removed."""
     for message in reversed(messages):
         if isinstance(message, AIMessage) and not message.tool_calls:
-            return str(message.text)
+            return strip_reasoning(str(message.text))
     return ""
 
 

@@ -293,14 +293,21 @@ def create_harness_runner(
                 stream.finish(handle, ok=True)
                 question = (
                     f"Справочник показателей:\n{guide}\n\n"
-                    f"Вопрос пользователя: {ctx.prompt}\n"
-                    "Ответь простыми словами, опираясь на справочник. Ссылки на "
-                    "основания [evidence:...] тут не нужны."
+                    f"Вопрос: {ctx.prompt}\n\n"
+                    "Ответь пользователю коротко: 3–5 предложений, простыми словами, "
+                    "только суть из справочника выше. Не описывай ход мыслей, не пиши "
+                    "«Ответ:», без Markdown, без ссылок [evidence:...]. Инструменты не "
+                    "вызывай — всё нужное уже дано."
                 )
 
             ledger = RunEvidenceLedger()
             async with reports_toolset(settings) as report_tools:
-                tools: list[BaseTool] = [*report_tools, _explain_indicator_tool]
+                # On an explain turn the guide is already in the prompt; leaving
+                # explain_indicator in the toolset just makes the model call it
+                # again and again.
+                tools: list[BaseTool] = list(report_tools)
+                if not explains:
+                    tools.append(_explain_indicator_tool)
                 if can_add and ctx.scope is not None:
                     tools.append(build_add_company_tool(settings, project_id=ctx.scope.project_id))
                 graph = create_harness(
@@ -360,7 +367,10 @@ def create_harness_runner(
                 stream=stream,
             )
             return
-        ctx.append_text(text_path, _tidy_answer(result.answer))
+        answer = _tidy_answer(result.answer)
+        if explains:
+            answer = _clamp_definition(answer)
+        ctx.append_text(text_path, answer)
         _finish(
             ctx,
             status=RunStatus.COMPLETED,
@@ -407,6 +417,22 @@ def _tidy_answer(text: str) -> str:
         else:
             out.append(line)
     return "\n".join(out)
+
+
+_DEFINITION_LIMIT = 900
+
+
+def _clamp_definition(text: str) -> str:
+    """Keep an "объясни показатель" reply short even if the model over-answers.
+
+    A definition needs a few sentences, not a page. Past the limit, cut back to
+    the last sentence boundary that fits.
+    """
+    if len(text) <= _DEFINITION_LIMIT:
+        return text
+    head = text[:_DEFINITION_LIMIT]
+    cut = max(head.rfind(". "), head.rfind("! "), head.rfind("? "), head.rfind("\n"))
+    return (head[: cut + 1] if cut > 200 else head).strip()
 
 
 def _started_at(ctx: RunContext) -> str:
