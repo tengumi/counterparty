@@ -107,6 +107,11 @@ function openLiveProject() {
 function panel() {
   return screen.getByRole('complementary', { name: 'Материалы проверки' });
 }
+// The company report and comparison open full-screen from the context strip
+// (mockup pReport); a basis opened from inside slides in as a drawer over it.
+function report() {
+  return screen.getByRole('region', { name: 'Отчёт' });
+}
 
 describe('live report material binding', () => {
   it('keeps exact decimals, null and unavailable states distinct', () => {
@@ -155,22 +160,23 @@ describe('live report material binding', () => {
     await user.type(draft, 'Проверить аванс');
     expect(screen.queryByText('Остановились на…')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Поставщик из REST' }));
-    await user.click(await within(panel()).findByRole('button', { name: /Финансы/ }));
-    expect(await within(panel()).findByText('0 ₽')).toBeVisible();
-    expect(within(panel()).getAllByText(/В отчёте нет этих сведений/).length).toBeGreaterThan(0);
-    await user.click(within(panel()).getByRole('button', { name: 'Показать ещё записи' }));
-    expect(await within(panel()).findByText('9 007 199 254 740 993,25 ₽')).toBeVisible();
-    await user.click(within(panel()).getByRole('button', { name: 'Основание: Выручка' }));
-    expect(await within(panel()).findByText('2025')).toBeVisible();
-    expect(within(panel()).getByLabelText('Исходный фрагмент')).toHaveTextContent('0');
+    await user.click(await within(report()).findByRole('button', { name: /Финансы/ }));
+    expect(await within(report()).findByText('0 ₽')).toBeVisible();
+    expect(within(report()).getAllByText(/В отчёте нет этих сведений/).length).toBeGreaterThan(0);
+    await user.click(within(report()).getByRole('button', { name: 'Показать ещё записи' }));
+    expect(await within(report()).findByText('9 007 199 254 740 993,25 ₽')).toBeVisible();
+    await user.click(within(report()).getByRole('button', { name: 'Основание: Выручка' }));
+    const basis = await screen.findByRole('complementary', { name: 'Основание' });
+    expect(await within(basis).findByText('2025')).toBeVisible();
+    expect(within(basis).getByLabelText('Исходный фрагмент')).toHaveTextContent('0');
     expect(fetch.mock.calls.some(([url]) => String(url).includes(encodeURIComponent(REF)))).toBe(
       true,
     );
-    await user.click(within(panel()).getByRole('button', { name: 'К отчёту' }));
-    expect(await within(panel()).findByText('0 ₽')).toBeVisible();
+    await user.click(within(basis).getByRole('button', { name: 'К отчёту' }));
+    expect(await within(report()).findByText('0 ₽')).toBeVisible();
     expect(draft).toHaveValue('Проверить аванс');
-    await user.click(within(panel()).getByRole('button', { name: 'Обсудить: Выручка' }));
-    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    await user.click(within(report()).getByRole('button', { name: 'Обсудить: Выручка' }));
+    expect(screen.queryByRole('region', { name: 'Отчёт' })).not.toBeInTheDocument();
     expect(screen.getByLabelText('Материалы в черновике')).toHaveTextContent('Выручка');
     expect(draft).toHaveValue('Проверить аванс');
     // The composer is live now: a non-empty draft can be sent to the agent.
@@ -236,13 +242,13 @@ describe('live report material binding', () => {
     vi.stubGlobal('fetch', fetch);
     openLiveProject();
     await userEvent.click(screen.getByRole('button', { name: 'Поставщик из REST' }));
-    await userEvent.click(await within(panel()).findByRole('button', { name: /Финансы/ }));
-    expect(await within(panel()).findByText('0 ₽')).toBeVisible();
-    await userEvent.click(within(panel()).getByRole('button', { name: 'Показать ещё записи' }));
-    expect(await within(panel()).findByRole('alert')).toBeVisible();
-    expect(within(panel()).getByText('0 ₽')).toBeVisible();
-    await userEvent.click(within(panel()).getByRole('button', { name: 'Повторить загрузку' }));
-    expect(await within(panel()).findByText('9 007 199 254 740 993,25 ₽')).toBeVisible();
+    await userEvent.click(await within(report()).findByRole('button', { name: /Финансы/ }));
+    expect(await within(report()).findByText('0 ₽')).toBeVisible();
+    await userEvent.click(within(report()).getByRole('button', { name: 'Показать ещё записи' }));
+    expect(await within(report()).findByRole('alert')).toBeVisible();
+    expect(within(report()).getByText('0 ₽')).toBeVisible();
+    await userEvent.click(within(report()).getByRole('button', { name: 'Повторить загрузку' }));
+    expect(await within(report()).findByText('9 007 199 254 740 993,25 ₽')).toBeVisible();
     expect(
       fetch.mock.calls.filter(([url]) => String(url).includes('cursor=next-finance')),
     ).toHaveLength(2);

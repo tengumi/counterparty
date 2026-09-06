@@ -30,6 +30,7 @@ export interface ProjectChatProps {
   readonly draft: string;
   readonly onDraftChange: (value: string) => void;
   readonly inputRef?: RefObject<HTMLTextAreaElement | null>;
+  readonly onOpenEvidence?: (evidenceRef: string) => void;
   readonly layout: (feed: ReactNode, composer: ReactNode) => ReactNode;
 }
 
@@ -46,6 +47,7 @@ export function ProjectChat({
   draft,
   onDraftChange,
   inputRef,
+  onOpenEvidence,
   layout,
 }: ProjectChatProps) {
   const conversation = useQuery({
@@ -101,6 +103,7 @@ export function ProjectChat({
       }
       initialState={restored?.state}
       inputRef={inputRef}
+      onOpenEvidence={onOpenEvidence}
       key={restored === undefined ? 'live' : 'restored'}
       layout={layout}
       onDraftChange={onDraftChange}

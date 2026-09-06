@@ -49,8 +49,8 @@
 
 /* P1 shell: 400 px beside the conversation, overlay under 1000 px */
 .panel { grid-column: 2; grid-row: 1 / 4; min-height: 0; flex: none; width: 400px; border-left: 1px solid #e7e8eb; background: #fff; display: flex; flex-direction: column; overflow: hidden; }
-.panelHeader { flex: none; flex-wrap: wrap; display: flex; align-items: center; gap: 8px; min-height: 56px; padding: 6px 12px 6px 20px; border-bottom: 1px solid #e7e8eb; }
-.panelTitle { flex: 1; min-width: 0; overflow-wrap: anywhere; margin: 0; font-size: 16px; line-height: 24px; font-weight: 600; }
+.panelHeader { flex: none; flex-wrap: wrap; display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 6px 12px 6px 16px; border-bottom: 1px solid #e7e8eb; }
+.panelTitle { flex: 1; min-width: 0; overflow-wrap: anywhere; margin: 0; font-size: 16px; line-height: 24px; font-weight: 500; }
 .panelClose { margin-left: auto; }
 .panelBody { min-height: 0; overflow: auto; padding: 16px 20px 32px; display: flex; flex-direction: column; gap: 8px; }
 .panelGroup { border: 1px solid #e7e8eb; border-radius: 10px; padding: 12px 14px; }
@@ -71,7 +71,8 @@
 .groupCount { max-width: 48%; text-align: right; color: rgba(5, 8, 29, .38); font-size: 13px; line-height: 18px; }
 .groupBody { display: flex; flex-direction: column; margin-top: 6px; }
 .row { display: flex; gap: 10px; align-items: baseline; padding: 8px 0; border-top: 1px solid #f1f2f4; text-align: left; }
-.rowButton { width: 100%; border: 0; background: none; cursor: pointer; color: inherit; font: inherit; }
+.rowButton { width: 100%; border: 0; border-radius: 8px; background: none; cursor: pointer; color: inherit; font: inherit; }
+.rowButton:hover { background: rgba(15, 25, 55, .04); }
 .rowMain { flex: 1; min-width: 0; }
 .rowName { overflow-wrap: anywhere; display: block; line-height: 20px; }
 .rowMeta { overflow-wrap: anywhere; display: block; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); }
@@ -194,12 +195,52 @@
   .draftContexts .draftContext button { min-width: 44px; min-height: 44px; flex-shrink: 0; }
 }
 
+/* Full-screen report (mockup pReport): covers the S2 view, own top bar. */
+.reportScreen { position: absolute; inset: 0; z-index: 2; background: #fff; display: flex; flex-direction: column; overflow: hidden; }
+.reportBar { flex: none; min-height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 20px; border-bottom: 1px solid #e7e8eb; white-space: nowrap; }
+.reportBack { flex: none; }
+.reportBarTitle { flex: none; font-size: 16px; line-height: 24px; font-weight: 500; }
+.reportModes { flex: none; display: flex; gap: 2px; margin-left: 8px; padding: 2px; border: 1px solid #e7e8eb; border-radius: 9px; }
+.reportMode { height: 28px; min-height: 28px; padding: 0 12px; border: 0; border-radius: 7px; background: none; cursor: pointer; color: inherit; font: inherit; font-size: 13px; line-height: 18px; white-space: nowrap; }
+.reportMode[aria-pressed='true'] { background: rgba(15, 25, 55, .06); font-weight: 500; }
+.reportPick { flex: none; display: inline-flex; }
+.reportPick select { min-height: 32px; max-width: 220px; border: 1px solid #e7e8eb; border-radius: 8px; padding: 0 8px; font: inherit; background: #fff; cursor: pointer; }
+.reportBarNote { margin-left: auto; flex: none; padding-left: 12px; font-size: 13px; line-height: 18px; color: rgba(4, 4, 19, .55); overflow: hidden; text-overflow: ellipsis; }
+.reportBody { flex: 1; min-height: 0; overflow: auto; padding: 24px 24px 96px; }
+.reportColumn { max-width: 1080px; margin: 0 auto; }
+.reportColumn .detail { gap: 16px; }
+.reportDrawer { grid-area: auto; position: absolute; inset: 0 0 0 auto; width: min(440px, 100%); box-shadow: -8px 0 24px rgba(9, 12, 37, .12); z-index: 4; }
+.reportDrawerBackdrop { position: absolute; inset: 0; z-index: 3; border: 0; background: rgba(9, 12, 37, .16); }
+@media (max-width: 640px) {
+  .reportBar { flex-wrap: wrap; padding: 8px 16px; gap: 8px 12px; }
+  .reportBarNote { margin-left: 0; flex-basis: 100%; padding-left: 0; }
+  .reportBody { padding: 16px 16px 64px; }
+  .reportDrawer { width: 100%; }
+  .reportMode { min-height: 36px; }
+}
+
 /* D1 decision screen */
 .decision { display: flex; flex-direction: column; gap: 20px; }
-.decision h3 { margin: 0 0 8px; }
-.decisionList { margin: 4px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
-.decisionItem { display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1px solid #ebeced; }
+/* In-panel section headers follow the mockup's in-body scale (14/20/500),
+   not the 20 px panel title — that is already rendered in the panel header. */
+.decision h3 { margin: 0 0 8px; font-size: 14px; line-height: 20px; font-weight: 500; }
+.decision section { min-width: 0; }
+.decision section:last-child { display: flex; flex-direction: column; gap: 16px; }
+.analysisMemo { display: flex; flex-direction: column; gap: 12px; border: 1px solid #e7e8eb; border-radius: 12px; padding: 16px 18px; font-size: 15px; line-height: 22px; overflow-wrap: anywhere; }
+.analysisMemo p { margin: 0; }
+/* Mockup pMemo: the question reads as the card title (16/24/500), the summary
+   as the body (15/22); a recorded decision keeps the outcome as its title. */
+.analysisMemo .detailTitle { font-size: 16px; line-height: 24px; font-weight: 500; }
+.analysisMemo .detailValue { font-size: 15px; line-height: 22px; font-weight: 400; }
+.decisionItem .detailValue { font-size: 16px; line-height: 24px; }
+.analysisMemo .sectionHeading { padding-top: 12px; border-top: 1px solid #e7e8eb; font-size: 13px; line-height: 20px; color: rgba(4, 4, 19, .55); }
+/* Mockup bullet pattern: a muted em dash, no disc marker (S2-09, pMemo). */
+.decisionList { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.decisionList li { display: flex; gap: 10px; }
+.decisionList li::before { content: "—"; flex: none; width: 10px; color: rgba(5, 8, 29, .38); }
+.decisionItem { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; padding: 16px 18px; border: 1px solid #e7e8eb; border-radius: 12px; font-size: 15px; line-height: 22px; overflow-wrap: anywhere; }
 .decisionItem p { margin: 0; }
-.decisionOutcomes { border: 0; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.decisionOutcomes { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .decisionOutcome { display: flex; align-items: center; min-height: 44px; }
-.decisionStale { color: #d97706; }
+.decisionStale { color: #b2670a; }
+.decisionHint { margin: 0; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); }

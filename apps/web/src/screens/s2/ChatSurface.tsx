@@ -154,6 +154,7 @@ export function ChatSurface({
         inputRef={inputRef}
         layout={layout}
         onDraftChange={setDraft}
+        onOpenEvidence={materialActions.onOpenEvidence}
         projectId={project.id}
         threadId={chat.id}
       />
@@ -168,6 +169,7 @@ export function ChatSurface({
         inputRef={inputRef}
         layout={layout}
         onDraftChange={setDraft}
+        onOpenEvidence={materialActions.onOpenEvidence}
         projectId={project.id}
         threadId={chat.id}
       />

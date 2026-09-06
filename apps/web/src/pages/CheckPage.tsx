@@ -19,6 +19,7 @@ import { projectDetail, withCompanies, workspaceKeys } from '../api/workspace';
 import { ChatSurface } from '../screens/s2/ChatSurface';
 import { CompanyContextStrip } from '../screens/s2/CompanyContextStrip';
 import { MaterialsPanel } from '../screens/s2/MaterialsPanel';
+import { ReportScreen } from '../screens/s2/ReportScreen';
 import { ProjectHeader } from '../screens/s2/ProjectHeader';
 import { readTaskHandoff } from '../screens/s2/taskHandoff';
 import { parseMaterialsState, initialMaterials } from '../screens/s2/materialsView';
@@ -61,6 +62,9 @@ function ProjectScreen({ apiProject, project, threadId, fixtureMode }: { apiProj
     parseMaterialsState,
   );
   const handoff = readTaskHandoff(location.state);
+  // The full-screen report (mockup `pReport`); only for live projects, the demo
+  // keeps its scripted materials panel.
+  const [report, setReport] = useState<{ mode: 'company' | 'comparison'; companyId?: string } | null>(null);
   // Set by the active chat so the panel can put a context chip in its composer.
   const insertDraft = useRef<((text: string | DiscussionContext) => void) | null>(null);
   const registerInsert = useCallback((insert: (text: string | DiscussionContext) => void) => {
@@ -141,8 +145,16 @@ function ProjectScreen({ apiProject, project, threadId, fixtureMode }: { apiProj
         companies={project.companies}
         isDemo={project.isDemo}
         onAddCompany={() => openMaterials({ kind: 'list' })}
-        onCompare={() => openMaterials({ kind: fixtureMode ? 'list' : 'comparison' })}
-        onOpenCompany={(companyId) => openMaterials({ kind: 'company', companyId })}
+        onCompare={() => {
+          if (fixtureMode) return openMaterials({ kind: 'list' });
+          setMaterials({ ...materials, open: false });
+          setReport({ mode: 'comparison' });
+        }}
+        onOpenCompany={(companyId) => {
+          if (fixtureMode) return openMaterials({ kind: 'company', companyId });
+          setMaterials({ ...materials, open: false });
+          setReport({ mode: 'company', companyId });
+        }}
         status={project.status}
       />
       <div className={styles.body}>
@@ -165,6 +177,19 @@ function ProjectScreen({ apiProject, project, threadId, fixtureMode }: { apiProj
           />
         )}
       </div>
+      {report && !fixtureMode ? (
+        <ReportScreen
+          apiProject={apiProject}
+          initialCompanyId={report.companyId}
+          initialMode={report.mode}
+          onClose={() => setReport(null)}
+          onDiscuss={(text) => {
+            setReport(null);
+            insertDraft.current?.(text);
+          }}
+          project={project}
+        />
+      ) : null}
       {materials.open ? (
         <>
           <button aria-label="Закрыть материалы" className={styles.panelBackdrop} onClick={closeMaterials} tabIndex={-1} type="button" />

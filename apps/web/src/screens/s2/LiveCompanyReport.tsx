@@ -144,6 +144,7 @@ function SectionContent({
   section,
   enabled,
   companyName,
+  groupTitle,
   onEvidence,
   onDiscuss,
 }: {
@@ -152,6 +153,8 @@ function SectionContent({
   section: SectionName;
   enabled: boolean;
   companyName: string;
+  /** The parent group's title; the section heading is dropped when it repeats it. */
+  groupTitle: string;
   onEvidence: (ref: string) => void;
   onDiscuss: (context: DiscussionContext) => void;
 }) {
@@ -165,7 +168,9 @@ function SectionContent({
   });
   return (
     <section aria-label={sectionTitles[section]}>
-      <h5 className={styles.liveSectionTitle}>{sectionTitles[section]}</h5>
+      {sectionTitles[section] === groupTitle ? null : (
+        <h5 className={styles.liveSectionTitle}>{sectionTitles[section]}</h5>
+      )}
       {query.isPending ? (
         <p role="status">Загружаем раздел…</p>
       ) : query.isError && !query.data ? (
@@ -346,6 +351,7 @@ export function LiveCompanyReport({
                     section={section}
                     enabled={open}
                     companyName={report.company.short_name}
+                    groupTitle={group.title}
                     onEvidence={onEvidence}
                     onDiscuss={onDiscuss}
                   />

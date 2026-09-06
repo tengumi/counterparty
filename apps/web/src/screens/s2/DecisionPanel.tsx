@@ -73,7 +73,7 @@ function Conclusion({
   onOpenEvidence: (evidenceRef: string) => void;
 }) {
   return (
-    <div className={styles.detail}>
+    <div className={styles.analysisMemo}>
       <p className={styles.proposal}>Предложение помощника · версия {artifact.version}</p>
       <p className={styles.detailTitle}>{artifact.question}</p>
       <p className={styles.detailValue}>{artifact.summary}</p>
@@ -328,7 +328,7 @@ export function DecisionPanel({ project, onOpenEvidence }: Props) {
             </Button>
           ) : null}
         </div>
-        <p className={styles.muted}>
+        <p className={styles.decisionHint}>
           Решение записываете вы. Помощник его не принимает и не меняет; прежние решения
           сохраняются.
         </p>

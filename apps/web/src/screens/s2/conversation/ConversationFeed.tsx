@@ -145,7 +145,7 @@ function Block({
           <p className={styles.resumeLabel}>Остановились на…</p>
           <p className={styles.resumeText}>{block.text}</p>
           <span className={styles.resumeAction}>
-            <Button onClick={actions.onFocusComposer} size={40} view="outlined">
+            <Button onClick={actions.onFocusComposer} size={40} view="primary">
               Продолжить
             </Button>
           </span>

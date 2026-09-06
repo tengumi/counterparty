@@ -58,6 +58,9 @@ export const fieldLabels: Readonly<Record<string, string>> = {
   borrowedFunds: 'Заёмные средства',
   assets: 'Активы',
   liabilities: 'Пассивы',
+  proceedings: 'Взыскания',
+  arbitration: 'Суды',
+  bank_risk: 'Оценка банка',
   currentAssets: 'Оборотные активы',
   uncurrentAssets: 'Внеоборотные активы',
   longTermDuties: 'Долгосрочные обязательства',
@@ -155,13 +158,19 @@ const sourceSections: Readonly<Record<string, SectionName>> = {
   zskRiskLevel: 'zsk',
 };
 
+/** Groups thousands with a space; touches no digit and performs no calculation. */
+export function groupDigits(value: string): string {
+  const [whole = '', fraction] = value.split('.');
+  const sign = whole.startsWith('-') ? '-' : '';
+  const grouped = whole.replace(/^-/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  const decimals = fraction && /[1-9]/.test(fraction) ? `,${fraction}` : '';
+  return `${sign}${grouped}${decimals}`;
+}
+
 /** String grouping keeps every decimal digit intact and performs no calculation. */
 export function formatDecimal(value: string, currency?: string | null): string {
   if (!/^-?\d+(\.\d+)?$/.test(value)) return 'Число в неизвестном формате';
-  const [whole = '', fraction] = value.split('.');
-  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  const decimals = fraction && /[1-9]/.test(fraction) ? `,${fraction}` : '';
-  return `${grouped}${decimals}${currency ? ` ${currency === 'RUB' ? '₽' : currency}` : ''}`;
+  return `${groupDigits(value)}${currency ? ` ${currency === 'RUB' ? '₽' : currency}` : ''}`;
 }
 export function sourceDate(value: string): string {
   const date = new Date(value);
@@ -365,6 +374,8 @@ export function fragmentRows(value: JsonValue, label: string): readonly Fragment
         : 'Нет'
       : typeof value === 'number' && !Number.isSafeInteger(value)
         ? 'Точность числа в исходном фрагменте не подтверждена'
-        : String(value);
+        : typeof value === 'number' && Math.abs(value) >= 10000
+          ? groupDigits(String(value))
+          : String(value);
   return [{ label, value: text }];
 }

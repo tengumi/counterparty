@@ -35,6 +35,8 @@ import type { ValueStore } from './connectionStore';
 import type { PublicActivity, PublicAgentState, RunStatus } from './publicAgentState';
 import { emptyAgentState } from './publicAgentState';
 import { useAgentProjection } from './useAgentProjection';
+import { EvidenceRefContext } from './evidenceContext';
+import { MarkdownText } from './MarkdownText';
 import { ActivityBlock } from '../screens/s2/conversation/ConversationFeed';
 import { Composer } from '../screens/s2/conversation/Composer';
 import type { ComposerStatus } from '../screens/s2/conversation/Composer';
@@ -112,7 +114,7 @@ function LiveMessages() {
         AssistantMessage: () => (
           <div className={styles.answer}>
             <div className={styles.answerText}>
-              <MessagePrimitive.Parts />
+              <MessagePrimitive.Parts components={{ Text: MarkdownText }} />
             </div>
           </div>
         ),
@@ -396,6 +398,8 @@ export interface AgentChatProps extends AgentRuntimeOptions {
   readonly draft?: string;
   readonly onDraftChange?: (value: string) => void;
   readonly inputRef?: RefObject<HTMLTextAreaElement | null>;
+  /** Opens a numbered basis cited in an answer (07 P1-03). */
+  readonly onOpenEvidence?: (evidenceRef: string) => void;
   /** Places the feed and the composer into the screen layout. */
   readonly layout?: (feed: ReactNode, composer: ReactNode) => ReactNode;
 }
@@ -406,6 +410,7 @@ export function AgentChat({
   draft,
   onDraftChange,
   inputRef,
+  onOpenEvidence,
   layout,
   ...options
 }: AgentChatProps) {
@@ -421,15 +426,17 @@ export function AgentChat({
   };
 
   return (
-    <ChatViewContext.Provider value={view}>
-      <AgentRuntimeHost
-        activeRunId={options.activeRunId}
-        apiBase={options.apiBase}
-        initialState={options.initialState}
-        newId={options.newId}
-        projectId={options.projectId}
-        threadId={options.threadId}
-      />
-    </ChatViewContext.Provider>
+    <EvidenceRefContext.Provider value={onOpenEvidence ?? null}>
+      <ChatViewContext.Provider value={view}>
+        <AgentRuntimeHost
+          activeRunId={options.activeRunId}
+          apiBase={options.apiBase}
+          initialState={options.initialState}
+          newId={options.newId}
+          projectId={options.projectId}
+          threadId={options.threadId}
+        />
+      </ChatViewContext.Provider>
+    </EvidenceRefContext.Provider>
   );
 }

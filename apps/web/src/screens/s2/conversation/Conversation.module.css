@@ -7,7 +7,7 @@
 .resume { border: 1px solid #e7e8eb; border-radius: 14px; padding: 16px 18px; }
 .resumeLabel { margin: 0; font-size: 13px; line-height: 18px; color: rgba(5, 8, 29, .38); }
 .resumeText { margin: 6px 0 0; font-size: 16px; line-height: 24px; }
-.resumeAction { margin-top: 12px; }
+.resumeAction { display: block; margin-top: 12px; }
 
 /* S2-03 client message */
 .user { align-self: flex-end; max-width: 84%; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
@@ -35,6 +35,25 @@
 /* S2-06 answer */
 .answer { font-size: 16px; line-height: 24px; display: flex; flex-direction: column; gap: 14px; }
 .answerText { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Markdown answer from the live model, rendered as the plain block of the
+   mockup: prose, dash bullets, light emphasis — no heading chrome. */
+.markdown { white-space: normal; display: flex; flex-direction: column; gap: 12px; }
+.markdown > :first-child { margin-top: 0; }
+.markdown > :last-child { margin-bottom: 0; }
+.mdParagraph { margin: 0; text-wrap: pretty; overflow-wrap: anywhere; }
+.mdHeading { margin: 0; font-size: 16px; line-height: 24px; font-weight: 600; text-wrap: pretty; }
+.mdList, .mdOrderedList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.mdOrderedList { counter-reset: md-item; }
+.mdItem { display: flex; gap: 10px; font-size: 15px; line-height: 22px; text-wrap: pretty; overflow-wrap: anywhere; }
+.mdItem::before { content: "—"; flex: none; width: 10px; color: rgba(5, 8, 29, .38); }
+.mdOrderedList > .mdItem { counter-increment: md-item; }
+.mdOrderedList > .mdItem::before { content: counter(md-item) "."; width: auto; }
+.mdItem > :first-child { margin-top: 0; }
+.mdItem > :last-child { margin-bottom: 0; }
+.mdItem .mdList, .mdItem .mdOrderedList { margin-top: 6px; flex: 1 1 100%; }
+.mdCode { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; background: rgba(15, 25, 55, .06); border-radius: 4px; padding: 1px 4px; }
+.evidenceMark { margin-left: 4px; font-size: 12px; line-height: 1; color: rgba(5, 8, 29, .38); vertical-align: super; }
 .points { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .point { display: flex; gap: 10px; font-size: 15px; line-height: 22px; }
 .pointDash { flex: none; width: 10px; color: rgba(5, 8, 29, .38); }
