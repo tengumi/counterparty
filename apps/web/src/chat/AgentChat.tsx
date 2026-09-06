@@ -107,8 +107,15 @@ function MessageTrail({
   if (activities.length === 0) return null;
 
   if (inFlight) {
-    const running = activities.find((activity) => activity.status === 'running');
-    const label = running?.label ?? activities[activities.length - 1]?.label ?? 'Изучаю отчёт';
+    const running = activities.filter((activity) => activity.status === 'running');
+    // No tool is running any more but the run is still going: the model is
+    // writing the answer. Say that instead of freezing on the last step.
+    const label =
+      running.length === 0
+        ? 'Формулирую ответ'
+        : running.length > 1
+          ? 'Собираю сведения'
+          : running[0]!.label;
     return (
       <p className={styles.activityLine} data-status="running">
         <span aria-hidden="true" className={styles.dot} data-status="running" />
@@ -154,6 +161,13 @@ function LiveConversation({ fallback }: { fallback: PublicAgentState }) {
   const state = useAgentProjection(fallback);
   const activeRunId =
     state.run !== null && RUN_IN_FLIGHT.has(state.run.status) ? state.run.id : null;
+  // Rendering straight from the projection means we also own keeping the newest
+  // message in view — a fresh answer must not land below the fold.
+  const endRef = useRef<HTMLDivElement>(null);
+  const tail = state.messages[state.messages.length - 1]?.blocks.map((b) => b.text).join('') ?? '';
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+  }, [state.messages.length, state.activities.length, tail, state.run?.status]);
   // Legacy / spike projections don't tag activities with a run; attribute the
   // whole list to the last assistant message so its trail still shows.
   const untagged = state.activities.every((activity) => activity.run_id == null);
@@ -190,6 +204,7 @@ function LiveConversation({ fallback }: { fallback: PublicAgentState }) {
           </div>
         );
       })}
+      <div aria-hidden="true" ref={endRef} />
     </>
   );
 }
