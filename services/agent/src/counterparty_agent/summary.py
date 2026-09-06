@@ -10,9 +10,10 @@ response schema passed as structured output — no JSON-shaped prompt, no hand
 parsing.
 """
 
+import asyncio
 import logging
-from collections.abc import Sequence
-from typing import Literal
+from collections.abc import Awaitable, Coroutine, Sequence
+from typing import Any, Literal
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import BaseTool
@@ -24,7 +25,11 @@ from .harness.tools import reports_toolset
 
 logger = logging.getLogger(__name__)
 
-_SECTIONS = ("financials", "execution_proceedings", "arbitration", "risk_signals")
+_SECTIONS = ("financials", "execution_proceedings", "risk_signals")
+_PART_CHARS = 3500
+"""Each report part is trimmed before it reaches the model. The raw MCP dumps
+run tens of thousands of characters of JSON; the block needs the shape of the
+numbers, not every field, and a big prefill is what makes the call slow."""
 
 _SYSTEM = (
     "Ты — помощник по проверке контрагентов в Альфа-Бизнесе. Перед тобой отчёт о "
@@ -71,23 +76,38 @@ def _tool(tools: Sequence[BaseTool], name: str) -> BaseTool | None:
     return next((tool for tool in tools if tool.name == name), None)
 
 
+def _clip(value: object) -> str:
+    text = str(value)
+    return text if len(text) <= _PART_CHARS else text[:_PART_CHARS] + " …(обрезано)"
+
+
 async def _gather(settings: AgentSettings, report_id: str) -> str:
-    """Pull a few sections of the report into one plain-text block for the model."""
-    parts: list[str] = []
+    """Pull a few report parts into one trimmed plain-text block for the model.
+
+    Parts are fetched together and each is clipped: the raw MCP dumps are tens
+    of thousands of characters, and a big prefill is what made the call slow.
+    """
+
+    async def part(name: str, coro: Awaitable[Any]) -> str:
+        try:
+            return f"== {name} ==\n{_clip(await coro)}"
+        except Exception as error:
+            logger.info("summary: part %s unavailable: %s", name, error)
+            return ""
+
     async with reports_toolset(settings) as tools:
         overview = _tool(tools, "get_company_overview")
         section = _tool(tools, "get_report_section")
+        jobs: list[Coroutine[Any, Any, str]] = []
         if overview is not None:
-            parts.append("== Карточка ==\n" + str(await overview.ainvoke({"report_id": report_id})))
+            jobs.append(part("Карточка", overview.ainvoke({"report_id": report_id})))
         if section is not None:
-            for name in _SECTIONS:
-                try:
-                    result = await section.ainvoke({"report_id": report_id, "section": name})
-                except Exception as error:
-                    logger.info("summary: section %s unavailable: %s", name, error)
-                    continue
-                parts.append(f"== {name} ==\n{result}")
-    return "\n\n".join(parts)
+            jobs.extend(
+                part(name, section.ainvoke({"report_id": report_id, "section": name}))
+                for name in _SECTIONS
+            )
+        parts = await asyncio.gather(*jobs)
+    return "\n\n".join(p for p in parts if p)
 
 
 async def build_report_summary(settings: AgentSettings, *, report_id: str) -> ReportSummary:
