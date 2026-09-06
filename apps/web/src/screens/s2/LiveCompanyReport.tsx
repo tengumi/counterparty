@@ -11,7 +11,8 @@ import { FinancialTable } from './report/FinancialTable';
 import { ReportOverview } from './report/ReportOverview';
 import reportStyles from './report/Report.module.css';
 import { availabilityText, factRow, recordRows, sectionTitles, sourceDate } from './liveReportView';
-import type { DisplayRow } from './liveReportView';
+import { ReportFactRow } from './report/ReportFactRow';
+export { ReportFactRow } from './report/ReportFactRow';
 import styles from './S2.module.css';
 
 export function ReadError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
@@ -46,60 +47,6 @@ export function Warnings({ warnings }: { warnings: readonly ReportWarning[] }) {
         </p>
       ))}
     </>
-  );
-}
-export function ReportFactRow({
-  row,
-  companyName,
-  onEvidence,
-  onDiscuss,
-}: {
-  row: DisplayRow;
-  companyName: string;
-  onEvidence: (ref: string) => void;
-  onDiscuss: (context: DiscussionContext) => void;
-}) {
-  const ref = row.refs[0];
-  return (
-    <div className={`${styles.factRow} ${reportStyles.factRow}`}>
-      <span className={styles.factLabel}>{row.label}</span>
-      <span className={styles.rowMain}>
-        <span
-          className={
-            row.fact && row.fact.availability !== 'available' ? styles.unknown : styles.rowName
-          }
-        >
-          {row.value}
-        </span>
-        {row.period != null ? <span className={styles.rowMeta}>{row.period} год</span> : null}
-      </span>
-      {ref ? (
-        <span className={styles.factActions}>
-          <Button
-            aria-label={`Основание: ${row.label}`}
-            onClick={() => onEvidence(ref)}
-            size={32}
-            view="text"
-          >
-            <span className={reportStyles.helpIcon} aria-hidden="true">?</span>
-          </Button>
-          <Button
-            aria-label={`Обсудить: ${row.label}`}
-            onClick={() =>
-              onDiscuss({
-                kind: 'evidence',
-                evidence_ref: ref,
-                label: `${row.label} · ${companyName}${row.period != null ? ` · ${row.period}` : ''}`,
-              })
-            }
-            size={32}
-            view="text"
-          >
-            Обсудить
-          </Button>
-        </span>
-      ) : null}
-    </div>
   );
 }
 function SectionContent({
@@ -153,6 +100,7 @@ function SectionContent({
                 <ReportFactRow
                   key={fact.key}
                   row={factRow(fact)}
+                  section={section}
                   companyName={companyName}
                   onEvidence={onEvidence}
                   onDiscuss={onDiscuss}
@@ -174,6 +122,7 @@ function SectionContent({
                       <ReportFactRow
                         key={row.key}
                         row={row}
+                        section={section}
                         companyName={companyName}
                         onEvidence={onEvidence}
                         onDiscuss={onDiscuss}

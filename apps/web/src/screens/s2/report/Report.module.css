@@ -13,20 +13,21 @@
 .neutral { background: #a0a0aa; }
 .attention { background: #bd6900; }
 .negative { background: #d6242a; }
-.sections { margin-top: 28px; }
-.section { border-top: 1px solid #e3e4e9; padding: 16px 0 4px; }
-.section h3 { margin: 0 0 10px; font-size: 16px; line-height: 24px; font-weight: 500; }
-.section h5 { margin: 12px 8px 4px; color: #80808c; font-size: 13px; font-weight: 400; }
-.section h6 { margin: 10px 8px 0; font-size: 13px; font-weight: 500; }
+/* Tabular report: spacing, type and colours follow the designer's rsections. */
+.sections { margin-top: 28px; container-type: inline-size; }
+.section { border-top: 1px solid #e7e8eb; padding: 16px 0 4px; }
+.section h3 { margin: 0 0 4px; font-size: 16px; line-height: 24px; font-weight: 500; }
+.section h5 { margin: 12px 8px 4px; color: rgba(4, 4, 19, .55); font-size: 13px; line-height: 18px; font-weight: 400; }
+.section h6 { margin: 10px 8px 0; font-size: 13px; line-height: 18px; font-weight: 500; }
 .section section { border: 0; }
-.section p { margin: 8px; color: #9c9daa; font-size: 13px; }
-.report .factRow { grid-template-columns: minmax(160px, 1fr) minmax(0, 1.35fr) 116px; align-items: start; gap: 16px; border: 0; padding: 10px 8px; border-radius: 6px; }
-.factRow:hover { background: #f8f9fb; }
-.factRow > :first-child { color: #29292c; }
-.factRow > :nth-child(2) { text-align: right; }
-.report .factRow > :nth-child(3) { grid-column: auto; gap: 8px; align-items: center; }
-.factRow button { color: #2a77ef; font-size: 13px; min-height: 22px; height: 22px; padding: 0; }
-.factRow button:first-child { color: #9c9daa; min-width: 20px; }
+.section p { margin: 8px; color: rgba(5, 8, 29, .38); font-size: 13px; line-height: 18px; }
+.fact { border-radius: 10px; }
+.fact:hover { background: rgba(15, 25, 55, .03); }
+.factRow { display: grid; grid-template-columns: minmax(120px, 2fr) minmax(160px, 3fr) 112px; align-items: baseline; gap: 12px; padding: 10px 8px; font-size: 14px; line-height: 20px; }
+.factLabel { min-width: 0; border: 0; background: none; padding: 0; color: rgba(3, 3, 6, .88); font: inherit; text-align: left; text-wrap: pretty; overflow-wrap: anywhere; }
+button.factLabel { cursor: pointer; }
+.factValue { min-width: 0; text-align: right; text-wrap: pretty; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.factPeriod { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; color: rgba(5, 8, 29, .38); }
 .helpIcon { display: inline-flex; align-items: center; justify-content: center; border: 1.5px solid currentColor; border-radius: 50%; width: 12px; height: 12px; font-size: 10px; line-height: 12px; font-weight: 500; }
 .sourceNote { border-top: 1px solid #e3e4e9; padding-top: 16px; margin-top: 24px; font-size: 12px; line-height: 18px; color: #9c9daa; }
 @media (max-width: 1050px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -34,19 +35,37 @@
   .metrics { gap: 8px; }
   .metric { padding: 12px; }
   .metricValue { font-size: 17px; line-height: 24px; }
-  .report .factRow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px 12px; }
-  .report .factRow > :nth-child(3) { grid-column: 1 / -1; }
 }
-.financialScroll { overflow-x: auto; }
-.financialTable { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 21px; }
-.financialTable th, .financialTable td { padding: 10px 8px; text-align: right; vertical-align: top; font-weight: 400; }
-.financialTable th:first-child { text-align: left; min-width: 160px; }
-.financialTable thead { color: #9c9daa; font-size: 13px; }
-.financialTable tbody tr:hover { background: #f8f9fb; }
-.financialTable td > button { border: 0; background: none; padding: 0; color: inherit; font: inherit; cursor: pointer; text-align: right; }
-.financialTable td > button:hover { color: #2a77ef; }
-.tableActions { display: flex; gap: 8px; justify-content: flex-end; }
-.tableActions button { color: #2a77ef; font-size: 13px; padding: 0; height: 22px; min-height: 22px; }
-.tableActions button:first-child { color: #9c9daa; min-width: 20px; }
-.missing { color: #9c9daa; }
+.financialScroll { overflow-x: auto; border-radius: 10px; }
+.financialTable { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; line-height: 20px; font-variant-numeric: tabular-nums; }
+.financialTable th, .financialTable td { padding: 10px 8px; text-align: right; vertical-align: baseline; font-weight: 400; }
+.financialTable th:first-child { text-align: left; min-width: 180px; width: 28%; }
+.financialTable th:last-child, .financialTable td:last-child { width: 112px; min-width: 112px; }
+.financialTable thead th { padding-top: 4px; padding-bottom: 4px; color: rgba(5, 8, 29, .38); font-size: 12px; line-height: 16px; }
+.financialTable td:not(:last-child) { min-width: 100px; }
+.financialRow:hover { background: rgba(15, 25, 55, .03); }
+.financialRow > :first-child { border-radius: 10px 0 0 10px; }
+.financialRow > :last-child { border-radius: 0 10px 10px 0; }
+.financialValue { border: 0; background: none; padding: 0; color: inherit; font: inherit; cursor: pointer; text-align: right; }
+.financialValue:hover, button.factLabel:hover { color: #2a77ef; }
+.tableActions { display: flex; gap: 10px; justify-content: flex-end; align-items: center; }
+.textAction { flex: none; border: 0; background: none; padding: 0; color: #2a77ef; font: inherit; font-size: 13px; line-height: 20px; cursor: pointer; white-space: nowrap; }
+.helpButton { width: 20px; height: 20px; flex: none; display: inline-flex; align-items: center; justify-content: center; border: 0; background: none; padding: 0; color: rgba(5, 8, 29, .38); cursor: pointer; }
+.helpButton:hover, .helpButton[aria-expanded='true'] { color: rgba(4, 4, 19, .75); }
+.helpText { padding: 0 8px 12px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; text-align: left; }
+.helpText > span { flex: 1; max-width: 640px; font-size: 13px; line-height: 18px; color: rgba(4, 4, 19, .75); text-wrap: pretty; }
+.financialTable .financialHelp > td { padding: 0; }
+.missing { color: rgba(5, 8, 29, .38); }
 .hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.fact button:focus-visible, .financialScroll:focus-visible, .financialTable button:focus-visible { outline: 2px solid #2a77ef; outline-offset: 3px; border-radius: 4px; }
+@container (max-width: 580px) {
+  .factRow { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 4px 12px; }
+  .factRow .tableActions { grid-column: 1 / -1; }
+  .helpText { flex-wrap: wrap; }
+  .helpText > span { flex-basis: 100%; }
+}
+@media (pointer: coarse) {
+  .tableActions { min-height: 44px; }
+  .helpButton { width: 44px; height: 44px; }
+  .textAction { min-height: 44px; }
+}
