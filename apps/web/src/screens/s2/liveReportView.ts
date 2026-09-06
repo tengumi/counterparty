@@ -5,6 +5,7 @@ import type {
   ReportRecord,
   SectionName,
 } from '../../api/reportContracts';
+import { formatDate } from '../../lib/formatDate';
 
 export const sectionTitles: Readonly<Record<SectionName, string>> = {
   profile: 'Реквизиты',
@@ -173,23 +174,14 @@ export function formatDecimal(value: string, currency?: string | null): string {
   return `${groupDigits(value)}${currency ? ` ${currency === 'RUB' ? '₽' : currency}` : ''}`;
 }
 export function sourceDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) return 'Дата не указана';
-  return `${new Intl.DateTimeFormat('ru-RU', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' }).format(date)} (UTC)`;
+  return formatDate(value);
 }
 
 const _DATE = /^\d{4}-\d\d-\d\d(?:[T ]|$)/;
 
 /** A stored date/timestamp shown to a person: "2 марта 2023", never an ISO string. */
 export function prettyDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) return value;
-  return new Intl.DateTimeFormat('ru-RU', {
-    timeZone: 'UTC',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(date);
+  return formatDate(value);
 }
 export function factText(fact: FactValue): string {
   if (fact.availability !== 'available') return availabilityText[fact.availability];
@@ -238,7 +230,7 @@ export function recordRows(record: ReportRecord): {
       .map(([label, value]) => ({
         key: label,
         label,
-        value: value as string,
+        value: _DATE.test(value as string) ? prettyDate(value as string) : value as string,
         refs: record.evidence_refs,
       }));
   switch (record.kind) {
@@ -378,7 +370,9 @@ export function fragmentRows(value: JsonValue, label: string): readonly Fragment
     );
   }
   const text =
-    typeof value === 'boolean'
+    typeof value === 'string' && _DATE.test(value)
+      ? prettyDate(value)
+      : typeof value === 'boolean'
       ? value
         ? 'Да'
         : 'Нет'

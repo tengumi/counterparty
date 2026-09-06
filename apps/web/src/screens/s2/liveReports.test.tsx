@@ -18,6 +18,7 @@ import {
 import { LiveCompanyReport } from './LiveCompanyReport';
 import { LiveEvidence } from './LiveEvidence';
 import { factText, formatDecimal, fragmentRows } from './liveReportView';
+import { formatDate } from '../../lib/formatDate';
 
 function notImplemented() {
   return Response.json(
@@ -131,7 +132,7 @@ describe('live report material binding', () => {
     );
     expect(factText({ ...zeroFact, evidence_refs: [] })).toContain('основание недоступно');
     expect(fragmentRows({ issueDate: { $date: '2026-01-01T21:00:00Z' } }, 'Лицензия')).toEqual([
-      { label: 'Лицензия · Дата выдачи', value: '2026-01-01T21:00:00Z' },
+      { label: 'Лицензия · Дата выдачи', value: formatDate('2026-01-01T21:00:00Z') },
     ]);
   });
   it('scopes immutable reports, evidence and comparison by project and snapshot', () => {

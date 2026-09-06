@@ -179,10 +179,12 @@
 .liveSelect { display: grid; gap: 8px; margin-bottom: 12px; font-size: 13px; }
 .liveSelect select { min-height: 44px; width: 100%; max-width: 100%; font: inherit; border: 1px solid #d3d3d3; border-radius: 8px; padding: 8px; background: white; }
 .comparisonScroll { width: 100%; overflow: auto; max-height: 65vh; margin: 16px 0; border: 1px solid #e8e8e8; border-radius: 10px; }
-.comparisonTable { border-collapse: separate; border-spacing: 0; font-size: 12px; min-width: 640px; }
+.comparisonTable { border-collapse: separate; border-spacing: 0; font-size: 13px; line-height: 20px; min-width: 640px; font-variant-numeric: tabular-nums; }
 .comparisonTable th, .comparisonTable td { min-width: 152px; max-width: 240px; padding: 12px; border-bottom: 1px solid #e8e8e8; border-right: 1px solid #e8e8e8; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
 .comparisonTable th:first-child { position: sticky; left: 0; background: #fafafa; z-index: 1; min-width: 170px; }
-.comparisonTable thead th { background: #f3f3f3; }
+.comparisonTable thead th { background: #f3f5f9; color: #535d6b; font-weight: 500; position: sticky; top: 0; z-index: 2; }
+.comparisonTable thead th:first-child { z-index: 3; }
+.comparisonTable tbody tr:hover td { background: #f9fbff; }
 .comparisonTable th span, .comparisonTable td span { display: block; }
 .draftContexts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .draftContext { display: flex; max-width: 100%; align-items: center; gap: 4px; border: 1px solid #d9d9d9; border-radius: 10px; padding-left: 10px; font-size: 12px; }
@@ -200,9 +202,9 @@
 .reportBar { flex: none; min-height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 20px; border-bottom: 1px solid #e7e8eb; white-space: nowrap; }
 .reportBack { flex: none; }
 .reportBarTitle { flex: none; font-size: 16px; line-height: 24px; font-weight: 500; }
-.reportModes { flex: none; display: flex; gap: 2px; margin-left: 8px; padding: 2px; border: 1px solid #e7e8eb; border-radius: 9px; }
+.reportModes { flex: none; display: flex; gap: 2px; margin-left: 8px; padding: 3px; border: 1px solid #e7e8eb; border-radius: 10px; background: #f3f5f9; }
 .reportMode { height: 28px; min-height: 28px; padding: 0 12px; border: 0; border-radius: 7px; background: none; cursor: pointer; color: inherit; font: inherit; font-size: 13px; line-height: 18px; white-space: nowrap; }
-.reportMode[aria-pressed='true'] { background: rgba(15, 25, 55, .06); font-weight: 500; }
+.reportMode[aria-pressed='true'] { background: #fff; font-weight: 500; box-shadow: 0 1px 3px rgba(20, 35, 65, .1); }
 .reportPick { flex: none; display: inline-flex; }
 .reportPick select { min-height: 32px; max-width: 220px; border: 1px solid #e7e8eb; border-radius: 8px; padding: 0 8px; font: inherit; background: #fff; cursor: pointer; }
 .reportBarNote { margin-left: auto; flex: none; padding-left: 12px; font-size: 13px; line-height: 18px; color: rgba(4, 4, 19, .55); overflow: hidden; text-overflow: ellipsis; }

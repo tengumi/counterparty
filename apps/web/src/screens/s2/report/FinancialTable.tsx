@@ -1,9 +1,10 @@
 import { Fragment, useId, useState } from 'react';
-import type { DiscussionContext, FinancialPeriod, ReportRecord } from '../../../api/reportContracts';
+import type { DiscussionContext, ReportRecord } from '../../../api/reportContracts';
 import { factLabel, factText } from '../liveReportView';
 import { reportHelp } from './helpContent';
 import { ReportHelpButton, ReportHelpText } from './ReportHelp';
 import styles from './Report.module.css';
+import { amountTone, financialPeriods } from './financialView';
 
 const fields = ['proceeds', 'total_assets', 'equity', 'accounts_payable', 'profit', 'cash', 'receivables'] as const;
 
@@ -15,8 +16,7 @@ export function FinancialTable({ records, companyName, onEvidence, onDiscuss }: 
 }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const id = useId();
-  const periods = records.filter((record): record is FinancialPeriod => record.kind === 'financial_period')
-    .sort((a, b) => a.year - b.year);
+  const periods = financialPeriods(records);
   if (!periods.length) return null;
   return <div className={styles.financialScroll} role="region" aria-label="Финансовые показатели по годам" tabIndex={0}>
     <table className={styles.financialTable}>
@@ -38,7 +38,8 @@ export function FinancialTable({ records, companyName, onEvidence, onDiscuss }: 
             {periods.map((period) => {
               const fact = period[key];
               const evidence = fact.evidence_refs[0];
-              return <td key={period.year} className={fact.availability !== 'available' ? styles.missing : undefined}>
+              return <td key={period.year} className={fact.availability !== 'available' ? styles.missing : undefined}
+                data-amount-tone={key === 'profit' ? amountTone(fact) : undefined}>
                 {evidence ? <button className={styles.financialValue} type="button"
                   title={`Основание: ${label} · ${period.year}`}
                   onClick={() => onEvidence(evidence)}>{factText(fact)}</button> : factText(fact)}

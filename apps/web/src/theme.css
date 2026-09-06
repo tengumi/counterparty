@@ -8,3 +8,7 @@ a:hover { text-decoration: underline; }
 :focus-visible { outline: 2px solid #2a77ef; outline-offset: 4px; }
 
 button, input, textarea { font: inherit; }
+
+/* Знак финансового значения. Ноль и неизвестное значение остаются нейтральными. */
+[data-amount-tone='positive'] { color: var(--color-light-text-positive, #16824b); }
+[data-amount-tone='negative'] { color: var(--color-light-text-negative, #d6242a); }

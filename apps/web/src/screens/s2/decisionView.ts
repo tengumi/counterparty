@@ -12,6 +12,7 @@ import type {
   ApiUserDecision,
   DecisionOutcome,
 } from '../../api/decisions';
+import { formatDateTime } from '../../lib/formatDate';
 
 export const outcomeLabels: Readonly<Record<DecisionOutcome, string>> = {
   ready: 'Готов работать',
@@ -107,13 +108,7 @@ export function decisionStaleMark(
 }
 
 export function decisionDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) return 'Дата недоступна';
-  return new Intl.DateTimeFormat('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(date);
+  return formatDateTime(value);
 }
 
 /** Newest first; the server keeps every version, so nothing is dropped. */

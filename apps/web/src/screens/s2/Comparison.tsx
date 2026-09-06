@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Button } from '@alfalab/core-components/button';
 import { Checkbox } from '@alfalab/core-components/checkbox';
 import { Input } from '@alfalab/core-components/input';
@@ -13,6 +14,9 @@ import { ReadError, Warnings } from './LiveCompanyReport';
 import { factLabel, factText, sourceDate } from './liveReportView';
 import { usePersistentState } from './persisted';
 import styles from './S2.module.css';
+import { amountTone } from './report/financialView';
+
+const ComparisonChart = lazy(() => import('./report/charts/ComparisonChart'));
 
 const criterionLabels: Readonly<Record<ComparisonCriterion, string>> = {
   bank_risk: 'Риск банка',
@@ -211,6 +215,9 @@ export function Comparison({
             .
           </p>
           <Warnings warnings={query.data.warnings} />
+          <Suspense fallback={<p role="status">Загружаем график…</p>}>
+            <ComparisonChart comparison={query.data} onEvidence={onEvidence} />
+          </Suspense>
           <div
             className={styles.comparisonScroll}
             tabIndex={0}
@@ -251,7 +258,7 @@ export function Comparison({
                         <td key={key}>
                           {cell ? (
                             <>
-                              <span>{factText(cell)}</span>
+                              <span data-amount-tone={cell.key.split(/[./]/).at(-1) === 'profit' ? amountTone(cell) : undefined}>{factText(cell)}</span>
                               {cell.period != null ? (
                                 <span className={styles.rowMeta}>{cell.period} год</span>
                               ) : null}

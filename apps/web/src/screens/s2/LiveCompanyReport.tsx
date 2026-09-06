@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Button } from '@alfalab/core-components/button';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { getOverview, getReportSummary, getSection, reportKeys } from '../../api/reports';
@@ -14,6 +15,8 @@ import { availabilityText, factRow, recordRows, sectionTitles, sourceDate } from
 import { ReportFactRow } from './report/ReportFactRow';
 export { ReportFactRow } from './report/ReportFactRow';
 import styles from './S2.module.css';
+
+const FinancialHistory = lazy(() => import('./report/charts/FinancialHistory'));
 
 export function ReadError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
   return (
@@ -101,6 +104,12 @@ function SectionContent({
         <ReadError error={query.error} onRetry={() => void query.refetch()} />
       ) : (
         <>
+          {section === 'financials' && query.data ? <Suspense fallback={<p role="status">Загружаем график…</p>}>
+            <FinancialHistory
+              records={query.data.pages.filter((page) => page.availability === 'available').flatMap((page) => page.records)}
+              partial={Boolean(query.hasNextPage)} onEvidence={onEvidence}
+            />
+          </Suspense> : null}
           {query.data?.pages.map((page, pageIndex) => (
             <div key={pageIndex}>
               {page.availability !== 'available' ? (

@@ -40,6 +40,7 @@ import { emptyAgentState, TERMINAL_RUN_STATUSES } from './publicAgentState';
 import { useAgentProjection } from './useAgentProjection';
 import { EvidenceRefContext } from './evidenceContext';
 import { MarkdownContent } from './MarkdownText';
+import { formatDateTime } from '../lib/formatDate';
 import { Composer } from '../screens/s2/conversation/Composer';
 import type { ComposerStatus } from '../screens/s2/conversation/Composer';
 import styles from '../screens/s2/conversation/Conversation.module.css';
@@ -191,6 +192,7 @@ function LiveConversation({ fallback }: { fallback: PublicAgentState }) {
               <div className={styles.bubble}>
                 {message.blocks.map((block) => block.text).join('')}
               </div>
+              <time className={styles.messageTime} dateTime={message.created_at}>{formatDateTime(message.created_at)}</time>
             </div>
           );
         }
@@ -210,6 +212,9 @@ function LiveConversation({ fallback }: { fallback: PublicAgentState }) {
             <div className={styles.answerText}>
               <MarkdownContent text={message.blocks.map((block) => block.text).join('')} />
             </div>
+            {message.status !== 'streaming' ? <time className={styles.messageTime} dateTime={message.created_at}>
+              {formatDateTime(message.created_at)}
+            </time> : null}
           </div>
         );
       })}

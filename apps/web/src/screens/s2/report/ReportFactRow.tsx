@@ -4,6 +4,7 @@ import type { DisplayRow } from '../liveReportView';
 import { reportHelp } from './helpContent';
 import { ReportHelpButton, ReportHelpText } from './ReportHelp';
 import styles from './Report.module.css';
+import { amountTone } from './financialView';
 
 export function ReportFactRow({ row, section, companyName, onEvidence, onDiscuss }: {
   row: DisplayRow;
@@ -23,7 +24,8 @@ export function ReportFactRow({ row, section, companyName, onEvidence, onDiscuss
         {row.label}
       </button> : <span className={styles.factLabel}>{row.label}</span>}
       <span className={styles.factValue}>
-        <span className={row.fact && row.fact.availability !== 'available' ? styles.missing : undefined}>
+        <span className={row.fact && row.fact.availability !== 'available' ? styles.missing : undefined}
+          data-amount-tone={row.fact?.key.split(/[./]/).at(-1) === 'profit' ? amountTone(row.fact) : undefined}>
           {row.value}
         </span>
         {row.period != null ? <span className={styles.factPeriod}>{row.period} год</span> : null}

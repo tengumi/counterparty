@@ -1,6 +1,7 @@
 import type { ApiProject, ApiProjectCompany, ProjectCompaniesResponse } from './contracts';
 import type { ChatSummary, CompanyRef, ProjectDetail, ProjectStatus, ProjectSummary } from '../mocks/types';
 import { findProject } from '../mocks/workspace';
+import { formatDateTime } from '../lib/formatDate';
 
 const statusMap: Readonly<Record<ApiProject['workflow_status'], ProjectStatus>> = {
   in_progress: 'in_progress',
@@ -12,19 +13,13 @@ function companyView(company: ApiProjectCompany): CompanyRef {
   return { id: company.company_id, reportId: company.report_id, name: company.short_name, inn: company.inn };
 }
 
-function activityLabel(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) return 'Дата недоступна';
-  return new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(date);
-}
-
 export function projectSummary(project: ApiProject): ProjectSummary {
   return {
     id: project.id,
     title: project.title,
     status: statusMap[project.workflow_status],
     continuation: project.last_open_question,
-    lastActivityLabel: activityLabel(project.updated_at),
+    lastActivityLabel: formatDateTime(project.updated_at),
     lastActivityAt: project.updated_at,
     lastThreadId: project.default_thread_id,
   };

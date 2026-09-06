@@ -2,6 +2,7 @@ import { Button } from '@alfalab/core-components/button';
 import type { Assessment, CompanyOverview } from '../../../api/reportContracts';
 import { availabilityText, factText } from '../liveReportView';
 import styles from './Report.module.css';
+import { amountTone, metricFact } from './financialView';
 
 const signalLabels: Record<string, string> = {
   LOW: 'Низкий риск', MEDIUM: 'Средний риск', HIGH: 'Высокий риск',
@@ -22,7 +23,7 @@ export function ReportOverview({ report, onEvidence }: {
     tone: value.display_level,
   });
   const financial = (key: string, label: string) => {
-    const facts = report.facts.filter((fact) => fact.key.endsWith(`.${key}`))
+    const facts = report.facts.filter((fact) => fact.key.split(/[./]/).at(-1) === key)
       .sort((a, b) => Number(b.period) - Number(a.period));
     const current = facts[0];
     return {
@@ -53,8 +54,9 @@ export function ReportOverview({ report, onEvidence }: {
     sectionCard('licenses', 'Лицензии'),
     sectionCard('risk_signals', 'Сигналы источника'),
   ];
+  const profit = metricFact(report.facts, 'profit');
   return <div className={styles.metrics}>
-    {cards.map((card) => <div className={styles.metric} key={card.label}>
+    {cards.map((card, index) => <div className={styles.metric} key={card.label}>
       <div className={styles.metricHeading}>
         <span>{card.label}</span>
         {card.ref ? <Button size={32} view="text" aria-label={`Основание: ${card.label}`}
@@ -67,6 +69,17 @@ export function ReportOverview({ report, onEvidence }: {
         {card.value}
       </div>
       <p>{card.note}</p>
+      {index === 2 ? <div className={styles.profitLine}>
+        <span>Прибыль{profit?.period ? ` · ${profit.period}` : ''}</span>
+        <span className={styles.profitValue} data-amount-tone={amountTone(profit)}>
+          {profit ? factText(profit) : 'Нет сведений'}
+        </span>
+        {profit?.evidence_refs[0] ? <Button size={32} view="text"
+          aria-label={`Основание: Прибыль${profit.period ? ` за ${profit.period} год` : ''}`}
+          onClick={() => onEvidence(profit.evidence_refs[0]!)}>
+          <span className={styles.helpIcon} aria-hidden="true">?</span>
+        </Button> : null}
+      </div> : null}
     </div>)}
   </div>;
 }
