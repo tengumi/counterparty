@@ -52,6 +52,85 @@ backlog и зависимости находятся в [плане разраб
 [индексе Specs](docs/Specs/00_OVERVIEW_AND_INDEX.md), краткая карта границ — в
 [архитектуре](docs/architecture.md).
 
+## Архитектура
+
+```mermaid
+flowchart TB
+    subgraph users["Пользовательский слой"]
+        user["Предприниматель"]
+    end
+
+    subgraph presentation["Интерфейс"]
+        web["Web<br/>React · Vite · assistant-ui<br/>Alfa Core Components"]
+    end
+
+    subgraph services["Сервисы приложения"]
+        direction LR
+        api["UI Backend<br/>FastAPI<br/>проекты · отчёты · сравнение"]
+        agent["Agent Service<br/>FastAPI · LangGraph · Deep Agents<br/>диалог · runs · checkpoints"]
+        mcp["MCP Service<br/>FastMCP<br/>инструменты получения фактов"]
+    end
+
+    subgraph data["Слой данных · PostgreSQL"]
+        direction LR
+        reports["Схема reports<br/>снимки и нормализованные отчёты"]
+        workspace["Схема workspace<br/>проекты · треды · решения<br/>runs · checkpoints"]
+    end
+
+    subgraph external["Внешние системы"]
+        model["DeepSeek V4 Flash 0731 FP8<br/>языковая модель"]
+    end
+
+    user --> web
+    web -->|"REST API"| api
+    web -->|"RPC · assistant-stream"| agent
+    agent -->|"запрос фактов"| mcp
+    api --> reports
+    api --> workspace
+    mcp --> reports
+    agent --> workspace
+    agent -->|"формирование ответа"| model
+
+    classDef service fill:#eef4ff,stroke:#3667b1,color:#172b4d;
+    classDef data fill:#fff4df,stroke:#a66a00,color:#4d3300;
+    classDef external fill:#f4f4f4,stroke:#666,color:#222;
+    class web,api,agent,mcp service;
+    class reports,workspace data;
+    class user,model external;
+```
+
+Обычные операции и детерминированные расчёты идут в UI Backend, разговор — в
+Agent Service. Агент получает факты отчётов через MCP Service, а каждый вывод
+связывает с существующим `evidence_ref` / `evidence_id`. `reports` и `workspace`
+— отдельные схемы внутри одной базы данных PostgreSQL, а не две базы. Проектные
+данные и память изолируются по `tenant_id`, `project_id` и `thread_id`; внешняя
+модель не выполняет расчёты и не подменяет решение пользователя.
+
+### Прохождение запроса
+
+```mermaid
+sequenceDiagram
+    actor User as Предприниматель
+    participant Web as Web
+    participant Agent as Agent Service
+    participant MCP as MCP Service
+    participant DB as PostgreSQL
+    participant Model as DeepSeek V4 Flash 0731 FP8
+
+    User->>Web: Задаёт вопрос о контрагенте
+    Web->>Agent: RPC / assistant-stream
+    Agent->>DB: Загружает контекст треда
+    Agent->>MCP: Запрашивает факты отчёта
+    MCP->>DB: Читает схему reports
+    DB-->>MCP: Факты и evidence
+    MCP-->>Agent: Результат инструмента
+    Agent->>Model: Контекст и подтверждённые факты
+    Model-->>Agent: Формулировка ответа
+    Agent->>DB: Сохраняет run и checkpoint
+    Agent-->>Web: Поток ответа с evidence refs
+    Web-->>User: Ответ и проверяемые основания
+```
+
 ## Части репозитория
 
 ```text
@@ -137,7 +216,7 @@ Compose поднимает PostgreSQL с durable volume, применяет Alem
 ничего не переимпортирует (`changed_nothing: true`).
 
 Открывайте **http://localhost:5173** — это единственный origin, который нужен
-браузеру: proxy отдаёт SPA, проксирует `/api/v1` в `ui_api` и `/agent/` в
+браузеру: proxy отдаёт SPA, проксирует `/api/v1` в `ui_api` и `/rpc/agent/` в
 `agent`, поэтому session cookie остаётся first-party, а SPA собирается без
 API base URL. Прямые порты сервисов опубликованы для отладки:
 
