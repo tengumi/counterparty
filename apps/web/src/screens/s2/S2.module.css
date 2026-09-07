@@ -145,9 +145,10 @@
   .companyAction { padding: 0 10px; }
   .conversationInner { padding: 14px 16px 8px; gap: 18px; }
   .dock { padding: 6px 16px max(12px, env(safe-area-inset-bottom)); }
-  /* Keyboard up: drop the home-indicator inset so the composer sits flush
-     against the keyboard with no white strip. */
-  :global(:root[data-keyboard='open']) .dock { padding-bottom: 6px; }
+  /* Keyboard up: drop the home-indicator inset and all trailing padding so
+     the composer sits flush against the keyboard with no white strip. */
+  :global(:root[data-keyboard='open']) .dock { padding: 4px 16px 0; }
+  :global(:root[data-keyboard='open']) .handoff { display: none; }
   :global(:root[data-keyboard='open']) .conversationInner { padding-bottom: 4px; }
   .panel { position: fixed; inset: 0; width: 100%; z-index: 6; box-shadow: none; }
   .panelCloseDesktop { display: none; }
