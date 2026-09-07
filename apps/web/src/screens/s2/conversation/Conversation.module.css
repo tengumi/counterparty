@@ -151,17 +151,24 @@
   .step { flex-wrap: wrap; gap: 4px; }
   .stepSource { flex-basis: 100%; }
 
-  /* iOS chat reference type scale: 17/26 assistant prose, 17/24 user bubble
-     and input, 16/24 list items, a rounder composer pill. */
-  .feed { gap: 20px; }
-  .answer { font-size: 17px; line-height: 26px; }
-  .bubble { font-size: 17px; line-height: 24px; border-radius: 18px 18px 6px 18px; }
-  .resumeText { font-size: 16px; line-height: 24px; }
-  .markdown { gap: 12px; }
-  .mdHeading { font-size: 17px; line-height: 24px; }
-  .mdItem, .point { font-size: 16px; line-height: 24px; }
-  .composer { border-radius: 22px; padding: 12px 12px 10px 16px; }
-  .input { font-size: 17px; line-height: 24px; min-height: 44px; }
+  /* iOS chat reference type scale: compact 16/22 prose, 15/21 list items,
+     a slim composer pill that starts at one line and grows. */
+  .feed { gap: 18px; }
+  .answer { font-size: 16px; line-height: 22px; }
+  .answerText { text-wrap: pretty; }
+  .bubble { font-size: 16px; line-height: 22px; padding: 10px 14px; border-radius: 18px 18px 6px 18px; }
+  .resume { padding: 14px 16px; }
+  .resumeText { font-size: 15px; line-height: 21px; }
+  .markdown { gap: 10px; }
+  .mdParagraph { font-size: 16px; line-height: 22px; }
+  .mdHeading { font-size: 16px; line-height: 22px; }
+  .mdItem, .point { font-size: 15px; line-height: 21px; }
+  .conclusion { border-radius: 14px; }
+  .conclusionLabel, .disclaimer { font-size: 12px; line-height: 16px; }
+  .messageTime { font-size: 12px; line-height: 16px; }
+  .composer { border-radius: 20px; padding: 8px 10px 8px 14px; gap: 6px; }
+  .input { font-size: 16px; line-height: 22px; min-height: 24px; }
+  .send { min-height: 40px; width: 40px; min-width: 40px; border-radius: 10px; }
 }
 
 .bubble p, .answerText p { margin: 0; }

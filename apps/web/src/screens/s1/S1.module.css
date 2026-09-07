@@ -32,12 +32,13 @@
 /* Mobile scale is tuned to the iOS chat reference: a 17/24 body and input,
    a 22/28 screen title, 15/20 secondary text and a 12-13 px meta floor. */
 @media (max-width: 640px) {
-  .scroll { padding: 24px 16px max(32px, 12dvh); }
+  .scroll { padding: 22px 16px max(28px, 10dvh); }
   .title { font-size: 22px; line-height: 28px; letter-spacing: -.4px; }
   .subtitle { margin-top: 8px; font-size: 15px; line-height: 20px; }
-  .composer { margin-top: 20px; padding: 14px 16px 12px; border-radius: 24px; }
-  .fieldText { font-size: 17px; line-height: 24px; }
-  .composerActions { margin-top: 6px; }
+  .composer { margin-top: 18px; padding: 10px 12px 8px 14px; border-radius: 20px; }
+  .fieldText { font-size: 16px; line-height: 22px; }
+  .composerActions { margin-top: 4px; }
+  .send { min-height: 40px; width: 40px; min-width: 40px; }
   .examples { gap: 8px; margin-top: 16px; }
   .listLabel { font-size: 13px; line-height: 18px; }
   .historyTitle { font-size: 15px; line-height: 20px; }
