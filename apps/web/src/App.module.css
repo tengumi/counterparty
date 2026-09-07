@@ -1,4 +1,15 @@
-.shell { height: var(--app-height, 100dvh); min-height: 0; display: flex; overflow: hidden; }
+.shell { height: 100dvh; min-height: 0; display: flex; overflow: hidden; }
+/* Keyboard open: glue the whole app to the visual viewport so it never
+   drifts above the fold when Safari auto-scrolls the page on focus. */
+:global(:root[data-keyboard='open']) .shell {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--app-height, 100dvh);
+  transform: translateY(var(--app-offset, 0px));
+  z-index: 20;
+}
 .sidebar { width: 280px; min-height: 0; flex-shrink: 0; border-right: 1px solid #e8ebef; padding: 20px 12px 8px; display: flex; flex-direction: column; background: #f8f9fb; }
 .sidebarTop { display: flex; align-items: center; justify-content: space-between; min-height: 40px; margin-bottom: 16px; }
 .brand { display: flex; align-items: center; gap: 10px; padding: 0 10px; font-size: 18px; line-height: 24px; font-weight: 600; color: #252d39; white-space: nowrap; }

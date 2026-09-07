@@ -9,6 +9,10 @@ a:hover { text-decoration: underline; }
 
 button, input, textarea { font: inherit; }
 
+/* When the on-screen keyboard is up the shell is pinned to the visual
+   viewport; freeze the page underneath so nothing shows through below it. */
+:root[data-keyboard='open'], :root[data-keyboard='open'] body { overflow: hidden; height: 100%; }
+
 /* Знак финансового значения. Ноль и неизвестное значение остаются нейтральными. */
 [data-amount-tone='positive'] { color: var(--color-light-text-positive, #16824b); }
 [data-amount-tone='negative'] { color: var(--color-light-text-negative, #d6242a); }
