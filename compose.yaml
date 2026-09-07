@@ -182,6 +182,7 @@ services:
       dockerfile: services/ui_api/Dockerfile
     environment:
       UI_API_DATABASE_URL: postgresql+psycopg://${UI_API_USER:-counterparty_web_dev}:${UI_API_PASSWORD:-counterparty_web_dev}@postgres:5432/${POSTGRES_DB:-counterparty}
+      UI_API_DEMO_AUTH: ${UI_API_DEMO_AUTH:-true}
       # Local HTTP only. The cookie stays HttpOnly and SameSite=Lax either way;
       # a deployment behind TLS leaves this unset.
       UI_API_SESSION_COOKIE_SECURE: "false"
