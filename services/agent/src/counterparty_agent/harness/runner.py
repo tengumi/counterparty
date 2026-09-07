@@ -37,6 +37,7 @@ from .graph import create_harness, run_turn
 from .indicator_guide import explain_indicator
 from .knowledge import lookup, render_relevant
 from .models import create_chat_model
+from .profile import configure_harness_profile
 from .prompts import (
     ASK_TO_ADD_COMPANY,
     DEFAULT_TOOL_ACTIVITY,
@@ -235,6 +236,7 @@ def create_harness_runner(
     config_factory: ConfigFactory = default_config,
 ) -> Callable[[RunContext], Awaitable[None]]:
     """Build the run function the transport registry executes."""
+    configure_harness_profile(settings)
     model = create_chat_model(settings)
 
     async def run(ctx: RunContext) -> None:

@@ -27,7 +27,6 @@ from .evidence import (
     split_claims,
     validate_answer,
 )
-from .filesystem import scoped_permissions, thread_workspace_root
 from .graph import CompiledHarness, TurnResult, create_harness, final_text, run_turn
 from .knowledge import (
     REFERENCE,
@@ -76,8 +75,6 @@ __all__ = [
     "reports_connection",
     "reports_toolset",
     "run_turn",
-    "scoped_permissions",
     "split_claims",
-    "thread_workspace_root",
     "validate_answer",
 ]
