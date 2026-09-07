@@ -169,6 +169,10 @@
   .composer { border-radius: 20px; padding: 8px 10px 8px 14px; gap: 6px; }
   .input { font-size: 16px; line-height: 22px; min-height: 24px; }
   .send { min-height: 40px; width: 40px; min-width: 40px; border-radius: 10px; }
+
+  /* Keyboard up: the boundary note only widens the gap to the keyboard —
+     drop it so the composer sits directly on top of the keyboard. */
+  :global(:root[data-keyboard='open']) .disclaimer { display: none; }
 }
 
 .bubble p, .answerText p { margin: 0; }
