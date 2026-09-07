@@ -134,15 +134,21 @@
   .panelBackdrop { display: block; position: absolute; inset: 0; z-index: 3; border: 0; background: rgba(9, 12, 37, .16); }
 }
 @media (max-width: 640px) {
-  /* Match the iOS chat reference: a 17/24 nav title, 13 px secondary strip,
-     tighter gutters and an airy feed rhythm. */
-  .header { padding: 10px 16px 4px; }
+  /* Match the iOS chat reference: a 17/24 nav title, compact 13 px secondary
+     strip, tight gutters and an unfussy feed rhythm. */
+  .header { padding: 8px 16px 4px; }
   .divider { display: none; }
   .projectTitleButton { width: 100%; font-size: 17px; line-height: 24px; }
   .renameIcon { display: none; }
-  .companies { padding: 4px 16px 12px; font-size: 13px; }
-  .conversationInner { padding: 16px 16px 8px; gap: 20px; }
-  .dock { padding: 8px 16px max(14px, env(safe-area-inset-bottom)); }
+  .companies { padding: 2px 16px 10px; font-size: 13px; gap: 6px; }
+  .companyName, .companyAction, .moreCompanies { font-size: 13px; }
+  .companyAction { padding: 0 10px; }
+  .conversationInner { padding: 14px 16px 8px; gap: 18px; }
+  .dock { padding: 6px 16px max(12px, env(safe-area-inset-bottom)); }
+  /* Keyboard up: drop the home-indicator inset so the composer sits flush
+     against the keyboard with no white strip. */
+  :global(:root[data-keyboard='open']) .dock { padding-bottom: 6px; }
+  :global(:root[data-keyboard='open']) .conversationInner { padding-bottom: 4px; }
   .panel { position: fixed; inset: 0; width: 100%; z-index: 6; box-shadow: none; }
   .panelCloseDesktop { display: none; }
   .panelCloseMobile { display: inline; }
