@@ -29,11 +29,20 @@
 .empty { margin: 0; padding: 8px 10px; font-size: 12px; line-height: 18px; color: #747e8c; }
 .submitError { margin: 8px 0 0; color: #d91d0b; font-size: 13px; line-height: 18px; }
 
+/* Mobile scale is tuned to the iOS chat reference: a 17/24 body and input,
+   a 22/28 screen title, 15/20 secondary text and a 12-13 px meta floor. */
 @media (max-width: 640px) {
-  .scroll { padding: 28px 20px 40px; }
-  .title { font-size: 27px; }
-  .subtitle { font-size: 14px; line-height: 22px; }
-  .composer { padding: 16px 14px 10px; border-radius: 18px; }
+  .scroll { padding: 24px 16px max(32px, 12dvh); }
+  .title { font-size: 22px; line-height: 28px; letter-spacing: -.4px; }
+  .subtitle { margin-top: 8px; font-size: 15px; line-height: 20px; }
+  .composer { margin-top: 20px; padding: 14px 16px 12px; border-radius: 24px; }
+  .fieldText { font-size: 17px; line-height: 24px; }
+  .composerActions { margin-top: 6px; }
+  .examples { gap: 8px; margin-top: 16px; }
+  .listLabel { font-size: 13px; line-height: 18px; }
+  .historyTitle { font-size: 15px; line-height: 20px; }
+  .continuation { font-size: 13px; line-height: 18px; }
+  .meta, .meta > span:last-child, .date { font-size: 12px; line-height: 16px; }
 }
 
 .send { min-height: 44px; width: 44px; min-width: 44px; padding: 0; border-radius: 10px; }

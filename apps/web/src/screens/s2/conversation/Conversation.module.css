@@ -150,6 +150,18 @@
   .point > :last-child { min-width: 0; overflow-wrap: anywhere; }
   .step { flex-wrap: wrap; gap: 4px; }
   .stepSource { flex-basis: 100%; }
+
+  /* iOS chat reference type scale: 17/26 assistant prose, 17/24 user bubble
+     and input, 16/24 list items, a rounder composer pill. */
+  .feed { gap: 20px; }
+  .answer { font-size: 17px; line-height: 26px; }
+  .bubble { font-size: 17px; line-height: 24px; border-radius: 18px 18px 6px 18px; }
+  .resumeText { font-size: 16px; line-height: 24px; }
+  .markdown { gap: 12px; }
+  .mdHeading { font-size: 17px; line-height: 24px; }
+  .mdItem, .point { font-size: 16px; line-height: 24px; }
+  .composer { border-radius: 22px; padding: 12px 12px 10px 16px; }
+  .input { font-size: 17px; line-height: 24px; min-height: 44px; }
 }
 
 .bubble p, .answerText p { margin: 0; }

@@ -134,13 +134,15 @@
   .panelBackdrop { display: block; position: absolute; inset: 0; z-index: 3; border: 0; background: rgba(9, 12, 37, .16); }
 }
 @media (max-width: 640px) {
-  .header { padding: 8px 16px 2px; }
+  /* Match the iOS chat reference: a 17/24 nav title, 13 px secondary strip,
+     tighter gutters and an airy feed rhythm. */
+  .header { padding: 10px 16px 4px; }
   .divider { display: none; }
-  .projectTitleButton { width: 100%; font-size: 14px; }
+  .projectTitleButton { width: 100%; font-size: 17px; line-height: 24px; }
   .renameIcon { display: none; }
-  .companies { padding: 4px 16px 12px; font-size: 12px; }
-  .conversationInner { padding: 20px 16px 8px; }
-  .dock { padding: 8px 16px max(12px, env(safe-area-inset-bottom)); }
+  .companies { padding: 4px 16px 12px; font-size: 13px; }
+  .conversationInner { padding: 16px 16px 8px; gap: 20px; }
+  .dock { padding: 8px 16px max(14px, env(safe-area-inset-bottom)); }
   .panel { position: fixed; inset: 0; width: 100%; z-index: 6; box-shadow: none; }
   .panelCloseDesktop { display: none; }
   .panelCloseMobile { display: inline; }
