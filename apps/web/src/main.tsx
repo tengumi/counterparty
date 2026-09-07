@@ -16,11 +16,23 @@ if (!root) throw new Error('Application root is missing');
  */
 function syncViewport(): void {
   const vv = window.visualViewport;
-  const height = Math.round(vv?.height ?? window.innerHeight);
-  const overlap = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
   const el = document.documentElement;
-  el.style.setProperty('--app-height', `${height}px`);
-  el.dataset.keyboard = overlap > 80 ? 'open' : 'closed';
+  if (!vv) {
+    el.dataset.keyboard = 'closed';
+    return;
+  }
+  const overlap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+  const open = overlap > 80;
+  el.dataset.keyboard = open ? 'open' : 'closed';
+  if (open) {
+    // Pin the shell to the visible strip: Safari also scrolls the page up on
+    // focus, so we size to the visual viewport and undo that scroll offset.
+    el.style.setProperty('--app-height', `${Math.round(vv.height)}px`);
+    el.style.setProperty('--app-offset', `${Math.round(vv.offsetTop)}px`);
+  } else {
+    el.style.removeProperty('--app-height');
+    el.style.removeProperty('--app-offset');
+  }
 }
 
 syncViewport();
