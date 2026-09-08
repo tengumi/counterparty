@@ -12,10 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --host 0.0.0.0",
-    "qa:check": "tsc --project qa/tsconfig.json",
-    "qa:browser": "node qa/run.ts",
-    "qa:web08": "node qa/web08.ts"
+    "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
     "@alfalab/core-components": "50.29.1",
