@@ -103,7 +103,7 @@ export function describeBankRisk(raw: string, evidenceId: string): SignalView {
 }
 
 /**
- * ЗСК is an unchangeable external signal (AGENTS.md, 07 §9).
+ * ЗСК is an unchangeable external signal (docs/Specs/07_DESIGN_AND_UX.md §9).
  *
  * The raw value is kept and shown as it arrived, the colour is never
  * recomputed from anything else, and the closed methodology behind it is not
